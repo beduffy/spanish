@@ -7,38 +7,49 @@ jest.mock('@/services/ApiService');
 describe('SentenceListView.vue', () => {
     let wrapper;
     const mockSentencesPage1 = {
-        count: 2,
+        count: 2, // Actually 2 S2E and 2 E2S = 4 total items if we consider directions
         total_pages: 1,
         results: [
             {
                 sentence_id: 1,
                 csv_number: 101,
+                translation_direction: 'S2E',
                 key_spanish_word: 'Hola',
                 spanish_sentence_example: 'Hola Mundo',
+                key_word_english_translation: 'Hello',
                 english_sentence_example: 'Hello World',
                 is_learning: true,
                 next_review_date: '2024-01-15T10:00:00Z',
             },
             {
                 sentence_id: 2,
-                csv_number: 102,
-                key_spanish_word: 'Adiós',
-                spanish_sentence_example: 'Adiós Amigo',
-                english_sentence_example: 'Goodbye Friend',
+                csv_number: 101, // Same CSV number, different direction
+                translation_direction: 'E2S',
+                key_spanish_word: 'Hola', // Spanish answer
+                spanish_sentence_example: 'Hola Mundo', // Spanish answer sentence
+                key_word_english_translation: 'Hello', // English prompt
+                english_sentence_example: 'Hello World', // English prompt sentence
                 is_learning: false,
                 next_review_date: '2024-02-20T12:30:00Z',
             },
         ],
     };
 
-    const mockSentencesPage2 = {
-        count: 2,
-        total_pages: 1, // Assuming total 2 pages for pagination test
+    const mockSentencesPage2 = { // This mock might need more items for a robust pagination test
+        count: 2, // if count refers to unique concepts, or 4 if total items
+        total_pages: 1,
         results: [
             {
-                sentence_id: 3, csv_number: 103, key_spanish_word: 'Gracias',
-                spanish_sentence_example: 'Muchas gracias', english_sentence_example: 'Thank you very much',
+                sentence_id: 3, csv_number: 103, translation_direction: 'S2E',
+                key_spanish_word: 'Gracias', spanish_sentence_example: 'Muchas gracias',
+                key_word_english_translation: 'Thank you', english_sentence_example: 'Thank you very much',
                 is_learning: true, next_review_date: '2024-03-10T08:00:00Z'
+            },
+            {
+                sentence_id: 4, csv_number: 103, translation_direction: 'E2S',
+                key_spanish_word: 'Gracias', key_word_english_translation: 'Thank you',
+                spanish_sentence_example: 'Muchas gracias', english_sentence_example: 'Thank you very much',
+                is_learning: false, next_review_date: '2024-03-15T09:00:00Z'
             }
         ]
     };
@@ -80,50 +91,92 @@ describe('SentenceListView.vue', () => {
         await new Promise(resolve => process.nextTick(resolve));
         await wrapper.vm.$nextTick();
 
-        const firstRowCells = wrapper.findAll('tbody tr').at(0).findAll('td');
-        const firstSentence = mockSentencesPage1.results[0];
+        const rows = wrapper.findAll('tbody tr');
+        expect(rows.length).toBe(mockSentencesPage1.results.length);
+
+        // Test S2E row (first row)
+        const firstRowCells = rows.at(0).findAll('td');
+        const firstSentence = mockSentencesPage1.results[0]; // S2E
 
         expect(firstRowCells.at(0).text()).toBe(firstSentence.csv_number.toString());
-        expect(firstRowCells.at(1).text()).toBe(firstSentence.key_spanish_word);
-        expect(firstRowCells.at(2).text()).toBe(firstSentence.spanish_sentence_example);
-        expect(firstRowCells.at(3).text()).toBe(firstSentence.english_sentence_example);
-        expect(firstRowCells.at(4).text()).toBe(firstSentence.is_learning ? 'Learning' : 'Review');
-        expect(firstRowCells.at(5).text()).toBe(wrapper.vm.formatDate(firstSentence.next_review_date));
+        expect(firstRowCells.at(1).find('span').text()).toBe('S2E');
+        expect(firstRowCells.at(1).find('span').classes()).toContain('badge-s2e');
+        expect(firstRowCells.at(2).text()).toBe(firstSentence.key_spanish_word); // Prompt Key Word for S2E
+        expect(firstRowCells.at(3).text()).toBe(firstSentence.spanish_sentence_example); // Prompt Sentence for S2E
+        expect(firstRowCells.at(4).text()).toBe(firstSentence.english_sentence_example); // Answer Sentence for S2E
+        expect(firstRowCells.at(5).text()).toBe(firstSentence.is_learning ? 'Learning' : 'Review');
+        expect(firstRowCells.at(6).text()).toBe(wrapper.vm.formatDate(firstSentence.next_review_date));
 
-        // Check router link
-        const routerLink = firstRowCells.at(6).findComponent(RouterLinkStub);
-        expect(routerLink.props().to).toEqual({ name: 'SentenceDetailView', params: { id: firstSentence.sentence_id } });
+        const routerLink1 = firstRowCells.at(7).findComponent(RouterLinkStub);
+        expect(routerLink1.props().to).toEqual({ name: 'SentenceDetailView', params: { id: firstSentence.sentence_id } });
+
+        // Test E2S row (second row)
+        const secondRowCells = rows.at(1).findAll('td');
+        const secondSentence = mockSentencesPage1.results[1]; // E2S
+
+        expect(secondRowCells.at(0).text()).toBe(secondSentence.csv_number.toString());
+        expect(secondRowCells.at(1).find('span').text()).toBe('E2S');
+        expect(secondRowCells.at(1).find('span').classes()).toContain('badge-e2s');
+        expect(secondRowCells.at(2).text()).toBe(secondSentence.key_word_english_translation); // Prompt Key Word for E2S
+        expect(secondRowCells.at(3).text()).toBe(secondSentence.english_sentence_example); // Prompt Sentence for E2S
+        expect(secondRowCells.at(4).text()).toBe(secondSentence.spanish_sentence_example); // Answer Sentence for E2S
+        expect(secondRowCells.at(5).text()).toBe(secondSentence.is_learning ? 'Learning' : 'Review');
+        expect(secondRowCells.at(6).text()).toBe(wrapper.vm.formatDate(secondSentence.next_review_date));
+
+        const routerLink2 = secondRowCells.at(7).findComponent(RouterLinkStub);
+        expect(routerLink2.props().to).toEqual({ name: 'SentenceDetailView', params: { id: secondSentence.sentence_id } });
     });
 
 
     it('handles pagination: fetches next page when "Next" is clicked', async () => {
-        const twoPageResponse = { ...mockSentencesPage1, total_pages: 2 };
+        // Adjust mock data to have a clear distinction for pagination
+        const page1Data = {
+            count: 4, // Total items across all pages
+            total_pages: 2,
+            results: [
+                { sentence_id: 1, csv_number: 101, translation_direction: 'S2E', key_spanish_word: 'S2E_1', spanish_sentence_example: 'Spanish S2E_1', key_word_english_translation: 'English S2E_1', english_sentence_example: 'English S2E_1' },
+                { sentence_id: 2, csv_number: 101, translation_direction: 'E2S', key_word_english_translation: 'E2S_1_Prompt', english_sentence_example: 'English E2S_1_Prompt', key_spanish_word: 'Spanish E2S_1_Ans', spanish_sentence_example: 'Spanish E2S_1_Ans' }
+            ]
+        };
+        const page2Data = {
+            count: 4,
+            total_pages: 2,
+            results: [
+                { sentence_id: 3, csv_number: 102, translation_direction: 'S2E', key_spanish_word: 'S2E_2', spanish_sentence_example: 'Spanish S2E_2', key_word_english_translation: 'English S2E_2', english_sentence_example: 'English S2E_2' },
+                { sentence_id: 4, csv_number: 102, translation_direction: 'E2S', key_word_english_translation: 'E2S_2_Prompt', english_sentence_example: 'English E2S_2_Prompt', key_spanish_word: 'Spanish E2S_2_Ans', spanish_sentence_example: 'Spanish E2S_2_Ans' }
+            ]
+        };
+
         ApiService.getAllSentences
-            .mockResolvedValueOnce({ status: 200, data: twoPageResponse })
-            .mockResolvedValueOnce({ status: 200, data: { ...mockSentencesPage2, total_pages: 2, count: 3 } }); // Assuming 1 item on page 2
+            .mockResolvedValueOnce({ status: 200, data: page1Data })
+            .mockResolvedValueOnce({ status: 200, data: page2Data });
 
         wrapper = mount(SentenceListView, { global: { stubs: { RouterLink: RouterLinkStub } } });
 
-        await new Promise(resolve => process.nextTick(resolve)); // Initial load page 1
+        await new Promise(resolve => process.nextTick(resolve));
         await wrapper.vm.$nextTick();
 
         expect(wrapper.vm.currentPage).toBe(1);
         expect(wrapper.vm.totalPages).toBe(2);
-        expect(wrapper.findAll('tbody tr').length).toBe(mockSentencesPage1.results.length);
+        expect(wrapper.findAll('tbody tr').length).toBe(page1Data.results.length);
 
         const nextButton = wrapper.findAll('.pagination-controls button').filter(b => b.text() === 'Next').at(0);
         await nextButton.trigger('click');
 
-        await new Promise(resolve => process.nextTick(resolve)); // Fetch page 2
+        await new Promise(resolve => process.nextTick(resolve));
         await wrapper.vm.$nextTick();
-        await new Promise(resolve => process.nextTick(resolve)); // DOM update for page 2
+        await new Promise(resolve => process.nextTick(resolve));
         await wrapper.vm.$nextTick();
 
         expect(ApiService.getAllSentences).toHaveBeenCalledTimes(2);
         expect(ApiService.getAllSentences).toHaveBeenLastCalledWith(2);
         expect(wrapper.vm.currentPage).toBe(2);
-        expect(wrapper.findAll('tbody tr').length).toBe(mockSentencesPage2.results.length);
-        expect(wrapper.findAll('tbody tr').at(0).findAll('td').at(0).text()).toBe(mockSentencesPage2.results[0].csv_number.toString());
+        expect(wrapper.findAll('tbody tr').length).toBe(page2Data.results.length);
+        // Check content of the first row on page 2
+        const firstRowPage2Cells = wrapper.findAll('tbody tr').at(0).findAll('td');
+        const firstSentencePage2 = page2Data.results[0];
+        expect(firstRowPage2Cells.at(0).text()).toBe(firstSentencePage2.csv_number.toString());
+        expect(firstRowPage2Cells.at(2).text()).toBe(firstSentencePage2.key_spanish_word); // S2E prompt
     });
 
 

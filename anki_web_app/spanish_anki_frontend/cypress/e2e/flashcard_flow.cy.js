@@ -9,7 +9,7 @@ describe('Flashcard Review Flow', () => {
     it('successfully completes a review cycle', () => {
         // 1. Check initial card display (front)
         cy.get('.flashcard-container .card-front h2').should('not.be.empty');
-        cy.get('.flashcard-container .card-front .spanish-sentence').should('not.be.empty');
+        cy.get('.flashcard-container .card-front .sentence-display').should('not.be.empty');
 
         // 2. Click "Show Answer"
         cy.get('button.action-button').contains('Show Answer')
@@ -28,7 +28,7 @@ describe('Flashcard Review Flow', () => {
 
         // 5. Click "Submit & Next"
         // Store the current card's Spanish sentence to compare with the next one
-        cy.get('.flashcard-container .card-front .spanish-sentence').invoke('text').as('firstCardSentence');
+        cy.get('.flashcard-container .card-front .sentence-display').invoke('text').as('firstCardSentence');
 
         cy.get('button.action-button').contains('Submit & Next').click();
 
@@ -37,7 +37,7 @@ describe('Flashcard Review Flow', () => {
         cy.get('.loading-message').should('not.exist'); // Or a more specific wait for it to disappear
 
         // Check that a new card is displayed (sentence should be different)
-        cy.get('.flashcard-container .card-front .spanish-sentence').invoke('text').then((newCardSentence) => {
+        cy.get('.flashcard-container .card-front .sentence-display').invoke('text').then((newCardSentence) => {
             cy.get('@firstCardSentence').should((firstCardSentence) => {
                 expect(newCardSentence).not.to.eq(firstCardSentence);
             });

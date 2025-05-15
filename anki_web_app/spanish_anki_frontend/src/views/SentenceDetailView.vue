@@ -116,10 +116,17 @@ export default {
   },
   methods: {
     async fetchSentenceDetails(sentenceId) {
+      if (!sentenceId) {
+        this.errorMessage = 'No sentence ID provided in the route.';
+        this.isLoading = false;
+        return;
+      }
       this.isLoading = true;
-      this.errorMessage = '';
+      this.errorMessage = null;
       try {
-        const response = await ApiService.getSentenceDetails(sentenceId);
+        // Use ApiService.default.getSentenceDetails if that's what the transpiled/mocked version is
+        const effectiveApiService = ApiService.default || ApiService;
+        const response = await effectiveApiService.getSentenceDetails(sentenceId);
         if (response.status === 200 && response.data) {
           this.sentence = response.data;
         } else {

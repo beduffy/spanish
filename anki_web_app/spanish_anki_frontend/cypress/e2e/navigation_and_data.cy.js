@@ -60,7 +60,7 @@ describe('Navigation and Data Verification', () => {
         cy.url().should('match', /\/sentences\/\d+/);
         cy.get('h1').contains('Sentence Detail');
 
-        cy.get('.main-details .detail-item').contains('Key Spanish Word:').should('be.visible');
+        cy.get('.main-details .detail-item').contains('Prompt Key Word:').should('be.visible');
         cy.get('.srs-details .detail-item').contains('Next Review Date:').should('be.visible');
         cy.get('.review-history').should('be.visible');
     });
