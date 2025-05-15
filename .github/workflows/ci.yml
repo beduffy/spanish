@@ -22,6 +22,7 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install "docker<6.0.0"  # Ensure compatible docker library
+        pip install requests-unixsocket # Add this for http+docker support
         pip install docker-compose==1.29.2
       # Previous attempt, keeping for history:
       # run: |
