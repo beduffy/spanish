@@ -18,11 +18,16 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Install docker-compose (V1) and compatible docker library
+    - name: Install docker-compose (V1) and compatible dependencies
       run: |
         pip install --upgrade pip
-        pip install "docker<6.0.0"  # Ensure compatible docker library
-        pip install requests-unixsocket # Add this for http+docker support
+        # Pin urllib3 to <2.0 for requests-unixsocket 0.3.0 compatibility
+        pip install "urllib3<2.0"
+        pip install requests-unixsocket # Relies on urllib3 <2.0 for its patching
+        # docker-compose 1.29.2 needs a compatible docker library.
+        # docker-py 5.x is compatible with requests, which is compatible with urllib3 1.x.
+        # Pip will resolve to docker-5.0.3 due to docker-compose's complex/messy metadata.
+        pip install "docker<6.0.0" 
         pip install docker-compose==1.29.2
       # Previous attempt, keeping for history:
       # run: |
@@ -33,7 +38,7 @@ jobs:
       # run: |
       #   echo "Install Docker Compose V2 (docker compose)"
       #   mkdir -p ~/.docker/cli-plugins/
-      #   COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d" -f4)
+      #   COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\\" -f4)
       #   echo "Latest Docker Compose version: $COMPOSE_VERSION"
       #   curl -SL https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
       #   chmod +x ~/.docker/cli-plugins/docker-compose
