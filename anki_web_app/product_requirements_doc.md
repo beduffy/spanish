@@ -242,6 +242,110 @@ This document outlines the requirements for a web application designed to help t
         *   Implement filtering/sorting if desired.
 *   **Backup and restore functionality for the database.**
 
+
+Testing Plan
+We'll approach this in phases, building up from backend tests to frontend and E2E tests.
+Phase 1: Strengthen Backend API/Integration Tests (Django)
+You already have a foundation for API tests with NextCardAPITests. We need to ensure these are complete and then add tests for the other API endpoints. These tests verify that different parts of your Django application (models, views, serializers) work together correctly when an API endpoint is hit.
+Location: anki_web_app/flashcards/tests.py
+Tool: Django's test client (django.test.Client or rest_framework.test.APIClient).
+NextCardAPITests (Review & Enhance):
+Ensure existing tests (test_get_next_card_review_card_due, test_get_next_card_new_card_available, etc.) pass reliably now that data import is working.
+Add tests for edge cases: What happens if a card's next_review_date is far in the future?
+SubmitReviewAPITests (New):
+Test successful submission:
+Correctly updates Sentence SRS fields (next_review_date, interval_days, ease_factor, is_learning, consecutive_correct_reviews, total_reviews, total_score_sum).
+Creates a Review record with correct data.
+Appends user_comment_addon to Sentence.base_comment with a timestamp.
+Test submission for a new card, a learning card, and a graduated card (to see different SRS transitions).
+Test different scores and their impact on SRS parameters.
+Test invalid input: non-existent sentence_id, invalid score (e.g., > 1.0).
+Test submission without a user_comment_addon.
+StatisticsAPITests (New):
+Test with an empty database (initial state).
+Test after one review.
+Test after multiple reviews, including new and review cards.
+Test with some cards "learned" and some "mastered" (ensure criteria match PRD).
+Verify all fields in the statistics payload are correct (reviews_today, new_cards_reviewed_today, overall_average_score, etc.).
+SentenceListAPITests (New):
+Test basic retrieval of sentences.
+Test pagination:
+Correct number of items per page (you mentioned 100).
+count, next, previous fields in the response.
+Requesting a specific page.
+Test default ordering (e.g., by csv_number).
+SentenceDetailAPITests (New):
+Test retrieval of a specific sentence.
+Ensure all required fields (including ease_factor, creation_date, last_modified_date, total_score_sum, consecutive_correct_reviews) are present in the response.
+Ensure nested reviews data is correct and complete.
+Test for a non-existent sentence ID (should return 404).
+Phase 2: Backend Unit Tests (Django)
+These tests focus on individual functions or methods in isolation. Your existing 42 tests likely include many of these. We should ensure comprehensive coverage.
+Location: anki_web_app/flashcards/tests.py (can be in the same file or separate files for organization).
+Models (Sentence, Review):
+Sentence.process_review(): Thoroughly test all logic paths for SRS updates based on score and current card state (new, learning steps, graduated, lapse). This is critical.
+Sentence._get_quality_from_score(): Test all score ranges.
+Test default values on model creation.
+Serializers (flashcards/serializers.py):
+Test SentenceSerializer.get_average_score() and get_last_reviewed_date() methods.
+Test validation logic in ReviewInputSerializer.
+Management Commands (import_csv.py):
+Test successful import of a few rows.
+Test skipping of duplicate csv_number.
+Test handling of malformed rows or missing required CSV columns.
+Test error if CSV file not found.
+Phase 3: Frontend Unit Tests (Vue.js)
+These test individual Vue components in isolation.
+Location: anki_web_app/spanish_anki_frontend/src/views/*.spec.js (or in a tests/unit directory).
+Tool: Vue Test Utils with Jest or Vitest. (We'll need to set this up).
+General Approach:
+Mock ApiService calls to avoid actual network requests.
+Test component rendering based on different props and data.
+Test component methods and computed properties.
+Components to Test:
+FlashcardView.vue:
+Initial rendering (shows loading, then card front).
+"Show Answer" button functionality.
+Correct display of card back information.
+Input fields for score and comment.
+submitReviewHandler calls ApiService.submitReview (mocked) with correct data and then fetchNextCard.
+Handling of 204 "No Content" for next card.
+DashboardView.vue:
+Calls ApiService.getStatistics (mocked) on mount.
+Correctly renders statistics data.
+Displays loading/error states.
+SentenceListView.vue:
+Calls ApiService.getAllSentences (mocked) on mount.
+Renders sentences in a table.
+Pagination logic (calling fetchSentences with new page number).
+SentenceDetailView.vue:
+Fetches sentence ID from route params.
+Calls ApiService.getSentenceDetails (mocked).
+Renders sentence details and review history.
+averageScore computed property.
+Phase 4: Frontend E2E (End-to-End) Tests (Vue.js)
+These tests simulate real user interactions in a browser, testing the entire application stack (frontend + backend).
+Location: anki_web_app/spanish_anki_frontend/tests/e2e/specs/ (typical for Cypress).
+Tool: Cypress or Playwright. (We'll need to set this up).
+Key User Flows to Test:
+Full Review Cycle:
+Open app, see first card.
+Click "Show Answer".
+Enter score and comment, click "Submit & Next".
+Verify new card loads.
+Dashboard Verification:
+Perform a few reviews.
+Navigate to Dashboard.
+Verify statistics reflect the reviews performed.
+Sentence List and Detail:
+Navigate to Sentences page.
+Verify sentences are listed.
+Use pagination.
+Click "View Details" for a sentence.
+Verify sentence details page loads with correct data, including review history matching actions from flow #1.
+No Cards Scenario: Test what happens if the API initially returns no cards.
+Handling API Errors (Optional but good): If possible, mock API errors at the network level to see how the frontend responds.
+
 ---
 
 This document outlines the core requirements for the Anki-Style Spanish Learning App. It should serve as a guide for development.
