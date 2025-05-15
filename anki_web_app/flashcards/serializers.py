@@ -23,6 +23,11 @@ class SentenceSerializer(serializers.ModelSerializer):
             'total_reviews', # Added for list view context
             'average_score',
             'last_reviewed_date',
+            'ease_factor',
+            'creation_date',
+            'last_modified_date',
+            'total_score_sum',
+            'consecutive_correct_reviews',
             # Add other fields the frontend might need for display or context
             # For now, keeping it to essential card data and SRS status indicators.
         ]
