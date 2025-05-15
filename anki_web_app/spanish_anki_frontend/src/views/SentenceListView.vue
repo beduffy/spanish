@@ -10,14 +10,15 @@
     </div>
 
     <div v-if="!isLoading && sentences.length > 0" class="sentences-container">
-      <p class="total-count">Total sentences: {{ totalItems }}</p>
+      <p class="total-count">Total sentence cards: {{ totalItems }}</p>
       <table>
         <thead>
           <tr>
             <th>#</th>
-            <th>Spanish Key Word</th>
-            <th>Spanish Sentence</th>
-            <th>English Sentence</th>
+            <th>Direction</th>
+            <th>Prompt Key Word</th>
+            <th>Prompt Sentence</th>
+            <th>Answer Sentence</th>
             <th>Learned?</th>
             <th>Next Review</th>
             <th>Actions</th>
@@ -26,9 +27,10 @@
         <tbody>
           <tr v-for="sentence in sentences" :key="sentence.sentence_id">
             <td>{{ sentence.csv_number }}</td>
-            <td>{{ sentence.key_spanish_word }}</td>
-            <td>{{ sentence.spanish_sentence_example }}</td>
-            <td>{{ sentence.english_sentence_example }}</td>
+            <td><span :class="getDirectionBadgeClass(sentence.translation_direction)">{{ formatDirection(sentence.translation_direction) }}</span></td>
+            <td>{{ getPromptKeyWord(sentence) }}</td>
+            <td>{{ getPromptSentence(sentence) }}</td>
+            <td>{{ getAnswerSentence(sentence) }}</td>
             <td>{{ sentence.is_learning ? 'Learning' : 'Review' }}</td>
             <td>{{ formatDate(sentence.next_review_date) }}</td>
             <td>
@@ -107,6 +109,27 @@ export default {
       if (!dateString) return 'N/A';
       const options = { year: 'numeric', month: 'short', day: 'numeric' };
       return new Date(dateString).toLocaleDateString(undefined, options);
+    },
+    formatDirection(direction) {
+      if (direction === 'S2E') return 'S2E'; // Spanish to English
+      if (direction === 'E2S') return 'E2S'; // English to Spanish
+      return direction; // Fallback
+    },
+    getDirectionBadgeClass(direction) {
+      return direction === 'S2E' ? 'badge-s2e' : 'badge-e2s';
+    },
+    // Helper methods to get prompt/answer based on direction for list view consistency
+    getPromptKeyWord(sentence) {
+      if (!sentence) return '';
+      return sentence.translation_direction === 'S2E' ? sentence.key_spanish_word : sentence.key_word_english_translation;
+    },
+    getPromptSentence(sentence) {
+      if (!sentence) return '';
+      return sentence.translation_direction === 'S2E' ? sentence.spanish_sentence_example : sentence.english_sentence_example;
+    },
+    getAnswerSentence(sentence) {
+      if (!sentence) return '';
+      return sentence.translation_direction === 'S2E' ? sentence.english_sentence_example : sentence.spanish_sentence_example;
     }
   },
   mounted() {
@@ -127,6 +150,23 @@ export default {
   font-family: Arial, sans-serif;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.badge-s2e,
+.badge-e2s {
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.8em;
+  font-weight: bold;
+  color: white;
+}
+
+.badge-s2e {
+  background-color: #007bff; /* Blue for S2E */
+}
+
+.badge-e2s {
+  background-color: #28a745; /* Green for E2S */
 }
 
 .loading-message, .error-message, .no-data-message {
