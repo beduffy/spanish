@@ -68,41 +68,68 @@ describe('Navigation and Data Verification', () => {
     it('reflects review activity in Dashboard and Sentence Detail', () => {
         // 1. Perform a review on the first card presented
         cy.visit('/');
+        cy.log('Test: reflects review activity - Visited /');
         // Ensure the card front h2 is loaded and not empty before getting its text
-        cy.get('.flashcard-container .card-front h2')
+        cy.get('.flashcard-container .card-front h2', { timeout: 15000 })
             .should(($h2) => {
                 expect($h2.text().trim()).not.to.be.empty;
             })
             .invoke('text').then((text) => {
                 const firstCardKeyWord = text.trim();
+                cy.log(`Test: reflects review activity - Captured firstCardKeyWord: ${firstCardKeyWord}`);
                 expect(firstCardKeyWord).not.to.be.empty; // Ensure it's not empty
 
-                cy.get('button.action-button').contains('Show Answer').click();
-                cy.get('#userScore').clear().type('0.7');
-                cy.get('#userComment').clear().type('E2E test - dashboard/detail check');
-                cy.get('button.action-button').contains('Submit & Next').click();
-                cy.get('.loading-message', { timeout: 10000 }).should('not.exist'); // Increased timeout for loading
+                cy.get('button.action-button', { timeout: 10000 }).contains('Show Answer').click();
+                cy.get('#userScore', { timeout: 10000 }).clear().type('0.7');
+                cy.get('#userComment', { timeout: 10000 }).clear().type('E2E test - dashboard/detail check');
+                cy.log('Test: reflects review activity - Submitting review...');
+                cy.intercept('POST', '/api/flashcards/submit-review/').as('submitReview');
+                cy.get('button.action-button', { timeout: 10000 }).contains('Submit & Next').click();
+                cy.wait('@submitReview', { timeout: 15000 }).its('response.statusCode').should('be.oneOf', [200, 201]);
+                cy.log('Test: reflects review activity - Review submitted and API call confirmed.');
+                
+                // Explicit wait for potential UI updates or loading messages after submit
+                // This is a general wait, adjust if a specific loading indicator exists and is reliable
+                cy.wait(1000); // Wait 1 second for UI to settle, adjust as needed
+                cy.get('.loading-message', { timeout: 15000 }).should('not.exist');
+                cy.log('Test: reflects review activity - Loading message (if any) is gone.');
 
                 // 2. Navigate to Dashboard and check if "Reviews Today" is at least 1
-                cy.get('nav a').contains('Dashboard').click();
-                cy.get('.stat-card h2').contains('Reviews Today').parent().find('p').invoke('text').then(parseFloat).should('be.gte', 1);
+                cy.log('Test: reflects review activity - Navigating to Dashboard.');
+                cy.get('nav a', { timeout: 10000 }).contains('Dashboard').click();
+                cy.url().should('include', '/dashboard');
+                cy.get('.stat-card h2', { timeout: 10000 }).contains('Reviews Today').parent().find('p').invoke('text').then(parseFloat).should('be.gte', 1);
+                cy.log('Test: reflects review activity - Dashboard review count verified.');
 
                 // 3. Navigate to Sentence List, find the reviewed sentence
-                cy.get('nav a').contains('Sentences').click();
+                cy.log('Test: reflects review activity - Navigating to Sentences list.');
+                cy.get('nav a', { timeout: 10000 }).contains('Sentences').click();
+                cy.url().should('include', '/sentences');
 
                 // Use the captured firstCardKeyWord
-                cy.contains('.sentence-list-view tbody tr td', firstCardKeyWord, { timeout: 10000 })
+                cy.log(`Test: reflects review activity - Searching for sentence with key word: ${firstCardKeyWord}`);
+                cy.contains('.sentence-list-view tbody tr td', firstCardKeyWord, { timeout: 15000 })
                     .should('be.visible') // Ensure it's found and visible
                     .parent('tr')
                     .find('a').contains('View Details')
                     .click();
+                cy.log('Test: reflects review activity - Navigated to sentence detail.');
 
                 // 4. On Sentence Detail view, verify the review is listed
                 cy.url().should('match', /\/sentences\/\d+/);
-                cy.get('h1').contains('Sentence Detail');
-                cy.get('.review-history table tbody tr').should('have.length.greaterThan', 0);
-                cy.get('.review-history table tbody tr td').contains('0.7');
-                cy.get('.review-history table tbody tr td pre').contains('E2E test - dashboard/detail check');
+                cy.get('h1', { timeout: 10000 }).contains('Sentence Detail');
+                cy.log('Test: reflects review activity - Verifying review history table.');
+
+                // Increased timeout and more specific checks for the review history table
+                cy.get('.review-history table tbody', { timeout: 20000 })
+                    .find('tr', { timeout: 15000 })
+                    .should('have.length.greaterThan', 0) // Ensure at least one row
+                    .first() // Get the first row (presumably the latest review)
+                    .within(() => {
+                        cy.get('td').eq(1).should('contain', '0.7'); // Assuming score is in the second column
+                        cy.get('td').eq(2).find('pre').should('contain', 'E2E test - dashboard/detail check'); // Assuming comment is in the third
+                    });
+                cy.log('Test: reflects review activity - Review history verified on detail page.');
             });
     });
 }); 
