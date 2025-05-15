@@ -7,21 +7,24 @@ echo "Starting all tests using Docker environment..."
 # This script assumes it's being run from the project root: /home/ben/all_projects/spanish/
 PROJECT_ROOT=$(pwd) # Or set this to your project root if running from elsewhere
 
+# Use docker-compose (v1, hyphenated) command
+DC_COMMAND="docker-compose"
+
 # Cleanup previous runs, if any (optional, but good practice)
 echo "Bringing down any existing Docker services..."
-docker-compose down -v --remove-orphans
+$DC_COMMAND down -v # Using -v for volume removal.
 
 echo ""
 echo "Building and starting Docker services in detached mode..."
-docker-compose up -d --build
+$DC_COMMAND up -d --build
 echo "Services started by docker-compose up -d."
 
 echo ""
 echo "Showing logs for the backend service shortly after startup:"
-docker-compose logs --tail="50" backend # Show last 50 log lines for backend
+$DC_COMMAND logs --tail="50" backend # Show last 50 log lines for backend
 echo ""
 echo "Showing logs for the frontend service shortly after startup:"
-docker-compose logs --tail="50" frontend # Show last 50 log lines for frontend
+$DC_COMMAND logs --tail="50" frontend # Show last 50 log lines for frontend
 
 echo ""
 echo "Waiting for services to initialize (e.g., database migrations, servers to start)..."
@@ -32,7 +35,7 @@ sleep 15 # Give services ~15 seconds to start up
 cleanup() {
     echo ""
     echo "Bringing down Docker services..."
-    docker-compose down -v --remove-orphans
+    $DC_COMMAND down -v # Using -v for volume removal.
     echo "Docker services stopped."
 }
 trap cleanup EXIT
@@ -43,7 +46,7 @@ echo " Phase 1: Backend Django tests      "
 echo "------------------------------------"
 echo "Running backend Django tests with coverage inside the 'backend' container..."
 # Ensure manage.py is executable and at the correct path within the container context (/app/)
-docker-compose exec -T backend sh -c "coverage run manage.py test && coverage xml -o /app/coverage.xml"
+$DC_COMMAND exec -T backend sh -c "coverage run manage.py test && coverage xml -o /app/coverage.xml"
 BACKEND_TEST_STATUS=$?
 if [ $BACKEND_TEST_STATUS -eq 0 ]; then
     echo "Backend Django tests completed and coverage report generated (coverage.xml in anki_web_app/)."
@@ -57,7 +60,7 @@ echo "----------------------------------------"
 echo " Phase 2: Frontend Unit tests (Jest)  "
 echo "----------------------------------------"
 echo "Running frontend unit tests (Jest) inside the 'frontend' container..."
-docker-compose exec -T frontend npm run test:unit
+$DC_COMMAND exec -T frontend npm run test:unit
 FRONTEND_UNIT_TEST_STATUS=$?
 if [ $FRONTEND_UNIT_TEST_STATUS -eq 0 ]; then
     echo "Frontend unit tests completed."
