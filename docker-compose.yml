@@ -21,13 +21,13 @@ services:
     build:
       context: ./anki_web_app/spanish_anki_frontend
       dockerfile: Dockerfile
+      target: build-stage # Use the build-stage for development (npm run serve)
     container_name: spanish_anki_frontend
     volumes:
-      - ./anki_web_app/spanish_anki_frontend/src:/app/src # Mounts the host's src for hot-reloading Vue dev server
-      # For Nginx setup, hot-reloading is handled by Vue's dev server, not Nginx directly.
-      # The Dockerfile for frontend uses npm run build, so changes won't reflect without a rebuild if only using Nginx to serve static files.
-      # To enable hot-reloading for frontend in Docker, we'd typically run `npm run serve` inside the container.
-      # Let's adjust the frontend service for development with hot-reloading:
+      - ./anki_web_app/spanish_anki_frontend:/app # Mount the entire frontend directory for hot-reloading
+      # We need to mount the whole directory, not just src, because node_modules and other files are needed by `npm run serve`
+      # Also, ensure .dockerignore in anki_web_app/spanish_anki_frontend/ excludes node_modules if you don't want host's node_modules to overwrite container's
+    working_dir: /app # Set working directory for npm commands
     command: npm run serve
     ports:
       - "8080:8080"
