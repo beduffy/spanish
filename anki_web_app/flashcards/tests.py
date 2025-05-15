@@ -1026,24 +1026,36 @@ class SentenceListAPITests(APITestCase):
         self.assertEqual(response.data['count'], self.total_sentence_objects) # Total count should still be all sentences
 
     def test_sentence_data_fields_in_list(self):
-        """Verify that essential fields, including calculated ones, are present."""
-        response = self.client.get(self.sentences_url, {'page_size': 5})
+        """Verify that essential fields, including calculated ones, are present for a specific S2E card."""
+        response = self.client.get(self.sentences_url, {'page_size': self.total_sentence_objects}) # Get all results
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
-        sentence_data = response.data['results'][2] # Get the 3rd sentence (csv_number 903)
-        # sentence created with i=3, so csv_number = 903
-        # total_reviews = 3 % 5 = 3
-        # total_score_sum = 3 * 0.8 = 2.4
-        # average_score = 2.4 / 3 = 0.8
-        # last_reviewed_date should exist because 3 % 3 == 0
+        target_csv_number = 903
+        target_direction = 'S2E'
+        sentence_data = None
+        for item in response.data['results']:
+            if item['csv_number'] == target_csv_number and item['translation_direction'] == target_direction:
+                sentence_data = item
+                break
+        
+        self.assertIsNotNone(sentence_data, f"Sentence with CSV number {target_csv_number} and direction {target_direction} not found in list.")
 
-        self.assertEqual(sentence_data['csv_number'], 903)
+        # For concept i=3 (csv_number=903):
+        # total_reviews = 3 % 5 = 3
+        # total_score_sum = 3 * 0.8 = 2.4 (for S2E)
+        # average_score = 2.4 / 3 = 0.8
+        # is_learning = (3 % 2 == 0) which is False
+        # interval_days = 3 % 7 = 3
+        # last_reviewed_date should exist because 3 % 3 == 0 (created in setUp)
+
+        self.assertEqual(sentence_data['key_spanish_word'], "List Word 3") # For S2E
         self.assertIsNotNone(sentence_data['average_score'])
         self.assertAlmostEqual(sentence_data['average_score'], 0.8, places=2)
         self.assertIsNotNone(sentence_data['last_reviewed_date'])
-        self.assertFalse(sentence_data['is_learning']) # Corrected: i=3 -> is_learning = (3 % 2 == 0) which is False
+        self.assertFalse(sentence_data['is_learning']) 
         self.assertEqual(sentence_data['total_reviews'], 3)
-        self.assertEqual(sentence_data['interval_days'], 3 % 7) # Corrected: i=3 -> interval_days = 3 % 7 = 3
+        self.assertEqual(sentence_data['interval_days'], 3)
+        self.assertEqual(sentence_data['translation_direction'], 'S2E')
 
     # TODO: Add tests for filtering and sorting once implemented.
     # TODO: Test with no sentences in DB.
