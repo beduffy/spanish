@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./anki_web_app
+      dockerfile: Dockerfile
+    container_name: spanish_anki_backend
+    command: run_server # Use 'gunicorn' for production after adding it to requirements.txt
+    volumes:
+      - ./anki_web_app:/app # Mounts the host's anki_web_app directory to /app in the container for development (hot-reloading for Python code)
+      - ./data:/app/data # Mounts the host's data directory to /app/data in the container for CSV and DB persistence
+      # - db_data:/app/anki_web_app/data # Example for a named volume if you want Docker to manage it
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal
+      # - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings # If needed
+    depends_on:
+      - db # If you were using a separate database service like Postgres
+
+  frontend:
+    build:
+      context: ./anki_web_app/spanish_anki_frontend
+      dockerfile: Dockerfile
+    container_name: spanish_anki_frontend
+    volumes:
+      - ./anki_web_app/spanish_anki_frontend/src:/app/src # Mounts the host's src for hot-reloading Vue dev server
+      # For Nginx setup, hot-reloading is handled by Vue's dev server, not Nginx directly.
+      # The Dockerfile for frontend uses npm run build, so changes won't reflect without a rebuild if only using Nginx to serve static files.
+      # To enable hot-reloading for frontend in Docker, we'd typically run `npm run serve` inside the container.
+      # Let's adjust the frontend service for development with hot-reloading:
+    command: npm run serve
+    ports:
+      - "8080:8080"
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Often needed for hot-reloading to work correctly in Docker
+    depends_on:
+      - backend
+  # If you decide to use a separate database container (e.g., PostgreSQL)
+  # db:
+  #   image: postgres:13
+  #   container_name: spanish_anki_db
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data/
+  #   environment:
+  #     - POSTGRES_DB=your_db_name
+  #     - POSTGRES_USER=your_db_user
+  #     - POSTGRES_PASSWORD=your_db_password
+  #   ports:
+  #     - "5432:5432"
+
+  # Named volumes (optional, Docker manages these)
+  # volumes:
+  #   postgres_data: 
+  #   db_data: # If you used the named volume for SQLite 
