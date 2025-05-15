@@ -60,4 +60,5 @@ jobs:
       uses: codecov/codecov-action@v4.0.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        slug: ${{ github.repository }} 
+        slug: ${{ github.repository }}
+        files: ./anki_web_app/coverage.xml # Explicitly point to the coverage file 
