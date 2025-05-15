@@ -20,7 +20,7 @@
             <th>English Sentence</th>
             <th>Learned?</th>
             <th>Next Review</th>
-            <!-- Add more columns as needed, e.g., Avg. Score, Last Reviewed -->
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -31,10 +31,9 @@
             <td>{{ sentence.english_sentence_example }}</td>
             <td>{{ sentence.is_learning ? 'Learning' : 'Review' }}</td>
             <td>{{ formatDate(sentence.next_review_date) }}</td>
-            <!-- 
-              Consider adding a link to SentenceDetailView later:
-              <router-link :to="{ name: 'SentenceDetail', params: { id: sentence.sentence_id } }">View</router-link>
-            -->
+            <td>
+              <router-link :to="{ name: 'SentenceDetailView', params: { id: sentence.sentence_id } }" class="action-link">View Details</router-link>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -204,5 +203,15 @@ tr:hover {
 .pagination-controls span {
   margin: 0 10px;
   vertical-align: middle;
+}
+
+.action-link {
+  color: #007bff;
+  text-decoration: none;
+  margin-left: 10px;
+}
+
+.action-link:hover {
+  text-decoration: underline;
 }
 </style> 

@@ -23,7 +23,7 @@ const routes = [
   },
   {
     path: '/sentences/:id', // Route parameter for sentence ID
-    name: 'SentenceDetail',
+    name: 'SentenceDetailView',
     component: SentenceDetailView,
     props: true // Pass route params as props to the component
   },
