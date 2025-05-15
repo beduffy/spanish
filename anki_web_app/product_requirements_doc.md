@@ -194,59 +194,53 @@ This document outlines the requirements for a web application designed to help t
 *   **CSV Structure (Answered):** The delimiter is comma. Encoding needs to be UTF-8 to support special Spanish characters (e.g., ñ, á, é, í, ó, ú, ü). Headers include: `Number`, `Spanish Word`, `English Translation`, `Spanish Example`, `English Example`, `Comment`, `Chat GPTs explanation`, `Gemini explanation`. We will use `Number`, `Spanish Word`, `English Translation` (for key word), `Spanish Example`, `English Example`, `Comment` (as base), and the AI explanation columns.
 *   **Key Spanish Word (Answered):** This will be the content of the `Spanish Word` column from the CSV. The associated translation will be from the `English Translation` column.
 *   **Initial SRS State (Answered):** New cards are introduced sequentially from the CSV (starting at `Number` 1). The user determines the number of new cards per session. Daily counts of new cards reviewed will be tracked.
-*   **"Mastery" Definition (Answered):** A sentence is considered "mastered" for statistical and scheduling purposes when it has been reviewed with a score > 0.8 for the last 3-5 consecutive reviews, AND its current review interval is greater than a significant period (e.g., 21 days).
+*   **"Mastery" Definition (Answered):** A sentence is considered "mastered" for statistical and scheduling purposes when it has been reviewed with a score > 0.8 for the last 3-5 consecutive reviews, AND its current review interval is greater than a significant period (e.g., 21 days). The API currently uses `is_learning=False`, `interval_days >= GRADUATING_INTERVAL_DAYS`, and `consecutive_correct_reviews >= 3`.
 *   **Display of Key Spanish Word on Front of Card (Answered):** The front of the card will always show `[Key Spanish Word]: [Spanish Example Sentence]`.
 *   **Handling of `Chat GPTs explanation` and `Gemini explanation` columns (Answered):** These will be imported into a single `ai_explanation` field in the `Sentences` table. Initially, this field can be NULL or empty if the CSV columns are blank. We can decide later if we need to merge them if both are present or prefer one.
+*   **Bidirectional Learning (Clarification for V2+):** The current (Phase 1) implementation focuses on Spanish to English translation. Each `Sentence` object has one set of SRS parameters. True bidirectional learning (English to Spanish) with independent SRS tracking for each direction for the same conceptual sentence is a V2+ consideration. This might involve treating forward and backward translations as separate "cards" with their own SRS schedules (e.g., by creating two `Sentence` objects per original CSV row or a more complex linked model).
 
 ## Phases
 
-Phase 1: Backend Core (Django)
-Project Setup & Models (Current Step):
-Set up a new Django project (e.g., spanish_anki_project).
-Create a new Django app within the project (e.g., flashcards).
-Define the Sentence and Review models in flashcards/models.py based on the schema we discussed (including fields like ease_factor, interval_days, next_review_date, ai_explanation, etc.).
-Create and run initial database migrations.
-CSV Data Import:
-Create a Django management command (e.g., import_csv) to parse your Spanish - 2000 words in context_may_15th_2025.csv file.
-This command will populate the Sentence table in the database, setting initial SRS parameters for each new sentence.
-Spaced Repetition System (SRS) Logic:
-Implement the core SRS algorithm logic (e.g., a simplified SM2-like algorithm). This will likely involve:
-Functions to determine the next card due for review (considering next_review_date and introducing new cards sequentially).
-Functions to update a sentence's ease_factor, interval_days, and next_review_date based on the user's score for a review.
-Logic for handling "learning" steps for new cards and "graduating" cards.
-Updating consecutive_correct_reviews, total_reviews, and total_score_sum on the Sentence model.
-Django APIs (for Frontend Interaction):
-Develop Django REST framework (or basic Django views returning JSON) for the following API endpoints:
-GET /api/next-card/: Fetches the next sentence to be reviewed based on SRS logic.
-POST /api/submit-review/: Accepts a review (sentence ID, score, comment), records it in the Review table, updates the sentence's SRS parameters, and updates comments.
-GET /api/statistics/: Provides data for the dashboard (reviews today, overall progress, etc.).
-GET /api/sentences/: Provides a list of all sentences with their statistics for the management page.
-GET /api/sentences/<id>/: Provides detailed history for a specific sentence.
-Phase 2: Frontend (Vue.js)
-Vue.js Project Setup & Basic Structure:
-Set up a new Vue.js project (e.g., using Vue CLI).
-Organize components (e.g., FlashcardView, DashboardView, SentenceListView).
-Set up Vue Router for navigation.
-Create services/helpers (e.g., using Axios) to communicate with the Django backend APIs.
-Flashcard Interface:
-Develop the main flashcard component:
-Display front of the card ([Key Spanish Word]: [Spanish Example Sentence]).
-Button to "Show Answer".
-Display back of the card (translations, original Spanish, comments).
-Input fields for score and new comment.
-Button to "Submit & Next", which calls the backend API.
-Statistics & Dashboard:
-Create Vue components to display the statistics fetched from the /api/statistics/ endpoint.
-Sentence Management Page:
-Create Vue components to display the list of all sentences and their individual statistics/history fetched from /api/sentences/ and /api/sentences/<id>/.
-Implement filtering/sorting if desired.
-Phase 3: Refinement & Deployment Prep
-Styling & UX:
-Apply CSS styling to make the app user-friendly and visually appealing.
-Refine user experience based on initial testing.
-Deployment Setup (Nginx & Django configuration):
-Configure Nginx to serve the Django application (e.g., using Gunicorn or uWSGI) and the static Vue.js frontend files.
-Implement basic HTTP authentication via Nginx if needed for security.
+**Phase 1: Backend Core (Django) - COMPLETE**
+
+*   **Project Setup & Models (COMPLETE):**
+    *   Set up Django project (`spanish_anki_project`) and app (`flashcards`).
+    *   Defined `Sentence` and `Review` models in `flashcards/models.py`.
+    *   Created and ran initial database migrations.
+*   **CSV Data Import (COMPLETE):**
+    *   Created `import_csv` Django management command.
+    *   Populated `Sentence` table, setting initial SRS parameters.
+*   **Spaced Repetition System (SRS) Logic (COMPLETE):**
+    *   Implemented SRS algorithm logic in `Sentence.process_review()`.
+    *   Handles learning steps, graduation, and lapses.
+    *   Updates `ease_factor`, `interval_days`, `next_review_date`, etc.
+*   **Django APIs (COMPLETE):**
+    *   `GET /api/flashcards/next-card/`: Fetches the next sentence for review.
+    *   `POST /api/flashcards/submit-review/`: Accepts review, updates SRS, and comments.
+    *   `GET /api/flashcards/statistics/`: Provides dashboard statistics.
+    *   `GET /api/flashcards/sentences/`: Provides a paginated list of all sentences with key stats.
+    *   `GET /api/flashcards/sentences/<id>/`: Provides detailed history for a specific sentence.
+
+**Phase 2: Frontend (Vue.js) - NEXT**
+
+*   **Vue.js Project Setup & Basic Structure:**
+    *   Set up a new Vue.js project (e.g., using Vue CLI).
+    *   Organize components (e.g., FlashcardView, DashboardView, SentenceListView).
+    *   Set up Vue Router for navigation.
+    *   Create services/helpers (e.g., using Axios) to communicate with the Django backend APIs.
+    *   Flashcard Interface:
+        *   Develop the main flashcard component:
+            *   Display front of the card ([Key Spanish Word]: [Spanish Example Sentence]).
+            *   Button to "Show Answer".
+            *   Display back of the card (translations, original Spanish, comments).
+            *   Input fields for score and new comment.
+            *   Button to "Submit & Next", which calls the backend API.
+    *   Statistics & Dashboard:
+        *   Create Vue components to display the statistics fetched from the /api/statistics/ endpoint.
+    *   Sentence Management Page:
+        *   Create Vue components to display the list of all sentences and their individual statistics/history fetched from /api/sentences/ and /api/sentences/<id>/.
+        *   Implement filtering/sorting if desired.
+*   **Backup and restore functionality for the database.**
 
 ---
 
