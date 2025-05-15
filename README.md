@@ -1,5 +1,8 @@
 # Spanish Anki Web App
 
+[![Django CI](https://github.com/beduffy/spanish_anki_project/actions/workflows/ci.yml/badge.svg)](https://github.com/beduffy/spanish_anki_project/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/beduffy/spanish_anki_project/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/beduffy/spanish_anki_project)
+
 ## Overview
 
 This project is a web application that allows users to learn Spanish using an Anki-like flashcard system. It provides a simple, clean interface for reviewing Spanish sentences and tracking progress. Vibe coded.
