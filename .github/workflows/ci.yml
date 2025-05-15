@@ -25,10 +25,10 @@ jobs:
         npm install
         cd ../.. 
         echo "Frontend dependencies installed."
-    - name: Install Xvfb for Cypress
+    - name: Install Cypress Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y xvfb
+        sudo apt-get install -y xvfb libnss3 libgtk-3-0 libgbm-dev libasound2
     - name: Run tests
       run: |
         sh ./run_all_tests.sh
