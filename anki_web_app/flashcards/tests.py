@@ -978,3 +978,73 @@ class SentenceListAPITests(APITestCase):
 
     # TODO: Add tests for filtering and sorting once implemented.
     # TODO: Test with no sentences in DB.
+
+class SentenceDetailAPITests(APITestCase):
+    def setUp(self):
+        Sentence.objects.all().delete()
+        Review.objects.all().delete()
+        self.today = timezone.now()
+
+        self.s1 = Sentence.objects.create(
+            csv_number=1001,
+            key_spanish_word="Detail Word 1",
+            total_reviews=2,
+            total_score_sum=1.7, # avg 0.85
+            next_review_date=self.today.date() + timedelta(days=5)
+        )
+        self.r1_s1 = Review.objects.create(
+            sentence=self.s1, user_score=0.8, review_timestamp=self.today - timedelta(days=2), 
+            interval_at_review=1, ease_factor_at_review=2.5
+        )
+        self.r2_s1 = Review.objects.create(
+            sentence=self.s1, user_score=0.9, review_timestamp=self.today - timedelta(days=1), 
+            user_comment_addon="Good progress!", interval_at_review=3, ease_factor_at_review=2.6
+        )
+
+        self.s2_no_reviews = Sentence.objects.create(
+            csv_number=1002,
+            key_spanish_word="Detail Word 2 No Reviews",
+            total_reviews=0,
+            total_score_sum=0.0,
+            next_review_date=self.today.date()
+        )
+
+    def test_get_sentence_detail_exists_with_reviews(self):
+        """Test fetching detail for an existing sentence with review history."""
+        url = f'/api/flashcards/sentences/{self.s1.pk}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(response.data['sentence_id'], self.s1.pk)
+        self.assertEqual(response.data['csv_number'], 1001)
+        self.assertAlmostEqual(response.data['average_score'], 0.85, places=2)
+        self.assertIsNotNone(response.data['last_reviewed_date'])
+        self.assertEqual(len(response.data['reviews']), 2)
+
+        review_ids_in_response = {r['review_id'] for r in response.data['reviews']}
+        self.assertIn(self.r1_s1.pk, review_ids_in_response)
+        self.assertIn(self.r2_s1.pk, review_ids_in_response)
+        
+        # Check one review detail
+        r2_data = next(r for r in response.data['reviews'] if r['review_id'] == self.r2_s1.pk)
+        self.assertEqual(r2_data['user_score'], 0.9)
+        self.assertEqual(r2_data['user_comment_addon'], "Good progress!")
+
+    def test_get_sentence_detail_exists_no_reviews(self):
+        """Test fetching detail for an existing sentence with no review history."""
+        url = f'/api/flashcards/sentences/{self.s2_no_reviews.pk}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(response.data['sentence_id'], self.s2_no_reviews.pk)
+        self.assertEqual(response.data['csv_number'], 1002)
+        self.assertIsNone(response.data['average_score'])
+        self.assertIsNone(response.data['last_reviewed_date'])
+        self.assertEqual(len(response.data['reviews']), 0)
+
+    def test_get_sentence_detail_not_found(self):
+        """Test fetching detail for a non-existent sentence ID."""
+        non_existent_pk = self.s1.pk + self.s2_no_reviews.pk + 100 # A PK that surely doesn't exist
+        url = f'/api/flashcards/sentences/{non_existent_pk}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

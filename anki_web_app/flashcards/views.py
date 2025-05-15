@@ -7,9 +7,9 @@ from datetime import timedelta
 from django.db.models import Sum
 
 from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS
-from .serializers import SentenceSerializer, ReviewInputSerializer, StatisticsSerializer
+from .serializers import SentenceSerializer, ReviewInputSerializer, StatisticsSerializer, SentenceDetailSerializer
 
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 
 
@@ -180,3 +180,12 @@ class SentenceListAPIView(ListAPIView):
     # ordering_fields = ['csv_number', 'next_review_date', 'total_reviews'] # Example ordering fields
     # For ordering by calculated/annotated fields like average_score or last_reviewed_date,
     # we would need to implement queryset annotations and add them to ordering_fields.
+
+
+class SentenceDetailAPIView(RetrieveAPIView):
+    """
+    API endpoint to retrieve details of a single sentence, including its review history.
+    """
+    queryset = Sentence.objects.all()
+    serializer_class = SentenceDetailSerializer
+    lookup_field = 'pk' # Corresponds to sentence_id as it's the primary key

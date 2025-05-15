@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Sentence
+from .models import Sentence, Review
 
 
 class SentenceSerializer(serializers.ModelSerializer):
@@ -70,4 +70,24 @@ class StatisticsSerializer(serializers.Serializer):
         raise NotImplementedError("This serializer is for output only.")
 
     def update(self, instance, validated_data):
-        raise NotImplementedError("This serializer is for output only.") 
+        raise NotImplementedError("This serializer is for output only.")
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = [
+            'review_id',
+            'review_timestamp',
+            'user_score',
+            'user_comment_addon',
+            'interval_at_review',
+            'ease_factor_at_review'
+        ]
+
+
+class SentenceDetailSerializer(SentenceSerializer): # Inherits from SentenceSerializer
+    reviews = ReviewSerializer(many=True, read_only=True) # Nested list of reviews
+
+    class Meta(SentenceSerializer.Meta): # Inherit Meta to keep model and base fields
+        fields = SentenceSerializer.Meta.fields + ['reviews'] 
