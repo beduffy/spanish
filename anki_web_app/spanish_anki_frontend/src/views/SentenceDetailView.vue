@@ -9,13 +9,15 @@
 
     <div v-if="!isLoading && sentence" class="sentence-content">
       <router-link to="/sentences" class="back-link">&larr; Back to Sentence List</router-link>
-      <h1>Sentence Detail (#{{ sentence.csv_number }})</h1>
+      <h1>Sentence Detail (#{{ sentence.csv_number }}) <span :class="getDirectionBadgeClass(sentence.translation_direction)">{{ formatDirection(sentence.translation_direction) }}</span></h1>
 
       <div class="sentence-card main-details">
-        <div class="detail-item"><strong>Key Spanish Word:</strong> {{ sentence.key_spanish_word }}</div>
-        <div class="detail-item"><strong>Key Word Translation:</strong> {{ sentence.key_word_english_translation }}</div>
-        <div class="detail-item spanish-text"><strong>Spanish Sentence:</strong> {{ sentence.spanish_sentence_example }}</div>
-        <div class="detail-item english-text"><strong>English Sentence:</strong> {{ sentence.english_sentence_example }}</div>
+        <div class="detail-item"><strong>Prompt Key Word:</strong> {{ promptKeyWord }}</div>
+        <div class="detail-item"><strong>Prompt Sentence:</strong> <span class="sentence-display">{{ promptSentence }}</span></div>
+        <hr class="divider" />
+        <div class="detail-item"><strong>Answer Key Word:</strong> {{ answerKeyWord }}</div>
+        <div class="detail-item"><strong>Answer Sentence:</strong> <span class="sentence-display">{{ answerSentence }}</span></div>
+        
         <div class="detail-item" v-if="sentence.base_comment"><strong>Base Comment:</strong> <pre>{{ sentence.base_comment }}</pre></div>
         <div class="detail-item" v-if="sentence.ai_explanation"><strong>AI Explanation:</strong> <pre>{{ sentence.ai_explanation }}</pre></div>
       </div>
@@ -90,6 +92,26 @@ export default {
         return (this.sentence.total_score_sum / this.sentence.total_reviews).toFixed(2);
       }
       return 'N/A';
+    },
+    // Computed properties for dynamic display based on translation_direction
+    isS2E() {
+      return this.sentence && this.sentence.translation_direction === 'S2E';
+    },
+    promptKeyWord() {
+      if (!this.sentence) return '';
+      return this.isS2E ? this.sentence.key_spanish_word : this.sentence.key_word_english_translation;
+    },
+    promptSentence() {
+      if (!this.sentence) return '';
+      return this.isS2E ? this.sentence.spanish_sentence_example : this.sentence.english_sentence_example;
+    },
+    answerKeyWord() { // Renamed from answerKeyWordTranslation for clarity in detail view
+      if (!this.sentence) return '';
+      return this.isS2E ? this.sentence.key_word_english_translation : this.sentence.key_spanish_word;
+    },
+    answerSentence() { // Renamed from answerSentenceTranslation for clarity
+      if (!this.sentence) return '';
+      return this.isS2E ? this.sentence.english_sentence_example : this.sentence.spanish_sentence_example;
     }
   },
   methods: {
@@ -124,6 +146,15 @@ export default {
       if (!dateTimeString) return 'N/A';
       const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
       return new Date(dateTimeString).toLocaleString(undefined, options);
+    },
+    // Copied from SentenceListView for consistency
+    formatDirection(direction) {
+      if (direction === 'S2E') return 'S2E';
+      if (direction === 'E2S') return 'E2S';
+      return direction;
+    },
+    getDirectionBadgeClass(direction) {
+      return direction === 'S2E' ? 'badge-s2e' : 'badge-e2s';
     }
   },
   mounted() {
@@ -152,6 +183,26 @@ export default {
   font-family: Arial, sans-serif;
   max-width: 900px;
   margin: 0 auto;
+}
+
+/* Badge styles copied from SentenceListView */
+.badge-s2e,
+.badge-e2s {
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.7em; /* Slightly smaller for header */
+  font-weight: bold;
+  color: white;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.badge-s2e {
+  background-color: #007bff; /* Blue for S2E */
+}
+
+.badge-e2s {
+  background-color: #28a745; /* Green for E2S */
 }
 
 .loading-message, .error-message, .no-data-message {
@@ -201,6 +252,13 @@ export default {
   padding-bottom: 8px;
 }
 
+.divider {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  border: 0;
+  border-top: 1px solid #eee;
+}
+
 .detail-item {
   margin-bottom: 10px;
   line-height: 1.5;
@@ -211,6 +269,10 @@ export default {
 }
 
 .spanish-text, .english-text {
+  font-size: 1.1em;
+}
+
+.sentence-display { /* Added for consistency with FlashcardView if specific styling is needed */
   font-size: 1.1em;
 }
 
