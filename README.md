@@ -1,7 +1,7 @@
 # Spanish Anki Web App
 
 [![Django CI](https://github.com/beduffy/spanish_anki_project/actions/workflows/ci.yml/badge.svg)](https://github.com/beduffy/spanish_anki_project/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/beduffy/spanish/graph/badge.svg?token=aU3YqSNTUX)](https://codecov.io/gh/beduffy/spanish)
+[![codecov](https://codecov.io/gh/beduffy/spanish/graph/badge.svg)](https://codecov.io/gh/beduffy/spanish)
 
 ## Overview
 
