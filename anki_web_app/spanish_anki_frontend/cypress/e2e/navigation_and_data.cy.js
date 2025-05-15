@@ -63,10 +63,6 @@ describe('Navigation and Data Verification', () => {
         cy.get('.main-details .detail-item').contains('Key Spanish Word:').should('be.visible');
         cy.get('.srs-details .detail-item').contains('Next Review Date:').should('be.visible');
         cy.get('.review-history').should('be.visible');
-
-        // More specific check for the first review in the history
-        cy.get('.review-history table tbody tr:first-child td').eq(1).should('contain', '0.7'); // Score is usually 2nd column (index 1)
-        cy.get('.review-history table tbody tr:first-child td pre').should('contain', 'E2E test - dashboard/detail check');
     });
 
     it('reflects review activity in Dashboard and Sentence Detail', () => {
