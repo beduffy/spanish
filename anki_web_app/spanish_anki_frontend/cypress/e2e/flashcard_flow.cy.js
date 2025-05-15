@@ -3,7 +3,15 @@ describe('Flashcard Review Flow', () => {
         // Intercept the initial card load and wait for it
         cy.intercept('GET', '/api/flashcards/next-card/').as('getNextCard');
         cy.visit('/');
-        cy.wait('@getNextCard', { timeout: 15000 }); // Wait up to 15 seconds for the first card
+        cy.wait('@getNextCard', { timeout: 15000 }).then((interception) => {
+            cy.log('Initial /api/flashcards/next-card/ response:', interception.response);
+            // Optional: Add assertions on the response status code if needed
+            // For example, if you expect a 200 or 204
+            // if (interception.response.statusCode !== 204) { // If not 'no cards due'
+            //    expect(interception.response.statusCode).to.eq(200);
+            //    expect(interception.response.body).to.have.property('spanish_sentence'); 
+            // }
+        });
     });
 
     it('successfully completes a review cycle', () => {
