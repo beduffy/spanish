@@ -2,28 +2,61 @@ describe('Flashcard Review Flow', () => {
     beforeEach(() => {
         cy.log('flashcard_flow.cy.js: beforeEach - Start');
         cy.log('flashcard_flow.cy.js: Setting up intercept for /api/flashcards/next-card/');
-        cy.intercept('GET', '/api/flashcards/next-card/', { failOnStatusCode: false }).as('getNextCard');
+        // Temporarily remove failOnStatusCode: false to see default Cypress error on bad status
+        cy.intercept('GET', '/api/flashcards/next-card/').as('getNextCard');
 
         cy.log('flashcard_flow.cy.js: Visiting / - Start');
         cy.visit('/');
         cy.log('flashcard_flow.cy.js: Visiting / - End');
 
-        cy.log('flashcard_flow.cy.js: Waiting for @getNextCard...');
-        cy.wait('@getNextCard', { timeout: 30000 }) // 30 seconds timeout
+        cy.log('flashcard_flow.cy.js: Waiting for @getNextCard (timeout 30s)...');
+        cy.wait('@getNextCard', { timeout: 30000 })
             .then((interception) => {
-                cy.log('flashcard_flow.cy.js: @getNextCard - Interception object:', JSON.stringify(interception));
+                cy.log('flashcard_flow.cy.js: @getNextCard - Interception received.');
+
+                if (!interception) {
+                    cy.log('flashcard_flow.cy.js: @getNextCard - CRITICAL: Interception object IS NULL or undefined.');
+                    throw new Error('@getNextCard interception object was null or undefined unexpectedly.');
+                }
+
+                cy.log('flashcard_flow.cy.js: @getNextCard - Interception object is present.');
+
+                if (interception.request) {
+                    cy.log('flashcard_flow.cy.js: @getNextCard - Request URL:', interception.request.url);
+                    cy.log('flashcard_flow.cy.js: @getNextCard - Request Headers:', JSON.stringify(interception.request.headers));
+                } else {
+                    cy.log('flashcard_flow.cy.js: @getNextCard - CRITICAL: NO interception.request object.');
+                    throw new Error('@getNextCard interception has no request object.');
+                }
+
                 if (interception.response) {
                     cy.log('flashcard_flow.cy.js: @getNextCard - Response status:', interception.response.statusCode);
-                    cy.log('flashcard_flow.cy.js: @getNextCard - Response body:', JSON.stringify(interception.response.body));
-                    // Basic assertion to ensure we have a response object
-                    expect(interception.response).to.not.be.undefined;
-                } else {
-                    cy.log('flashcard_flow.cy.js: @getNextCard - No interception.response object found.');
-                }
-            })
-            .should('exist'); // Ensures the wait command itself completes and yields the interception
+                    cy.log('flashcard_flow.cy.js: @getNextCard - Response Headers:', JSON.stringify(interception.response.headers));
+                    let responseBodyString = 'N/A';
+                    try {
+                        // Only attempt to stringify if body exists and is not excessively large for logging
+                        if (interception.response.body && typeof interception.response.body === 'object') {
+                            responseBodyString = JSON.stringify(interception.response.body).substring(0, 500); // Log a snippet
+                        } else if (interception.response.body) {
+                            responseBodyString = String(interception.response.body).substring(0, 500);
+                        }
+                    } catch (e) {
+                        responseBodyString = `Error stringifying response body: ${e.message}`;
+                    }
+                    cy.log('flashcard_flow.cy.js: @getNextCard - Response body (stringified snippet):', responseBodyString);
 
-        cy.log('flashcard_flow.cy.js: beforeEach - End');
+                    // Assert basic validity of the response
+                    expect(interception.response, 'Interception response object').to.exist;
+                    expect(interception.response.statusCode, 'API response status code').to.be.oneOf([200, 204]);
+
+                } else {
+                    cy.log('flashcard_flow.cy.js: @getNextCard - CRITICAL: NO interception.response object.');
+                    throw new Error('@getNextCard interception received, but no interception.response object found.');
+                }
+            });
+        // Removed the previous .should('exist')
+
+        cy.log('flashcard_flow.cy.js: beforeEach - End, after .wait().then() chain.');
     });
 
     it('successfully completes a review cycle', () => {
