@@ -21,12 +21,10 @@ jobs:
     - name: Install docker-compose (V1) and compatible dependencies
       run: |
         pip install --upgrade pip
-        # docker-compose 1.29.2 needs a compatible docker library.
-        # docker-py 5.x is compatible with requests, which is compatible with urllib3 1.x.
-        # Pip will resolve to docker-5.0.3 due to docker<6.0.0 and docker-compose's dependency.
-        # Let pip resolve compatible requests and urllib3.
-        pip install "docker<6.0.0"  # Should pull in docker-py 5.0.3
-        pip install docker-compose==1.29.2 # Depends on docker[ssh]>=3.0.0,<7.0.0 OR docker>=5
+        pip install requests==2.31.0  # Pin requests to a known good version before 2.32.0
+        pip install "urllib3<2.0"  # Compatible with requests 2.31.0
+        pip install requests-unixsocket # For robust socket handling
+        pip install docker-compose==1.25.0 # Match user's local working version, pulls in docker-py 4.x
       # Previous attempt, keeping for history:
       # run: |
       #   sudo apt-get update

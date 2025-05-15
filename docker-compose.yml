@@ -16,6 +16,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal
       # - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings # If needed
+    networks:
+      - app_services_network
 
   frontend:
     build:
@@ -35,6 +37,8 @@ services:
       - CHOKIDAR_USEPOLLING=true # Often needed for hot-reloading to work correctly in Docker
     depends_on:
       - backend
+    networks:
+      - app_services_network
   # If you decide to use a separate database container (e.g., PostgreSQL)
   # db:
   #   image: postgres:13
@@ -52,3 +56,8 @@ services:
   # volumes:
   #   postgres_data:
   #   db_data: # If you used the named volume for SQLite
+
+networks:
+  app_services_network:
+    driver: bridge
+    name: spanish_anki_app_net # Explicit name for the Docker network
