@@ -4,7 +4,8 @@ from io import StringIO
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
-from flashcards.models import Sentence
+from flashcards.models import Sentence, Review
+from datetime import timedelta
 
 # Create your tests here.
 
@@ -130,3 +131,85 @@ class ImportCSVCommandTest(TestCase):
         call_command('import_csv', temp_csv_file, stdout=out)
         self.assertEqual(Sentence.objects.count(), 0)
         self.assertIn("Successfully imported 0 new sentences.", out.getvalue())
+
+class SRSLogicTests(TestCase):
+    def _create_sentence(self, csv_number=100, key_spanish_word="Test Word", 
+                           ease_factor=2.5, interval_days=0, 
+                           is_learning=True, consecutive_correct_reviews=0,
+                           next_review_date=None, total_reviews=0, total_score_sum=0.0):
+        if next_review_date is None:
+            next_review_date = timezone.now().date()
+        
+        # Delete if exists to ensure clean slate for specific csv_number in tests
+        Sentence.objects.filter(csv_number=csv_number).delete()
+        
+        return Sentence.objects.create(
+            csv_number=csv_number,
+            key_spanish_word=key_spanish_word,
+            key_word_english_translation="Test Translation",
+            spanish_sentence_example="Test Spanish Example",
+            english_sentence_example="Test English Example",
+            ease_factor=ease_factor,
+            interval_days=interval_days,
+            is_learning=is_learning,
+            consecutive_correct_reviews=consecutive_correct_reviews,
+            next_review_date=next_review_date,
+            total_reviews=total_reviews,
+            total_score_sum=total_score_sum
+        )
+
+    def test_new_card_perfect_score(self):
+        sentence = self._create_sentence(interval_days=0, is_learning=True, consecutive_correct_reviews=0)
+        original_ef = sentence.ease_factor
+        
+        # This method doesn't exist yet, so this test will error out initially
+        sentence.process_review(user_score=0.95, review_comment="Perfect!") 
+
+        self.assertEqual(sentence.interval_days, 1, "Interval should be 1 day after first learning pass")
+        self.assertAlmostEqual(sentence.ease_factor, original_ef + 0.1, delta=0.01, msg="EF should increase for perfect score")
+        self.assertTrue(sentence.is_learning, "Should still be in learning phase")
+        self.assertEqual(sentence.consecutive_correct_reviews, 1, "Consecutive good scores should be 1")
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=1))
+        self.assertEqual(sentence.total_reviews, 1)
+        self.assertEqual(sentence.total_score_sum, 0.95)
+        self.assertEqual(Review.objects.count(), 1)
+        review = Review.objects.first()
+        self.assertEqual(review.sentence, sentence)
+        self.assertEqual(review.user_score, 0.95)
+        self.assertEqual(review.user_comment_addon, "Perfect!")
+        self.assertEqual(review.interval_at_review, 0) # Interval before this review
+        self.assertEqual(review.ease_factor_at_review, original_ef) # EF before this review
+
+    def test_new_card_medium_score(self):
+        sentence = self._create_sentence(interval_days=0, is_learning=True, consecutive_correct_reviews=0)
+        original_ef = sentence.ease_factor # Should be 2.5
+        # user_score = 0.7 (q=3)
+        # EF_new = EF + (0.1 - (5-3)*(0.08+(5-3)*0.02)) = EF + (0.1 - 2*(0.08+0.04)) = EF + (0.1 - 2*0.12) = EF + (0.1 - 0.24) = EF - 0.14
+        expected_ef = original_ef - 0.14 
+
+        sentence.process_review(user_score=0.7, review_comment="Okay")
+
+        self.assertEqual(sentence.interval_days, 1, "Interval should be 1 day after first learning pass")
+        self.assertAlmostEqual(sentence.ease_factor, expected_ef, delta=0.01, msg="EF should decrease for q=3 score")
+        self.assertTrue(sentence.is_learning)
+        self.assertEqual(sentence.consecutive_correct_reviews, 0, "Score 0.7 is not > 0.8 for mastery tracking")
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=1))
+        self.assertEqual(Review.objects.count(), 1)
+        self.assertEqual(Review.objects.first().user_score, 0.7)
+
+    def test_new_card_fail_score(self):
+        sentence = self._create_sentence(interval_days=0, is_learning=True, consecutive_correct_reviews=0)
+        original_ef = sentence.ease_factor
+        
+        sentence.process_review(user_score=0.3) # q=1 (fail)
+
+        self.assertEqual(sentence.interval_days, 0, "Interval should reset to 0 (or first step) on fail")
+        self.assertAlmostEqual(sentence.ease_factor, original_ef, delta=0.01, msg="EF should ideally not change much or slightly decrease on first fail") # Or define penalty
+        self.assertTrue(sentence.is_learning)
+        self.assertEqual(sentence.consecutive_correct_reviews, 0)
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=0)) # Or 1 if first step is 1 day
+        self.assertEqual(Review.objects.count(), 1)
+        self.assertEqual(Review.objects.first().user_score, 0.3)
+
+    # We will add more tests for other scenarios (learning steps, graduation, review, lapse, EF cap etc.)
+    # once the basic process_review method structure is in place and these initial tests pass.
