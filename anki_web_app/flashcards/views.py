@@ -160,7 +160,7 @@ class StatisticsAPIView(APIView):
 
 
 class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 25 # Default page size
+    page_size = 100 # Default page size
     page_size_query_param = 'page_size'
     max_page_size = 100
 
