@@ -38,7 +38,7 @@ docker-compose logs --tail="20" frontend || echo "Could not get frontend logs ye
 # A more robust wait: check for a specific log message or port availability if possible.
 # For now, a simple sleep is used, but this could be improved.
 # Example: Wait for Django migrations to complete in backend
-# This is a placeholder; a more robust check would be `docker-compose exec backend python manage.py showmigrations --plan | grep -q "\[ \]"`
+# This is a placeholder; a more robust check would be `docker-compose exec -T backend python manage.py showmigrations --plan | grep -q "\[ \]"`
 # or checking if the port is open and responsive.
 
 # Simple sleep for now, can be improved with health checks
@@ -51,16 +51,16 @@ sleep $SLEEP_SECONDS
 print_message "Phase 1: Backend Django tests"
 echo "Running backend Django tests with coverage inside the 'backend' container..."
 # The command to run tests and generate coverage.xml. Output will be in /app/coverage.xml inside the container.
-docker-compose exec backend coverage run manage.py test flashcards --noinput
+docker-compose exec -T backend coverage run manage.py test flashcards --noinput
 # Generate XML report from coverage data
-docker-compose exec backend coverage xml -o /app/coverage.xml
+docker-compose exec -T backend coverage xml -o /app/coverage.xml
 echo "Backend Django tests completed and coverage report generated (coverage.xml in anki_web_app/)."
 
 
 # --- Phase 1.5: Seed data for E2E tests ---
 print_message "Phase 1.5: Seeding database for E2E tests"
 echo "Running seed_e2e_data management command inside the 'backend' container..."
-docker-compose exec backend python manage.py seed_e2e_data
+docker-compose exec -T backend python manage.py seed_e2e_data
 echo "E2E data seeding completed."
 
 
@@ -68,7 +68,7 @@ echo "E2E data seeding completed."
 print_message "Phase 2: Frontend Unit tests (Jest)"
 echo "Running frontend unit tests (Jest) inside the 'frontend' container..."
 # The frontend service in docker-compose.yml should be using the 'build-stage' which has Node installed.
-docker-compose exec frontend npm run test:unit
+docker-compose exec -T frontend npm run test:unit
 echo "Frontend unit tests completed."
 
 
