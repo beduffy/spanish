@@ -11,6 +11,7 @@ class SentenceSerializer(serializers.ModelSerializer):
         fields = [ # Specify fields to include in the API response
             'sentence_id',
             'csv_number',
+            'translation_direction', # Added for bidirectional cards
             'key_spanish_word',
             'key_word_english_translation',
             'spanish_sentence_example',
@@ -94,5 +95,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 class SentenceDetailSerializer(SentenceSerializer): # Inherits from SentenceSerializer
     reviews = ReviewSerializer(many=True, read_only=True) # Nested list of reviews
 
+    # Meta inheritance is handled by SentenceSerializer, so no need to redefine fields here explicitly
+    # unless we are adding fields specific only to Detail, which 'reviews' is.
+    # The base fields including 'translation_direction' will be inherited.
     class Meta(SentenceSerializer.Meta): # Inherit Meta to keep model and base fields
-        fields = SentenceSerializer.Meta.fields + ['reviews'] 
+        # Ensure 'reviews' is added to the inherited list of fields
+        fields = list(SentenceSerializer.Meta.fields) + ['reviews'] 

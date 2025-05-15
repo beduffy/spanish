@@ -10,8 +10,20 @@ LAPSE_INTERVAL_DAYS = 0 # Interval when a review card lapses (back to learning s
 LEARNING_STEPS_DAYS = [1, 3] # Intervals for learning steps: 1 day, then 3 days
 
 class Sentence(models.Model):
+    TRANSLATION_DIRECTIONS = [
+        ('S2E', 'Spanish to English'),
+        ('E2S', 'English to Spanish'),
+    ]
+
     sentence_id = models.AutoField(primary_key=True)
-    csv_number = models.IntegerField(unique=True, help_text="Original number from CSV for reference")
+    # csv_number will be unique in combination with translation_direction
+    csv_number = models.IntegerField(help_text="Original number from CSV for reference")
+    translation_direction = models.CharField(
+        max_length=3,
+        choices=TRANSLATION_DIRECTIONS,
+        default='S2E',
+        help_text="Direction of translation for this card (e.g., Spanish to English)"
+    )
     key_spanish_word = models.TextField()
     key_word_english_translation = models.TextField()
     spanish_sentence_example = models.TextField()
@@ -29,7 +41,7 @@ class Sentence(models.Model):
     total_score_sum = models.FloatField(default=0.0, help_text="Sum of all scores for this card, to calculate average")
 
     def __str__(self):
-        return f"{self.csv_number}: {self.key_spanish_word} - {self.spanish_sentence_example[:50]}..."
+        return f"{self.csv_number} ({self.get_translation_direction_display()}): {self.key_spanish_word} - {self.spanish_sentence_example[:50]}..."
 
     def _get_quality_from_score(self, score):
         if score >= 0.9:
@@ -120,7 +132,8 @@ class Sentence(models.Model):
         return self
 
     class Meta:
-        ordering = ['csv_number']
+        ordering = ['csv_number', 'translation_direction']
+        unique_together = [['csv_number', 'translation_direction']]
         verbose_name = "Sentence Card"
         verbose_name_plural = "Sentence Cards"
 

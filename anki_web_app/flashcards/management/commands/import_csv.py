@@ -18,11 +18,15 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f'Starting import from "{csv_file_path}"'))
 
-        # Keep track of imported sentences to avoid duplicates if script is run multiple times
-        # based on csv_number
-        existing_csv_numbers = set(Sentence.objects.values_list('csv_number', flat=True))
-        imported_count = 0
-        skipped_count = 0
+        # Keep track of imported sentences to avoid duplicates
+        # based on (csv_number, translation_direction) tuples
+        existing_sentence_tuples = set(
+            Sentence.objects.values_list('csv_number', 'translation_direction')
+        )
+        imported_s2e_count = 0
+        imported_e2s_count = 0
+        skipped_s2e_count = 0
+        skipped_e2s_count = 0
 
         try:
             with open(csv_file_path, mode='r', encoding='utf-8') as file:
@@ -37,50 +41,68 @@ class Command(BaseCommand):
                 for row_num, row in enumerate(reader, start=2): # start=2 because of header row
                     try:
                         csv_number = int(row['Number'])
-                        if csv_number in existing_csv_numbers:
-                            self.stdout.write(self.style.WARNING(f'Skipping already imported sentence with CSV Number: {csv_number}'))
-                            skipped_count += 1
-                            continue
-
-                        key_spanish_word = row['Spanish Word']
-                        key_word_english_translation = row['English Translation']
-                        spanish_sentence_example = row['Spanish Example']
-                        english_sentence_example = row['English Example']
-                        base_comment = row.get('Comment') # Changed: Allow None if column missing, or actual value (empty string if cell is empty)
                         
-                        # Concatenate AI explanations if they exist, otherwise leave as None
+                        # Common data for both directions
+                        base_comment_val = row.get('Comment')
                         chat_gpt_explanation = row.get('Chat GPTs explanation', '').strip()
                         gemini_explanation = row.get('Gemini explanation', '').strip()
-                        ai_explanation = None
+                        ai_explanation_val = None
                         if chat_gpt_explanation and gemini_explanation:
-                            ai_explanation = f"ChatGPT: {chat_gpt_explanation}\nGemini: {gemini_explanation}"
+                            ai_explanation_val = f"ChatGPT: {chat_gpt_explanation}\nGemini: {gemini_explanation}"
                         elif chat_gpt_explanation:
-                            ai_explanation = chat_gpt_explanation
+                            ai_explanation_val = chat_gpt_explanation
                         elif gemini_explanation:
-                            ai_explanation = gemini_explanation
+                            ai_explanation_val = gemini_explanation
 
-                        Sentence.objects.create(
-                            csv_number=csv_number,
-                            key_spanish_word=key_spanish_word,
-                            key_word_english_translation=key_word_english_translation,
-                            spanish_sentence_example=spanish_sentence_example,
-                            english_sentence_example=english_sentence_example,
-                            base_comment=base_comment, # Changed: Directly pass the value
-                            ai_explanation=ai_explanation,
-                            # SRS defaults are set in the model definition
-                            # (ease_factor, interval_days, next_review_date, is_learning, consecutive_correct_reviews)
-                            # creation_date and last_modified_date also have defaults or auto_now
-                        )
-                        existing_csv_numbers.add(csv_number) # Add to set after successful creation
-                        imported_count += 1
+                        # Data for S2E card
+                        s2e_tuple = (csv_number, 'S2E')
+                        if s2e_tuple in existing_sentence_tuples:
+                            self.stdout.write(self.style.WARNING(f'Skipping already imported S2E sentence with CSV Number: {csv_number}'))
+                            skipped_s2e_count += 1
+                        else:
+                            Sentence.objects.create(
+                                csv_number=csv_number,
+                                translation_direction='S2E',
+                                key_spanish_word=row['Spanish Word'],
+                                key_word_english_translation=row['English Translation'],
+                                spanish_sentence_example=row['Spanish Example'],
+                                english_sentence_example=row['English Example'],
+                                base_comment=base_comment_val,
+                                ai_explanation=ai_explanation_val,
+                            )
+                            existing_sentence_tuples.add(s2e_tuple)
+                            imported_s2e_count += 1
+
+                        # Data for E2S card
+                        e2s_tuple = (csv_number, 'E2S')
+                        if e2s_tuple in existing_sentence_tuples:
+                            self.stdout.write(self.style.WARNING(f'Skipping already imported E2S sentence with CSV Number: {csv_number}'))
+                            skipped_e2s_count += 1
+                        else:
+                            Sentence.objects.create(
+                                csv_number=csv_number,
+                                translation_direction='E2S',
+                                # For E2S, the 'key_spanish_word' field will store the English key word/phrase
+                                # and 'key_word_english_translation' will store the Spanish one.
+                                # The prompt sentence is English, answer is Spanish.
+                                key_spanish_word=row['English Translation'], # English key word is the prompt's key
+                                key_word_english_translation=row['Spanish Word'], # Spanish key word is the answer's key
+                                spanish_sentence_example=row['English Example'], # English sentence is the prompt
+                                english_sentence_example=row['Spanish Example'], # Spanish sentence is the answer
+                                base_comment=base_comment_val,
+                                ai_explanation=ai_explanation_val,
+                            )
+                            existing_sentence_tuples.add(e2s_tuple)
+                            imported_e2s_count += 1
+                            
                     except ValueError as e:
                         self.stderr.write(self.style.ERROR(f'Error processing row {row_num}: {e}. Row data: {row}'))
                     except KeyError as e:
                         self.stderr.write(self.style.ERROR(f'Missing expected column in row {row_num}: {e}. Row data: {row}'))
                         
-            self.stdout.write(self.style.SUCCESS(f'Successfully imported {imported_count} new sentences.'))
-            if skipped_count > 0:
-                self.stdout.write(self.style.WARNING(f'Skipped {skipped_count} already existing sentences.'))
+            self.stdout.write(self.style.SUCCESS(f'Successfully imported {imported_s2e_count} new S2E sentences and {imported_e2s_count} new E2S sentences.'))
+            if skipped_s2e_count > 0 or skipped_e2s_count > 0:
+                self.stdout.write(self.style.WARNING(f'Skipped {skipped_s2e_count} S2E and {skipped_e2s_count} E2S already existing sentences.'))
 
         except FileNotFoundError:
             raise CommandError(f'File "{csv_file_path}" not found')
