@@ -77,7 +77,7 @@ This document outlines the requirements for a web application designed to help t
 ### 4.1. Learning Flow (Flashcard Interface)
 
 *   **Card Display (Front - "Input"):**
-    *   Show the Spanish sentence (e.g., from CSV "Spanish Example" field, optionally prefixed by the "Spanish Word" field like "De: Él es de la ciudad de Nueva York").
+    *   Show `[Key Spanish Word]: [Spanish Example Sentence]` (e.g., "De: Él es de la ciudad de Nueva York"). The `Key Spanish Word` is from the CSV "Spanish Word" field, and `Spanish Example Sentence` is from the CSV "Spanish Example" field.
 *   **User Action: Think/Say Translation.**
 *   **User Action: Click "Show Answer".**
 *   **Card Display (Back - "Answer"):**
@@ -103,7 +103,8 @@ This document outlines the requirements for a web application designed to help t
     *   User's score on previous reviews of the card.
     *   Time since the card was last reviewed.
     *   Calculated ease factor or similar SRS parameter for the card.
-*   New cards will be introduced gradually.
+*   **New Card Introduction:** New cards will be introduced sequentially, starting from `Number` 1 in the CSV. The number of new cards per day/session will be a configurable setting (e.g., default to 10-20 new cards if there are due reviews, otherwise more).
+*   **Card Gradation/Mastery:** Cards considered "mastered" (e.g., consistently achieving a score > 0.8 for the last 3-5 reviews AND current interval > 21 days) will have their review intervals significantly increased.
 *   Cards mastered will appear less frequently.
 
 ### 4.4. Progress Tracking & Statistics
@@ -113,7 +114,7 @@ This document outlines the requirements for a web application designed to help t
     *   Cards reviewed this week.
     *   Total cards reviewed.
     *   Overall average score.
-    *   Number of unique sentences mastered (e.g., consistently scoring >0.9, see definition in Open Questions).
+    *   Number of unique sentences mastered (see definition in SRS section).
     *   Number of unique sentences learned/seen.
     *   Percentage of total sentences learned/seen.
 *   **Per-Sentence Statistics:**
@@ -179,11 +180,12 @@ This document outlines the requirements for a web application designed to help t
 
 ## 8. Open Questions & Clarifications
 
-*   **CSV Structure (Partially Answered):** The provided snippet shows headers: `Number`, `Spanish Word`, `English Translation`, `Spanish Example`, `English Example`, `Comment`, `Chat GPTs explanation`, `Gemini explanation`, and some empty columns followed by a URL. We will primarily use `Number`, `Spanish Word`, `English Translation` (for the key word), `Spanish Example`, `English Example`, and `Comment`. We should confirm if the delimiter is comma and if there are any specific encoding requirements (e.g., UTF-8 for special characters).
+*   **CSV Structure (Answered):** The delimiter is comma. Encoding needs to be UTF-8 to support special Spanish characters (e.g., ñ, á, é, í, ó, ú, ü). Headers are: `Number`, `Spanish Word`, `English Translation`, `Spanish Example`, `English Example`, `Comment`, and others which may be ignored. We will primarily use `Number`, `Spanish Word`, `English Translation` (for the key word), `Spanish Example`, `English Example`, and `Comment` (as the base comment).
 *   **Key Spanish Word (Answered):** This will be the content of the `Spanish Word` column from the CSV. The associated translation will be from the `English Translation` column.
-*   **Initial SRS State:** How should new cards be prioritized initially? (e.g., show in order of CSV `Number`, or randomly select from unseen cards? How many new cards per day/session by default?)
-*   **"Mastery" Definition:** How do we define when a sentence is "mastered" for statistical purposes (e.g., N successful reviews in a row with score >= 0.9, interval reaches X days)?
-*   **Display of Key Spanish Word on Front of Card:** In your example "Input to me: De: Él es de la ciudad de Nueva York", the "De:" prefix seems to come from the key Spanish word. Should the front of the card always show `[Key Spanish Word]: [Spanish Example Sentence]` or just the `[Spanish Example Sentence]`?
+*   **Initial SRS State (Answered):** New cards are introduced sequentially from the CSV (starting at `Number` 1). A default number of new cards per day/session should be configurable (e.g., 10-20 if review cards are also due).
+*   **"Mastery" Definition (Answered):** A sentence is considered "mastered" for statistical and scheduling purposes when it has been reviewed with a score > 0.8 for the last 3-5 consecutive reviews, AND its current review interval is greater than a significant period (e.g., 21 days).
+*   **Display of Key Spanish Word on Front of Card (Answered):** The front of the card will always show `[Key Spanish Word]: [Spanish Example Sentence]`.
+*   **Handling of `Chat GPTs explanation` and `Gemini explanation` columns:** Should these be imported into the database? If so, where? Perhaps a new field in the `Sentences` table like `ai_explanation` or similar, or are they to be ignored for now?
 
 ---
 
