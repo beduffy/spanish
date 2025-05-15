@@ -1,7 +1,7 @@
 # Product Requirements Document: Anki-Style Spanish Learning App
 
 ## Original prompt:
-Here is my latest csv. Could you build me a Plan document for a HTML app that will test with anki cards on each sentence from Spanish to english and Spanish to german (but also mention the spanish and english word). Maybe initially I will just say/think the translation (actually this requires less typing which is best) e.g.
+Here is my latest csv. Could you build me a Plan document for a HTML app that will test with anki cards on each sentence from Spanish to english... Maybe initially I will just say/think the translation (actually this requires less typing which is best) e.g.
 
 Input to me:
 De:
@@ -45,22 +45,21 @@ Could we store this all is csv or SQL or something? Yes SQL is best. What do you
 
 ## 1. Introduction/Overview
 
-This document outlines the requirements for a web application designed to help the user learn Spanish sentences and vocabulary through an Anki-style flashcard system. The primary goal is to facilitate the memorization and understanding of approximately 2000 Spanish sentences, with translations to English and German, and to track progress effectively.
+This document outlines the requirements for a web application designed to help the user learn Spanish sentences and vocabulary through an Anki-style flashcard system. The primary goal is to facilitate the memorization and understanding of approximately 2000 Spanish sentences, with translations to English, and to track progress effectively.
 
 ## 2. Goals
 
 *   Efficiently learn and retain ~2000 Spanish sentences.
 *   Practice translation from Spanish to English.
-*   Practice translation from Spanish to German (while also seeing the English translation and Spanish word).
 *   Track subjective understanding and recall for each sentence.
-*   Implement a spaced repetition system (SRS) to optimize learning.
+*   Implement a spaced repetition system (SRS) to optimize learning based on established forgetting curve principles.
 *   Provide clear metrics on learning progress.
 *   Create a simple, fast, and intuitive user experience.
 
 ## 3. User Stories
 
 *   **As a user, I want to be shown a Spanish sentence so I can practice translating it in my head.**
-*   **As a user, after thinking of the translation, I want to click a button to reveal the correct English and German translations, along with the original Spanish sentence and a key Spanish word with its English translation.**
+*   **As a user, after thinking of the translation, I want to click a button to reveal the correct English translation, along with the original Spanish sentence and a key Spanish word with its English translation.**
 *   **As a user, I want to be able to add a timestamped comment to my review of a sentence, noting any difficulties or insights (e.g., "forgot to say 'city'").**
 *   **As a user, I want to give myself a subjective score (e.g., 0.0 to 1.0) for each sentence translation attempt to track my understanding.**
 *   **As a user, I want to submit my comment and score and immediately move to the next sentence/card.**
@@ -78,17 +77,16 @@ This document outlines the requirements for a web application designed to help t
 ### 4.1. Learning Flow (Flashcard Interface)
 
 *   **Card Display (Front - "Input"):**
-    *   Show the Spanish sentence (e.g., "De: Él es de la ciudad de Nueva York").
+    *   Show the Spanish sentence (e.g., from CSV "Spanish Example" field, optionally prefixed by the "Spanish Word" field like "De: Él es de la ciudad de Nueva York").
 *   **User Action: Think/Say Translation.**
 *   **User Action: Click "Show Answer".**
 *   **Card Display (Back - "Answer"):**
-    *   Original Spanish sentence.
-    *   Key Spanish word and its English translation (e.g., "De = From").
-    *   English translation (e.g., "He is from New York City.").
-    *   German translation (e.g., "Er kommt aus New York City.")
-    *   Existing comments, including any previously user-added timestamped notes.
+    *   Original Spanish sentence (from CSV "Spanish Example" field).
+    *   Key Spanish word (from CSV "Spanish Word" field) and its English translation (from CSV "English Translation" field for that word) (e.g., "De = From").
+    *   English translation of the sentence (from CSV "English Example" field) (e.g., "He is from New York City.").
+    *   Existing comments, including any previously user-added timestamped notes (from CSV "Comment" field, appended with user's dynamic notes).
 *   **User Input Fields:**
-    *   Text area for new comment.
+    *   Text area for new comment (to be appended to existing comments for the sentence).
     *   Input for subjective score (0.0 - 1.0).
 *   **User Action: Click "Submit & Next".**
 
@@ -96,15 +94,15 @@ This document outlines the requirements for a web application designed to help t
 
 *   Users can assign a numerical score (float between 0.0 and 1.0) to each review attempt.
 *   Users can add free-text comments.
-*   Comments will be appended to a running log for that specific sentence, with a timestamp (e.g., "15:31 May 15th: ahhhh I forgot to say city").
+*   Comments will be appended to a running log for that specific sentence, with a timestamp (e.g., "15:31 May 15th: ahhhh I forgot to say city"). The initial comment may come from the CSV's "Comment" field.
 
 ### 4.3. Spaced Repetition System (SRS)
 
-*   The system will decide which card to show next based on an SRS algorithm (e.g., a simplified version of Anki's SM2 algorithm or similar).
+*   The system will decide which card to show next based on an SRS algorithm. Research will be conducted to select/implement a suitable algorithm based on established forgetting curve literature (e.g., a variant of SM2, Leitner system principles, etc.).
 *   Factors influencing card scheduling:
     *   User's score on previous reviews of the card.
     *   Time since the card was last reviewed.
-    *   Overall learning progress.
+    *   Calculated ease factor or similar SRS parameter for the card.
 *   New cards will be introduced gradually.
 *   Cards mastered will appear less frequently.
 
@@ -115,7 +113,7 @@ This document outlines the requirements for a web application designed to help t
     *   Cards reviewed this week.
     *   Total cards reviewed.
     *   Overall average score.
-    *   Number of unique sentences mastered (e.g., consistently scoring >0.9).
+    *   Number of unique sentences mastered (e.g., consistently scoring >0.9, see definition in Open Questions).
     *   Number of unique sentences learned/seen.
     *   Percentage of total sentences learned/seen.
 *   **Per-Sentence Statistics:**
@@ -130,54 +128,62 @@ This document outlines the requirements for a web application designed to help t
 *   **Sentence Page:**
     *   A view to list all ~2000 sentences.
     *   Ability to see key statistics for each sentence at a glance.
-    *   Potentially filter/sort sentences (e.g., by difficulty, last reviewed).
+    *   Potentially filter/sort sentences (e.g., by difficulty, last reviewed, score).
 
 ## 5. Data Model (High-Level - SQL Database)
 
 *   **Sentences Table:**
-    *   `sentence_id` (Primary Key)
-    *   `spanish_sentence` (TEXT)
-    *   `english_translation` (TEXT)
-    *   `german_translation` (TEXT)
-    *   `key_spanish_word` (TEXT, optional, if a specific word from the sentence is highlighted)
-    *   `key_word_english_translation` (TEXT, optional)
-    *   `base_comment` (TEXT, e.g., "Literal translation: He is from the city of New York")
-    *   `creation_date` (TIMESTAMP)
-    *   `last_modified_date` (TIMESTAMP)
-    *   *(SRS-related fields like `ease_factor`, `interval`, `next_review_date` will be stored here or in a linked table)*
+    *   `sentence_id` (Primary Key, Auto-incrementing Integer)
+    *   `csv_number` (Integer, from 'Number' column in CSV for reference)
+    *   `key_spanish_word` (TEXT, from 'Spanish Word' column in CSV)
+    *   `key_word_english_translation` (TEXT, from 'English Translation' column in CSV)
+    *   `spanish_sentence_example` (TEXT, from 'Spanish Example' column in CSV)
+    *   `english_sentence_example` (TEXT, from 'English Example' column in CSV)
+    *   `base_comment` (TEXT, from 'Comment' column in CSV, can be appended to by user)
+    *   `creation_date` (TIMESTAMP, when record was first imported)
+    *   `last_modified_date` (TIMESTAMP, when record or its SRS data was last updated)
+    *   `ease_factor` (FLOAT, SRS parameter, e.g., initial value 2.5)
+    *   `interval_days` (INTEGER, SRS parameter, days until next review)
+    *   `next_review_date` (DATE, SRS parameter)
+    *   `is_learning` (BOOLEAN, flag for cards currently in learning phase vs. review phase)
 
 *   **Reviews Table:**
-    *   `review_id` (Primary Key)
+    *   `review_id` (Primary Key, Auto-incrementing Integer)
     *   `sentence_id` (Foreign Key to Sentences Table)
     *   `review_timestamp` (TIMESTAMP)
     *   `user_score` (FLOAT, 0.0-1.0)
-    *   `user_comment` (TEXT, optional)
+    *   `user_comment_addon` (TEXT, optional, new comment part added by user during this review)
+    *   `interval_at_review` (INTEGER, interval before this review)
+    *   `ease_factor_at_review` (FLOAT, ease factor before this review)
 
 *   **Initial Data Source:**
-    *   A CSV file containing the ~2000 sentences and their translations. A script will be needed to import this into the `Sentences` table.
+    *   A CSV file (e.g., `data/Spanish - 2000 words in context_may_15th_2025.csv`). A script will be needed to parse and import this into the `Sentences` table.
 
 ## 6. Non-Functional Requirements
 
-*   **Data Storage:** SQL database (e.g., SQLite for simplicity to start, potentially PostgreSQL or MySQL for more robust deployment).
-*   **User Interface:** Simple, clean, and fast. Minimal distractions.
-*   **Accessibility:** Basic web accessibility considerations.
+*   **Data Storage:** SQLite database. The database file should be stored within the application directory (e.g., `anki_web_app/database/app.db`).
+*   **User Interface:** Simple, clean, and fast. Minimal distractions. Optimized for quick review cycles.
+*   **Accessibility:** Basic web accessibility considerations (e.g., keyboard navigation, sufficient contrast).
+*   **Security (for single-user self-hosted):** If deployed to a publicly accessible server, implement basic HTTP authentication to restrict access. For local-only use, this may not be strictly necessary but good practice to consider.
+*   **Performance:** App should load quickly and card transitions should be snappy.
 
 ## 7. Future Considerations/Ideas (Optional V2+)
 
 *   Audio playback for Spanish sentences.
-*   Reverse translation (English/German to Spanish).
-*   More sophisticated SRS algorithm tuning.
+*   Reverse translation (English to Spanish).
+*   More sophisticated SRS algorithm tuning and user-adjustable parameters.
 *   User accounts if multiple users were to use it (currently scoped for single user).
-*   Gamification elements (streaks, points beyond scores).
-*   Tagging sentences.
+*   Gamification elements (streaks, points beyond scores, daily goals).
+*   Tagging sentences (e.g., by topic, difficulty, grammar point).
+*   Backup and restore functionality for the database.
 
 ## 8. Open Questions & Clarifications
 
-*   **CSV Structure:** What is the exact structure of the input CSV? (Number of columns, headers, delimiter).
-*   **Key Spanish Word:** Is the "key Spanish word" always a single word from the sentence, or can it be a phrase? How is this determined? Is it always "De" as in the example, or does it vary per sentence?
-*   **German Translations:** Are German translations readily available for all sentences in the CSV?
-*   **Initial SRS State:** How should new cards be prioritized initially?
-*   **"Mastery" Definition:** How do we define when a sentence is "mastered" for statistical purposes (e.g., N successful reviews in a row, average score above X)?
+*   **CSV Structure (Partially Answered):** The provided snippet shows headers: `Number`, `Spanish Word`, `English Translation`, `Spanish Example`, `English Example`, `Comment`, `Chat GPTs explanation`, `Gemini explanation`, and some empty columns followed by a URL. We will primarily use `Number`, `Spanish Word`, `English Translation` (for the key word), `Spanish Example`, `English Example`, and `Comment`. We should confirm if the delimiter is comma and if there are any specific encoding requirements (e.g., UTF-8 for special characters).
+*   **Key Spanish Word (Answered):** This will be the content of the `Spanish Word` column from the CSV. The associated translation will be from the `English Translation` column.
+*   **Initial SRS State:** How should new cards be prioritized initially? (e.g., show in order of CSV `Number`, or randomly select from unseen cards? How many new cards per day/session by default?)
+*   **"Mastery" Definition:** How do we define when a sentence is "mastered" for statistical purposes (e.g., N successful reviews in a row with score >= 0.9, interval reaches X days)?
+*   **Display of Key Spanish Word on Front of Card:** In your example "Input to me: De: Él es de la ciudad de Nueva York", the "De:" prefix seems to come from the key Spanish word. Should the front of the card always show `[Key Spanish Word]: [Spanish Example Sentence]` or just the `[Spanish Example Sentence]`?
 
 ---
 
