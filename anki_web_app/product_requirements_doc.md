@@ -64,7 +64,8 @@ This document outlines the requirements for a web application designed to help t
 *   **As a user, I want to give myself a subjective score (e.g., 0.0 to 1.0) for each sentence translation attempt to track my understanding.**
 *   **As a user, I want to submit my comment and score and immediately move to the next sentence/card.**
 *   **As a user, I want to see statistics about my learning, including:**
-    *   Number of cards reviewed today, this week, and overall.
+    *   Number of cards (new and review) reviewed today, this week, and overall.
+    *   Number of new cards specifically reviewed today.
     *   Overall average score.
     *   Number of unique sentences seen out of the total.
     *   My average score on these seen sentences.
@@ -103,14 +104,15 @@ This document outlines the requirements for a web application designed to help t
     *   User's score on previous reviews of the card.
     *   Time since the card was last reviewed.
     *   Calculated ease factor or similar SRS parameter for the card.
-*   **New Card Introduction:** New cards will be introduced sequentially, starting from `Number` 1 in the CSV. The number of new cards per day/session will be a configurable setting (e.g., default to 10-20 new cards if there are due reviews, otherwise more).
+*   **New Card Introduction:** New cards will be introduced sequentially, starting from `Number` 1 in the CSV. The user can decide how many new cards to study in any given session. The system will track the number of new cards reviewed daily.
 *   **Card Gradation/Mastery:** Cards considered "mastered" (e.g., consistently achieving a score > 0.8 for the last 3-5 reviews AND current interval > 21 days) will have their review intervals significantly increased.
 *   Cards mastered will appear less frequently.
 
 ### 4.4. Progress Tracking & Statistics
 
 *   **Dashboard/Overview Page:**
-    *   Cards reviewed today.
+    *   Cards (new and reviews) reviewed today.
+    *   New cards reviewed today.
     *   Cards reviewed this week.
     *   Total cards reviewed.
     *   Overall average score.
@@ -135,18 +137,20 @@ This document outlines the requirements for a web application designed to help t
 
 *   **Sentences Table:**
     *   `sentence_id` (Primary Key, Auto-incrementing Integer)
-    *   `csv_number` (Integer, from 'Number' column in CSV for reference)
+    *   `csv_number` (Integer, from 'Number' column in CSV for reference, unique)
     *   `key_spanish_word` (TEXT, from 'Spanish Word' column in CSV)
     *   `key_word_english_translation` (TEXT, from 'English Translation' column in CSV)
     *   `spanish_sentence_example` (TEXT, from 'Spanish Example' column in CSV)
     *   `english_sentence_example` (TEXT, from 'English Example' column in CSV)
     *   `base_comment` (TEXT, from 'Comment' column in CSV, can be appended to by user)
+    *   `ai_explanation` (TEXT, Nullable, from 'Chat GPTs explanation' or 'Gemini explanation' columns in CSV)
     *   `creation_date` (TIMESTAMP, when record was first imported)
     *   `last_modified_date` (TIMESTAMP, when record or its SRS data was last updated)
     *   `ease_factor` (FLOAT, SRS parameter, e.g., initial value 2.5)
-    *   `interval_days` (INTEGER, SRS parameter, days until next review)
+    *   `interval_days` (INTEGER, SRS parameter, days until next review, 0 for new/learning)
     *   `next_review_date` (DATE, SRS parameter)
-    *   `is_learning` (BOOLEAN, flag for cards currently in learning phase vs. review phase)
+    *   `is_learning` (BOOLEAN, flag for cards currently in learning phase vs. review phase, default True for new cards)
+    *   `consecutive_correct_reviews` (INTEGER, tracks successive good scores for graduation, reset if score is low)
 
 *   **Reviews Table:**
     *   `review_id` (Primary Key, Auto-incrementing Integer)
@@ -165,8 +169,15 @@ This document outlines the requirements for a web application designed to help t
 *   **Data Storage:** SQLite database. The database file should be stored within the application directory (e.g., `anki_web_app/database/app.db`).
 *   **User Interface:** Simple, clean, and fast. Minimal distractions. Optimized for quick review cycles.
 *   **Accessibility:** Basic web accessibility considerations (e.g., keyboard navigation, sufficient contrast).
-*   **Security (for single-user self-hosted):** If deployed to a publicly accessible server, implement basic HTTP authentication to restrict access. For local-only use, this may not be strictly necessary but good practice to consider.
+*   **Security (for single-user self-hosted):** If deployed to a publicly accessible server, implement basic HTTP authentication (e.g., via Nginx) to restrict access. For local-only use, this is a lower priority.
 *   **Performance:** App should load quickly and card transitions should be snappy.
+
+### 6.1. Technology Stack
+
+*   **Backend Framework:** Python with Django.
+*   **Frontend Framework:** Vue.js.
+*   **Database:** SQLite.
+*   **Web Server/Reverse Proxy (for deployment):** Nginx.
 
 ## 7. Future Considerations/Ideas (Optional V2+)
 
@@ -180,13 +191,13 @@ This document outlines the requirements for a web application designed to help t
 
 ## 8. Open Questions & Clarifications
 
-*   **CSV Structure (Answered):** The delimiter is comma. Encoding needs to be UTF-8 to support special Spanish characters (e.g., ñ, á, é, í, ó, ú, ü). Headers are: `Number`, `Spanish Word`, `English Translation`, `Spanish Example`, `English Example`, `Comment`, and others which may be ignored. We will primarily use `Number`, `Spanish Word`, `English Translation` (for the key word), `Spanish Example`, `English Example`, and `Comment` (as the base comment).
+*   **CSV Structure (Answered):** The delimiter is comma. Encoding needs to be UTF-8 to support special Spanish characters (e.g., ñ, á, é, í, ó, ú, ü). Headers include: `Number`, `Spanish Word`, `English Translation`, `Spanish Example`, `English Example`, `Comment`, `Chat GPTs explanation`, `Gemini explanation`. We will use `Number`, `Spanish Word`, `English Translation` (for key word), `Spanish Example`, `English Example`, `Comment` (as base), and the AI explanation columns.
 *   **Key Spanish Word (Answered):** This will be the content of the `Spanish Word` column from the CSV. The associated translation will be from the `English Translation` column.
-*   **Initial SRS State (Answered):** New cards are introduced sequentially from the CSV (starting at `Number` 1). A default number of new cards per day/session should be configurable (e.g., 10-20 if review cards are also due).
+*   **Initial SRS State (Answered):** New cards are introduced sequentially from the CSV (starting at `Number` 1). The user determines the number of new cards per session. Daily counts of new cards reviewed will be tracked.
 *   **"Mastery" Definition (Answered):** A sentence is considered "mastered" for statistical and scheduling purposes when it has been reviewed with a score > 0.8 for the last 3-5 consecutive reviews, AND its current review interval is greater than a significant period (e.g., 21 days).
 *   **Display of Key Spanish Word on Front of Card (Answered):** The front of the card will always show `[Key Spanish Word]: [Spanish Example Sentence]`.
-*   **Handling of `Chat GPTs explanation` and `Gemini explanation` columns:** Should these be imported into the database? If so, where? Perhaps a new field in the `Sentences` table like `ai_explanation` or similar, or are they to be ignored for now?
+*   **Handling of `Chat GPTs explanation` and `Gemini explanation` columns (Answered):** These will be imported into a single `ai_explanation` field in the `Sentences` table. Initially, this field can be NULL or empty if the CSV columns are blank. We can decide later if we need to merge them if both are present or prefer one.
 
 ---
 
-This initial draft should provide a good foundation. We can iterate on this as we discuss further.
+This document outlines the core requirements for the Anki-Style Spanish Learning App. It should serve as a guide for development.
