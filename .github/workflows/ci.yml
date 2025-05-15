@@ -28,7 +28,7 @@ jobs:
     - name: Install Cypress Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y xvfb libnss3 libgtk-3-0 libgbm-dev libasound2
+        sudo apt-get install -y xvfb libnss3 libgtk-3-0 libgbm-dev libasound2t64
     - name: Run tests
       run: |
         sh ./run_all_tests.sh
