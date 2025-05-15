@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
-from anki_web_app.flashcards.models import Sentence, Review
+from flashcards.models import Sentence, Review
 
 class Command(BaseCommand):
     help = 'Seeds the database with specific data for E2E testing.'
