@@ -14,7 +14,14 @@ docker-compose down -v --remove-orphans
 echo ""
 echo "Building and starting Docker services in detached mode..."
 docker-compose up -d --build
-echo "Services started."
+echo "Services started by docker-compose up -d."
+
+echo ""
+echo "Showing logs for the backend service shortly after startup:"
+docker-compose logs --tail="50" backend # Show last 50 log lines for backend
+echo ""
+echo "Showing logs for the frontend service shortly after startup:"
+docker-compose logs --tail="50" frontend # Show last 50 log lines for frontend
 
 echo ""
 echo "Waiting for services to initialize (e.g., database migrations, servers to start)..."
