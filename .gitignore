@@ -1,3 +1,5 @@
 *.pyc
 node_modules/
 **/node_modules/
+coverage.xml
+.coverage
