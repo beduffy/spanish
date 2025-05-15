@@ -11,14 +11,15 @@ echo ""
 echo "------------------------------------"
 echo " Phase 1: Backend Django tests      "
 echo "------------------------------------"
-echo "Running backend Django tests from anki_web_app/..."
-(cd anki_web_app && python manage.py test)
-echo "Backend Django tests completed."
+echo "Running backend Django tests with coverage from anki_web_app/..."
+(cd anki_web_app && coverage run manage.py test && coverage xml) # TODO: ensure manage.py is in this path
+echo "Backend Django tests completed and coverage report generated (coverage.xml)."
 
 echo ""
 echo "----------------------------------------"
 echo " Phase 2: Frontend Unit tests (Jest)  "
 echo "----------------------------------------"
+# TODO: Add coverage for frontend tests if desired
 echo "Running frontend unit tests (Jest) from anki_web_app/spanish_anki_frontend/..."
 (cd anki_web_app/spanish_anki_frontend && npm run test:unit)
 echo "Frontend unit tests completed."
@@ -27,6 +28,7 @@ echo ""
 echo "-----------------------------------------"
 echo " Phase 3: Frontend E2E tests (Cypress) "
 echo "-----------------------------------------"
+# TODO: Add coverage for E2E tests if desired
 echo "Running frontend E2E tests (Cypress) from anki_web_app/spanish_anki_frontend/..."
 (cd anki_web_app/spanish_anki_frontend && npx cypress run)
 echo "Frontend E2E tests completed."
