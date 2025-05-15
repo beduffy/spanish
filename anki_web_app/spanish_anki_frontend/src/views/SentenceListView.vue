@@ -79,9 +79,9 @@ export default {
       try {
         const response = await ApiService.getAllSentences(page);
         if (response.status === 200 && response.data) {
-          this.sentences = response.data.results; // DRF pagination wraps results in 'results'
-          this.totalPages = response.data.total_pages; // Assuming backend sends total_pages
-          this.totalItems = response.data.count;       // Assuming backend sends count (total items)
+          this.sentences = response.data.results || []; // Default to empty array if results is null/undefined
+          this.totalPages = Number.isInteger(response.data.total_pages) ? response.data.total_pages : 0;
+          this.totalItems = Number.isInteger(response.data.count) ? response.data.count : 0;
           this.currentPage = page;
         } else {
           this.errorMessage = "Could not load sentences. The server didn't return valid data.";
@@ -90,6 +90,9 @@ export default {
         console.error(`Error fetching sentences (page ${page}):`, error);
         this.errorMessage = 'Failed to load sentences. Please check your connection or try again later.';
         // Optionally, clear sentences or handle specific errors
+        this.sentences = [];
+        this.totalPages = 0;
+        this.totalItems = 0;
       } finally {
         this.isLoading = false;
         this.isFetchingPage = false;

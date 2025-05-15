@@ -30,17 +30,27 @@ describe('Navigation and Data Verification', () => {
         // Enhanced pagination check
         cy.get('.pagination-controls span').invoke('text').then((text) => {
             const match = text.match(/Page (\d+) of (\d+)/);
-            expect(match).to.not.be.null;
+            // Expect a match, meaning totalPages is a number and rendered.
+            expect(match, `Expected pagination text '${text}' to match Page X of Y`).to.not.be.null;
+            if (!match) return; // Exit if match is null to prevent further errors
+
             const currentPage = parseInt(match[1]);
             const totalPages = parseInt(match[2]);
 
-            if (totalPages > 1 && currentPage < totalPages) {
-                cy.get('.pagination-controls button').contains('Next').click();
-                cy.get('.pagination-controls span').should('contain', `Page ${currentPage + 1} of ${totalPages}`);
-                cy.get('.pagination-controls button').contains('Previous').click();
-                cy.get('.pagination-controls span').should('contain', `Page ${currentPage} of ${totalPages}`);
+            if (totalPages > 1) {
+                if (currentPage < totalPages) {
+                    cy.get('.pagination-controls button').contains('Next').click();
+                    cy.get('.pagination-controls span').should('contain', `Page ${currentPage + 1} of ${totalPages}`);
+                    cy.get('.pagination-controls button').contains('Previous').click();
+                    cy.get('.pagination-controls span').should('contain', `Page ${currentPage} of ${totalPages}`);
+                } else {
+                    // On the last page of multiple pages
+                    cy.get('.pagination-controls button').contains('Previous').click();
+                    cy.get('.pagination-controls span').should('contain', `Page ${currentPage - 1} of ${totalPages}`);
+                }
             } else {
-                cy.log('Skipping Next/Previous click test as there is only one page or already on the last page.');
+                cy.log('Skipping Next/Previous click test as there is only one page or totalPages is 0.');
+                expect(totalPages).to.be.at.most(1);
             }
         });
 
@@ -53,6 +63,10 @@ describe('Navigation and Data Verification', () => {
         cy.get('.main-details .detail-item').contains('Key Spanish Word:').should('be.visible');
         cy.get('.srs-details .detail-item').contains('Next Review Date:').should('be.visible');
         cy.get('.review-history').should('be.visible');
+
+        // More specific check for the first review in the history
+        cy.get('.review-history table tbody tr:first-child td').eq(1).should('contain', '0.7'); // Score is usually 2nd column (index 1)
+        cy.get('.review-history table tbody tr:first-child td pre').should('contain', 'E2E test - dashboard/detail check');
     });
 
     it('reflects review activity in Dashboard and Sentence Detail', () => {
