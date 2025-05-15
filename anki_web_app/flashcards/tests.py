@@ -4,7 +4,7 @@ from io import StringIO
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
-from flashcards.models import Sentence, Review
+from flashcards.models import Sentence, Review, LEARNING_STEPS_DAYS, GRADUATING_INTERVAL_DAYS, LAPSE_INTERVAL_DAYS, MIN_EASE_FACTOR
 from datetime import timedelta
 
 # Create your tests here.
@@ -211,5 +211,123 @@ class SRSLogicTests(TestCase):
         self.assertEqual(Review.objects.count(), 1)
         self.assertEqual(Review.objects.first().user_score, 0.3)
 
-    # We will add more tests for other scenarios (learning steps, graduation, review, lapse, EF cap etc.)
-    # once the basic process_review method structure is in place and these initial tests pass.
+    def test_learning_step1_pass_perfect(self):
+        # Card has passed initial review (interval_days=0), now at interval_days=1 (LEARNING_STEPS_DAYS[0])
+        sentence = self._create_sentence(interval_days=LEARNING_STEPS_DAYS[0], is_learning=True, consecutive_correct_reviews=1, ease_factor=2.6)
+        original_ef = sentence.ease_factor # Should be 2.6 from previous perfect review
+        
+        sentence.process_review(user_score=0.95) # Perfect score again (q=5)
+        # Expected EF: 2.6 + 0.1 = 2.7
+
+        self.assertEqual(sentence.interval_days, LEARNING_STEPS_DAYS[1], "Interval should advance to the second learning step (3 days)")
+        self.assertAlmostEqual(sentence.ease_factor, original_ef + 0.1, delta=0.01)
+        self.assertTrue(sentence.is_learning, "Should still be in learning phase")
+        self.assertEqual(sentence.consecutive_correct_reviews, 2)
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=LEARNING_STEPS_DAYS[1]))
+        self.assertEqual(Review.objects.filter(sentence=sentence).count(), 1) # Check a new review was created
+
+    def test_learning_step1_fail(self):
+        sentence = self._create_sentence(interval_days=LEARNING_STEPS_DAYS[0], is_learning=True, consecutive_correct_reviews=1, ease_factor=2.6)
+        original_ef = sentence.ease_factor
+
+        sentence.process_review(user_score=0.3) # Fail (q=1)
+
+        self.assertEqual(sentence.interval_days, 0, "Interval should reset to 0 on failing a learning step")
+        self.assertAlmostEqual(sentence.ease_factor, original_ef, delta=0.01, msg="EF should not change on learning step fail, or only slightly penalized if desired")
+        self.assertTrue(sentence.is_learning)
+        self.assertEqual(sentence.consecutive_correct_reviews, 0, "Consecutive good scores should reset on fail")
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=0))
+
+    def test_graduation_pass_perfect(self):
+        # Card is at the last learning step (interval_days = LEARNING_STEPS_DAYS[1] = 3 days)
+        sentence = self._create_sentence(interval_days=LEARNING_STEPS_DAYS[1], is_learning=True, consecutive_correct_reviews=2, ease_factor=2.7)
+        original_ef = sentence.ease_factor # Should be 2.7
+        # Expected EF: 2.7 + 0.1 = 2.8
+
+        sentence.process_review(user_score=0.95) # Perfect score (q=5)
+
+        self.assertEqual(sentence.interval_days, GRADUATING_INTERVAL_DAYS, f"Interval should be graduating interval {GRADUATING_INTERVAL_DAYS} days")
+        self.assertAlmostEqual(sentence.ease_factor, original_ef + 0.1, delta=0.01)
+        self.assertFalse(sentence.is_learning, "Card should have graduated")
+        self.assertEqual(sentence.consecutive_correct_reviews, 3)
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=GRADUATING_INTERVAL_DAYS))
+
+    def test_graduation_fail(self):
+        # Card is at the last learning step (interval_days = LEARNING_STEPS_DAYS[1] = 3 days)
+        sentence = self._create_sentence(interval_days=LEARNING_STEPS_DAYS[1], is_learning=True, consecutive_correct_reviews=2, ease_factor=2.7)
+        original_ef = sentence.ease_factor
+
+        sentence.process_review(user_score=0.3) # Fail (q=1)
+
+        self.assertEqual(sentence.interval_days, 0, "Interval should reset to 0 on failing last learning step before graduation")
+        self.assertAlmostEqual(sentence.ease_factor, original_ef, delta=0.01)
+        self.assertTrue(sentence.is_learning, "Card should remain in learning")
+        self.assertEqual(sentence.consecutive_correct_reviews, 0)
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=0))
+
+    def test_graduated_card_review_perfect(self):
+        initial_interval = 10
+        initial_ef = 2.5
+        sentence = self._create_sentence(interval_days=initial_interval, is_learning=False, ease_factor=initial_ef, consecutive_correct_reviews=3)
+        
+        # Expected new interval = round(10 * 2.5) = 25
+        # Expected new EF = 2.5 + 0.1 = 2.6
+        sentence.process_review(user_score=0.95) # Perfect (q=5)
+
+        self.assertEqual(sentence.interval_days, round(initial_interval * initial_ef))
+        self.assertFalse(sentence.is_learning)
+        self.assertAlmostEqual(sentence.ease_factor, initial_ef + 0.1, delta=0.01)
+        self.assertEqual(sentence.consecutive_correct_reviews, 4)
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=round(initial_interval * initial_ef)))
+
+    def test_graduated_card_review_medium(self):
+        initial_interval = 10
+        initial_ef = 2.5
+        sentence = self._create_sentence(interval_days=initial_interval, is_learning=False, ease_factor=initial_ef, consecutive_correct_reviews=3)
+        
+        # score = 0.7 (q=3), EF = 2.5 - 0.14 = 2.36
+        # Expected new interval = round(10 * 2.36) = 24 (using NEW EF for interval calculation is a common SM2 variant)
+        # Let's assume for now interval is calculated with OLD EF, then EF is updated.
+        # Anki actually does: new_interval = old_interval * old_ef (if good), then updates EF for next time.
+        # Let's test with old_ef for interval calculation for now, as per current model logic. So, round(10 * 2.5) = 25
+        # The model updates EF *after* interval calculation for graduated cards if q>=3.
+
+        sentence.process_review(user_score=0.7) # Medium (q=3)
+
+        self.assertEqual(sentence.interval_days, round(initial_interval * initial_ef), "Interval should be calculated with EF before its update for this review")
+        self.assertFalse(sentence.is_learning)
+        self.assertAlmostEqual(sentence.ease_factor, initial_ef - 0.14, delta=0.01, msg="EF should decrease for q=3 on review card")
+        self.assertEqual(sentence.consecutive_correct_reviews, 0, "Consecutive should reset as score is not > 0.8")
+
+    def test_graduated_card_lapse(self):
+        initial_interval = 20
+        initial_ef = 2.5
+        sentence = self._create_sentence(interval_days=initial_interval, is_learning=False, ease_factor=initial_ef, consecutive_correct_reviews=5)
+        expected_ef_after_lapse = max(MIN_EASE_FACTOR, initial_ef - 0.20)
+
+        sentence.process_review(user_score=0.1) # Fail (q=0)
+
+        self.assertTrue(sentence.is_learning, "Card should re-enter learning phase on lapse")
+        self.assertEqual(sentence.interval_days, LAPSE_INTERVAL_DAYS, f"Interval should reset to {LAPSE_INTERVAL_DAYS} on lapse")
+        self.assertAlmostEqual(sentence.ease_factor, expected_ef_after_lapse, delta=0.01, msg="EF should be penalized on lapse")
+        self.assertEqual(sentence.consecutive_correct_reviews, 0, "Consecutive should reset on lapse")
+        self.assertEqual(sentence.next_review_date, timezone.now().date() + timedelta(days=LAPSE_INTERVAL_DAYS))
+
+    def test_ease_factor_min_boundary(self):
+        # Test EF doesn't go below MIN_EASE_FACTOR
+        # Start with EF already at min
+        sentence = self._create_sentence(is_learning=False, interval_days=10, ease_factor=MIN_EASE_FACTOR)
+        sentence.process_review(user_score=0.7) # q=3, which would normally decrease EF
+        self.assertAlmostEqual(sentence.ease_factor, MIN_EASE_FACTOR, delta=0.01, msg=f"EF should not go below {MIN_EASE_FACTOR}")
+
+        # Test EF reduction stopping at MIN_EASE_FACTOR
+        sentence2 = self._create_sentence(csv_number=101, is_learning=False, interval_days=10, ease_factor=MIN_EASE_FACTOR + 0.05)
+        sentence2.process_review(user_score=0.7) # q=3, EF formula would be (MIN_EASE_FACTOR + 0.05) - 0.14
+        self.assertAlmostEqual(sentence2.ease_factor, MIN_EASE_FACTOR, delta=0.01, msg=f"EF should be capped at {MIN_EASE_FACTOR}")
+
+        # Test EF reduction on lapse stopping at MIN_EASE_FACTOR
+        sentence3 = self._create_sentence(csv_number=102, is_learning=False, interval_days=10, ease_factor=MIN_EASE_FACTOR + 0.1)
+        sentence3.process_review(user_score=0.1) # Lapse, EF penalty is -0.20
+        self.assertAlmostEqual(sentence3.ease_factor, MIN_EASE_FACTOR, delta=0.01, msg=f"EF penalty on lapse should be capped at {MIN_EASE_FACTOR}")
+
+    # More tests might be needed for edge cases with interval rounding, very high EFs, etc.
