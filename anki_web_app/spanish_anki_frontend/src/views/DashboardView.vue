@@ -65,16 +65,20 @@ export default {
       this.errorMessage = '';
       try {
         const response = await ApiService.getStatistics();
-        if (response.status === 200 && response.data) {
-          this.statistics = response.data;
+        if (response.status === 200) {
+          if (response.data) {
+            this.statistics = response.data;
+          } else {
+            this.statistics = null;
+          }
         } else {
-          // Handle cases where data might be empty or response is not 200, though API should provide data or error.
           this.errorMessage = "Could not load statistics. The server didn't return valid data.";
+          this.statistics = null;
         }
       } catch (error) {
         console.error("Error fetching statistics:", error);
         this.errorMessage = 'Failed to load statistics. Please check your connection or try again later.';
-        this.statistics = null; // Clear any stale data
+        this.statistics = null;
       }
       this.isLoading = false;
     },

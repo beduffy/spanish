@@ -58,9 +58,9 @@
           </button>
         </div>
       </div>
-      <div v-if="errorMessage" class="error-message">
-        <p>{{ errorMessage }}</p>
-      </div>
+    </div>
+    <div v-if="errorMessage && !isLoading" class="error-message central-error">
+      <p>{{ errorMessage }}</p>
     </div>
   </div>
 </template>
@@ -168,6 +168,14 @@ export default {
 .error-message {
   color: red;
   background-color: #ffe0e0;
+}
+
+/* Added for distinct styling if needed, or merge with existing .error-message */
+.central-error {
+ margin-top: 20px;
+ text-align: center;
+ padding: 15px;
+ border-radius: 8px;
 }
 
 .flashcard-container {
