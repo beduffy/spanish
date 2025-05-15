@@ -57,6 +57,7 @@ jobs:
 
     - name: Run tests using docker-compose
       run: |
+        export DOCKER_HOST=unix:///var/run/docker.sock
         sh ./run_all_tests.sh # This script now uses 'docker-compose'
 
     - name: Upload coverage reports to Codecov
