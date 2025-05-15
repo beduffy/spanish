@@ -16,8 +16,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal
       # - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings # If needed
-    depends_on:
-      - db # If you were using a separate database service like Postgres
 
   frontend:
     build:
