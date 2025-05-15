@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.7'
 
 services:
   backend:
@@ -52,5 +52,5 @@ services:
 
   # Named volumes (optional, Docker manages these)
   # volumes:
-  #   postgres_data: 
-  #   db_data: # If you used the named volume for SQLite 
+  #   postgres_data:
+  #   db_data: # If you used the named volume for SQLite
