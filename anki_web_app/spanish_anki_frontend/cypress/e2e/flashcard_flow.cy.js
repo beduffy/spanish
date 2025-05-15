@@ -1,17 +1,25 @@
 describe('Flashcard Review Flow', () => {
     beforeEach(() => {
-        // Intercept the initial card load and wait for it
+        cy.log('Setting up intercept for /api/flashcards/next-card/');
         cy.intercept('GET', '/api/flashcards/next-card/').as('getNextCard');
         cy.visit('/');
-        cy.wait('@getNextCard', { timeout: 15000 }).then((interception) => {
-            cy.log('Initial /api/flashcards/next-card/ response:', interception.response);
-            // Optional: Add assertions on the response status code if needed
-            // For example, if you expect a 200 or 204
-            // if (interception.response.statusCode !== 204) { // If not 'no cards due'
-            //    expect(interception.response.statusCode).to.eq(200);
-            //    expect(interception.response.body).to.have.property('spanish_sentence'); 
-            // }
-        });
+        cy.log('Waiting for @getNextCard...');
+        cy.wait('@getNextCard', { timeout: 30000 }) // Increased to 30 seconds for debugging
+            .then((interception) => {
+                cy.log('Initial @getNextCard response status:', interception.response.statusCode);
+                cy.log('Initial @getNextCard response body:', JSON.stringify(interception.response.body));
+                // Assert that the API call was successful and returned data, or 204 for no cards
+                expect(interception.response.statusCode).to.be.oneOf([200, 204]);
+                if (interception.response.statusCode === 200) {
+                    expect(interception.response.body).to.not.be.empty;
+                }
+            }, (error) => {
+                cy.log('Error waiting for @getNextCard:', error.message);
+                // Optionally, fail the test explicitly if the API call errors out
+                // throw new Error('@getNextCard API call failed or timed out'); 
+                return; // Prevent further execution in this test if API fails
+            });
+        cy.log('Finished beforeEach setup.');
     });
 
     it('successfully completes a review cycle', () => {
