@@ -3,6 +3,9 @@ from .models import Sentence
 
 
 class SentenceSerializer(serializers.ModelSerializer):
+    average_score = serializers.SerializerMethodField()
+    last_reviewed_date = serializers.SerializerMethodField()
+
     class Meta:
         model = Sentence
         fields = [ # Specify fields to include in the API response
@@ -16,11 +19,26 @@ class SentenceSerializer(serializers.ModelSerializer):
             'ai_explanation',
             'next_review_date',
             'is_learning',
+            'interval_days', # Added for more context in list view
+            'total_reviews', # Added for list view context
+            'average_score',
+            'last_reviewed_date',
             # Add other fields the frontend might need for display or context
             # For now, keeping it to essential card data and SRS status indicators.
         ]
         # Example of read_only_fields if we were doing POST/PUT, not relevant for GET-only next-card
         # read_only_fields = ['sentence_id', 'csv_number', 'creation_date'] 
+
+    def get_average_score(self, obj):
+        if obj.total_reviews > 0 and obj.total_score_sum is not None:
+            return round(obj.total_score_sum / obj.total_reviews, 2)
+        return None
+
+    def get_last_reviewed_date(self, obj):
+        last_review = obj.reviews.order_by('-review_timestamp').first()
+        if last_review:
+            return last_review.review_timestamp
+        return None
 
 
 class ReviewInputSerializer(serializers.Serializer):
@@ -34,4 +52,22 @@ class ReviewInputSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         # This serializer is for input validation, not for updating an object directly
-        raise NotImplementedError() 
+        raise NotImplementedError()
+
+
+class StatisticsSerializer(serializers.Serializer):
+    reviews_today = serializers.IntegerField()
+    new_cards_reviewed_today = serializers.IntegerField()
+    reviews_this_week = serializers.IntegerField()
+    total_reviews_all_time = serializers.IntegerField()
+    overall_average_score = serializers.FloatField(allow_null=True) # Allow null if no reviews yet
+    total_sentences = serializers.IntegerField()
+    sentences_mastered = serializers.IntegerField()
+    sentences_learned = serializers.IntegerField() # Unique sentences with at least one review
+    percentage_learned = serializers.FloatField(allow_null=True) # Allow null if total_sentences is 0
+
+    def create(self, validated_data):
+        raise NotImplementedError("This serializer is for output only.")
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError("This serializer is for output only.") 

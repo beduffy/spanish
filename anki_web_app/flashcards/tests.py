@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
 from flashcards.models import Sentence, Review, LEARNING_STEPS_DAYS, GRADUATING_INTERVAL_DAYS, LAPSE_INTERVAL_DAYS, MIN_EASE_FACTOR
-from datetime import timedelta
+from datetime import timedelta, date, datetime
 from rest_framework.test import APITestCase
 from rest_framework import status
 
@@ -719,3 +719,262 @@ class SubmitReviewAPITests(APITestCase):
 
     # TODO: Consider edge case for timestamp generation if tests run too fast for different timestamps in append test.
     # Might need to mock timezone.now() for more precise timestamp append tests if it becomes an issue.
+
+class StatisticsAPITests(APITestCase):
+    def setUp(self):
+        Sentence.objects.all().delete()
+        Review.objects.all().delete()
+        self.stats_url = "/api/flashcards/statistics/" # To be added to urls.py
+        self.today = timezone.now().date()
+        self.one_day_ago = self.today - timedelta(days=1)
+        self.three_days_ago = self.today - timedelta(days=3)
+        self.eight_days_ago = self.today - timedelta(days=8)
+
+    def _create_sentence_for_stats(self, csv_number, is_learning=False, interval_days=30, 
+                                   consecutive_correct_reviews=3, total_reviews=5, total_score_sum=4.0, ease_factor=2.5):
+        return Sentence.objects.create(
+            csv_number=csv_number,
+            key_spanish_word=f"Word {csv_number}",
+            is_learning=is_learning,
+            interval_days=interval_days,
+            consecutive_correct_reviews=consecutive_correct_reviews,
+            next_review_date=self.today + timedelta(days=interval_days),
+            total_reviews=total_reviews,
+            total_score_sum=total_score_sum,
+            ease_factor=ease_factor
+        )
+
+    def _create_review(self, sentence, score, timestamp_obj, interval_at_review=0):
+        # Ensure timestamp_obj is datetime and aware
+        if isinstance(timestamp_obj, date) and not isinstance(timestamp_obj, datetime):
+            aware_timestamp = timezone.make_aware(datetime.combine(timestamp_obj, datetime.min.time()))
+        elif isinstance(timestamp_obj, datetime) and timezone.is_naive(timestamp_obj):
+            aware_timestamp = timezone.make_aware(timestamp_obj)
+        else:
+            aware_timestamp = timestamp_obj # Assuming it's already an aware datetime
+
+        return Review.objects.create(
+            sentence=sentence,
+            user_score=score,
+            review_timestamp=aware_timestamp,
+            interval_at_review=interval_at_review, 
+            ease_factor_at_review=sentence.ease_factor 
+        )
+
+    def test_get_statistics_no_data(self):
+        """Test statistics endpoint when there is no data."""
+        response = self.client.get(self.stats_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        expected_stats = {
+            "reviews_today": 0,
+            "new_cards_reviewed_today": 0,
+            "reviews_this_week": 0,
+            "total_reviews_all_time": 0,
+            "overall_average_score": None,
+            "total_sentences": 0,
+            "sentences_mastered": 0,
+            "sentences_learned": 0,
+            "percentage_learned": None
+        }
+        self.assertEqual(response.data, expected_stats)
+
+    def test_get_statistics_with_basic_data(self):
+        """Test statistics with some reviews and sentences."""
+        # s1: Learned, but not mastered
+        s1 = self._create_sentence_for_stats(
+            csv_number=801, 
+            is_learning=True, # Clearly not mastered
+            interval_days=1, 
+            consecutive_correct_reviews=1, 
+            total_reviews=1, 
+            total_score_sum=0.9, 
+            ease_factor=2.5
+        )
+        # s2: Learned, but not mastered
+        s2 = self._create_sentence_for_stats(
+            csv_number=802, 
+            is_learning=True, # Clearly not mastered
+            interval_days=3, 
+            consecutive_correct_reviews=2, 
+            total_reviews=2, 
+            total_score_sum=1.5, # avg 0.75
+            ease_factor=2.6
+        )
+        # s3: New, not reviewed, not learned
+        s3 = self._create_sentence_for_stats(
+            csv_number=803, 
+            is_learning=True, 
+            interval_days=0, 
+            consecutive_correct_reviews=0, 
+            total_reviews=0, 
+            total_score_sum=0.0,
+            ease_factor=2.5
+        ) 
+        # s4_mastered: Clearly mastered
+        s4_mastered = self._create_sentence_for_stats(
+            csv_number=804, 
+            is_learning=False, 
+            interval_days=GRADUATING_INTERVAL_DAYS + 1, 
+            consecutive_correct_reviews=3, 
+            total_reviews=5, 
+            total_score_sum=4.5, # avg 0.9
+            ease_factor=2.8
+        )
+
+        # Reviews Today
+        self._create_review(s1, 0.9, timezone.now(), interval_at_review=0) # New card review today
+        self._create_review(s2, 0.8, timezone.now() - timedelta(hours=1), interval_at_review=5) # Existing card review today
+        
+        # Reviews This Week (but not today)
+        self._create_review(s1, 0.7, self.one_day_ago, interval_at_review=1)
+        self._create_review(s2, 0.7, self.three_days_ago, interval_at_review=10)
+
+        # Reviews Older than a week
+        self._create_review(s4_mastered, 0.9, self.eight_days_ago, interval_at_review=20)
+
+        response = self.client.get(self.stats_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Expected calculations based on PRD and setup
+        # total_sentences = 4 (s1, s2, s3, s4_mastered)
+        # sentences_learned = 3 (s1, s2, s4_mastered, as s3 has 0 reviews)
+        # percentage_learned = (3/4)*100 = 75.0
+        # reviews_today = 2
+        # new_cards_reviewed_today = 1 (s1's first review was today and interval_at_review=0)
+        # reviews_this_week = 2 (today) + 2 (one_day_ago, three_days_ago) = 4
+        # total_reviews_all_time = 2 (today) + 2 (this week not today) + 1 (older) = 5
+        # overall_average_score: (s1.total_score_sum + s2.total_score_sum + s4_mastered.total_score_sum) / (s1.total_reviews + s2.total_reviews + s4_mastered.total_reviews)
+        # (0.9 + 1.5 + 4.5) / (1 + 2 + 5) = 6.9 / 8 = 0.8625
+        # sentences_mastered = 1 (s4_mastered)
+
+        expected_stats = {
+            "reviews_today": 2,
+            "new_cards_reviewed_today": 1,
+            "reviews_this_week": 4,
+            "total_reviews_all_time": Review.objects.count(), # Should be 5 based on creation
+            "overall_average_score": round((0.9 + 0.8 + 0.7 + 0.7 + 0.9) / 5, 4), # Corrected calculation: sum of scores / num_reviews
+            "total_sentences": 4,
+            "sentences_mastered": 1,
+            "sentences_learned": 3,
+            "percentage_learned": 75.0
+        }
+        self.assertEqual(response.data, expected_stats)
+
+    # TODO: Add more granular tests: 
+    # - Test with only new cards reviewed today
+    # - Test with only review cards today
+    # - Test with reviews exactly 7 days ago (should be counted in this week)
+    # - Test average score calculation with more varied scores
+    # - Test mastered calculation with edge cases (e.g. just meets criteria vs. exceeds)
+    # - Test learned sentences when some sentences have no reviews at all.
+    # - Test percentage learned when total_sentences is 0 (already covered by no_data, but good to keep in mind)
+
+class SentenceListAPITests(APITestCase):
+    def setUp(self):
+        Sentence.objects.all().delete()
+        Review.objects.all().delete()
+        self.sentences_url = "/api/flashcards/sentences/"
+        self.today = timezone.now()
+
+        # Create a batch of sentences for pagination and content testing
+        self.num_sentences = 30
+        for i in range(1, self.num_sentences + 1):
+            sentence = Sentence.objects.create(
+                csv_number=900 + i,
+                key_spanish_word=f"List Word {i}",
+                spanish_sentence_example=f"List Spanish Example {i}",
+                english_sentence_example=f"List English Example {i}",
+                total_reviews=i % 5, 
+                total_score_sum=(i % 5) * 0.8 if (i % 5 > 0) else 0.0, 
+                next_review_date=self.today.date() + timedelta(days=i),
+                is_learning= (i % 2 == 0),
+                interval_days= i % 7 # Set interval_days for testing
+            )
+            if i % 3 == 0: # Add a review for some sentences to test last_reviewed_date
+                Review.objects.create(
+                    sentence=sentence, 
+                    user_score=0.9, 
+                    review_timestamp=self.today - timedelta(days=i),
+                    interval_at_review=0,
+                    ease_factor_at_review=2.5
+                )
+
+    def test_list_sentences_paginated_default_size(self):
+        """Test fetching the first page of sentences with default page size."""
+        response = self.client.get(self.sentences_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # StandardResultsSetPagination default page_size is 25
+        self.assertEqual(len(response.data['results']), 25)
+        self.assertEqual(response.data['count'], self.num_sentences)
+        self.assertIsNotNone(response.data['next'])
+        self.assertIsNone(response.data['previous'])
+        
+        # Check content of the first item
+        first_sentence_data = response.data['results'][0]
+        self.assertEqual(first_sentence_data['csv_number'], 901)
+        self.assertEqual(first_sentence_data['key_spanish_word'], "List Word 1")
+        self.assertIn('average_score', first_sentence_data)
+        self.assertIn('last_reviewed_date', first_sentence_data)
+        if (901 % 3 == 0): # Sentence 901 (i=1) won't have a review by this logic
+             self.assertIsNone(first_sentence_data['last_reviewed_date'])
+        else: # Actually i=1 is not divisible by 3, so no review for first sentence.
+             self.assertIsNone(first_sentence_data['last_reviewed_date'])
+
+    def test_list_sentences_custom_page_size_and_navigation(self):
+        """Test fetching with custom page size and navigating to the second page."""
+        page_size = 10
+        response = self.client.get(self.sentences_url, {'page_size': page_size, 'page': 1})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), page_size)
+        self.assertEqual(response.data['count'], self.num_sentences)
+        self.assertIsNotNone(response.data['next'])
+        self.assertIsNone(response.data['previous'])
+        self.assertEqual(response.data['results'][0]['csv_number'], 901)
+
+        # Fetch second page
+        response_page2 = self.client.get(response.data['next']) # Use the 'next' URL
+        self.assertEqual(response_page2.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response_page2.data['results']), page_size)
+        self.assertIsNotNone(response_page2.data['next'])
+        self.assertIsNotNone(response_page2.data['previous'])
+        self.assertEqual(response_page2.data['results'][0]['csv_number'], 900 + page_size + 1) # 911
+
+    def test_list_sentences_last_page(self):
+        """Test fetching the last page which might have fewer items."""
+        page_size = 25 # Default
+        num_pages = (self.num_sentences + page_size - 1) // page_size # Ceiling division
+        remaining_items = self.num_sentences % page_size
+        if remaining_items == 0: remaining_items = page_size
+
+        response = self.client.get(self.sentences_url, {'page': num_pages})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), remaining_items)
+        self.assertIsNone(response.data['next'])
+        if num_pages > 1:
+            self.assertIsNotNone(response.data['previous'])
+        else:
+            self.assertIsNone(response.data['previous'])
+
+    def test_sentence_data_fields_in_list(self):
+        """Verify that essential fields, including calculated ones, are present."""
+        response = self.client.get(self.sentences_url, {'page_size': 5})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        sentence_data = response.data['results'][2] # Get the 3rd sentence (csv_number 903)
+        # sentence created with i=3, so csv_number = 903
+        # total_reviews = 3 % 5 = 3
+        # total_score_sum = 3 * 0.8 = 2.4
+        # average_score = 2.4 / 3 = 0.8
+        # last_reviewed_date should exist because 3 % 3 == 0
+
+        self.assertEqual(sentence_data['csv_number'], 903)
+        self.assertIsNotNone(sentence_data['average_score'])
+        self.assertAlmostEqual(sentence_data['average_score'], 0.8, places=2)
+        self.assertIsNotNone(sentence_data['last_reviewed_date'])
+        self.assertFalse(sentence_data['is_learning']) # Corrected: i=3 -> is_learning = (3 % 2 == 0) which is False
+        self.assertEqual(sentence_data['total_reviews'], 3)
+        self.assertEqual(sentence_data['interval_days'], 3 % 7) # Corrected: i=3 -> interval_days = 3 % 7 = 3
+
+    # TODO: Add tests for filtering and sorting once implemented.
+    # TODO: Test with no sentences in DB.
