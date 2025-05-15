@@ -1,18 +1,19 @@
 describe('Flashcard Review Flow', () => {
     beforeEach(() => {
-        // For E2E tests, we might need to ensure a consistent state.
-        // This could involve resetting the database or ensuring specific cards are due.
-        // For now, we'll assume there are cards available for review.
-        cy.visit('/'); // Assumes the flashcard view is at the root
+        // Intercept the initial card load and wait for it
+        cy.intercept('GET', '/api/flashcards/next-card/').as('getNextCard');
+        cy.visit('/');
+        cy.wait('@getNextCard', { timeout: 15000 }); // Wait up to 15 seconds for the first card
     });
 
     it('successfully completes a review cycle', () => {
         // 1. Check initial card display (front)
-        cy.get('.flashcard-container .card-front h2').should('not.be.empty');
-        cy.get('.flashcard-container .card-front .sentence-display').should('not.be.empty');
+        // Ensure the card front elements are present and visible with a longer timeout
+        cy.get('.flashcard-container .card-front h2', { timeout: 10000 }).should('be.visible').and('not.be.empty');
+        cy.get('.flashcard-container .card-front .sentence-display', { timeout: 10000 }).should('be.visible').and('not.be.empty');
 
         // 2. Click "Show Answer"
-        cy.get('button.action-button').contains('Show Answer')
+        cy.get('button.action-button', { timeout: 10000 }).contains('Show Answer')
             .should('be.visible')
             .and('not.be.disabled')
             .click({ force: true });
@@ -52,16 +53,20 @@ describe('Flashcard Review Flow', () => {
         // This test requires setting up the backend so no cards are due.
         // This might involve an API call to reset/clear reviews or a specific DB state.
         // For now, we will stub the API response directly in Cypress for this test case.
+        // Re-intercept for this specific test case after the beforeEach one.
         cy.intercept('GET', '/api/flashcards/next-card/', { statusCode: 204, body: null }).as('getNextCardEmpty');
-        cy.visit('/');
-        cy.wait('@getNextCardEmpty');
-        cy.get('.all-done-message').should('be.visible');
-        cy.get('.all-done-message p').contains("Congratulations! You've reviewed all available cards for now!");
+        cy.visit('/'); // Re-visit to trigger the new intercept
+        cy.wait('@getNextCardEmpty', { timeout: 10000 }); // Wait for the stubbed response
+        cy.get('.all-done-message', { timeout: 10000 }).should('be.visible');
+        cy.get('.all-done-message p').contains("Congratulations! You\'ve reviewed all available cards for now!");
     });
 
     it('displays an error message if submitting a review fails', () => {
-        cy.visit('/');
-        cy.get('button.action-button').contains('Show Answer').click();
+        // Ensure the card front elements are present and visible first
+        cy.get('.flashcard-container .card-front h2', { timeout: 10000 }).should('be.visible').and('not.be.empty');
+        cy.get('.flashcard-container .card-front .sentence-display', { timeout: 10000 }).should('be.visible').and('not.be.empty');
+
+        cy.get('button.action-button', { timeout: 10000 }).contains('Show Answer').click();
         cy.get('#userScore').clear().type('0.5');
 
         // Intercept the submit review API call to simulate a failure
