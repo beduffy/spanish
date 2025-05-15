@@ -52,11 +52,38 @@ jobs:
         sudo apt-get install -y xvfb libnss3 libgtk-3-0 libgbm-dev libasound2
 
     - name: Run tests using docker-compose
+      if: always() # Run this even if previous steps failed, to ensure cleanup
       run: |
         export DOCKER_HOST=unix:///var/run/docker.sock
-        sh ./run_all_tests.sh # This script now uses 'docker-compose'
+        # The run_all_tests.sh script will exit with a non-zero code if tests fail
+        # We want to capture this status to fail the CI job correctly
+        # but still allow artifact upload if tests ran and failed.
+        set +e # Do not exit immediately on error for the test script
+        ./run_all_tests.sh
+        TEST_EXIT_CODE=$?
+        set -e # Re-enable immediate exit on error
 
-    - name: Upload coverage reports to Codecov
+        # Upload Cypress artifacts if the directory exists (meaning E2E tests ran)
+        # This step should run even if run_all_tests.sh failed, to capture failure artifacts
+        if [ -d "./anki_web_app/spanish_anki_frontend/cypress/screenshots" ]; then
+          echo "Cypress screenshots directory found, uploading..."
+        fi
+        if [ -d "./anki_web_app/spanish_anki_frontend/cypress/videos" ]; then
+          echo "Cypress videos directory found, uploading..."
+        fi
+        exit $TEST_EXIT_CODE # Exit with the original test script's exit code
+
+    - name: Upload Cypress Screenshots and Videos # This step specifically handles uploads
+      if: failure() # Only run this step if any previous step (like tests) failed
+      uses: actions/upload-artifact@v4
+      with:
+        name: cypress-artifacts
+        path: |
+          ./anki_web_app/spanish_anki_frontend/cypress/screenshots/
+          ./anki_web_app/spanish_anki_frontend/cypress/videos/
+        retention-days: 7 # Optional: how long to keep the artifacts
+
+    - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4.0.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
