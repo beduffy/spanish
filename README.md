@@ -46,3 +46,93 @@ This project follows a standard Django structure. Here's an overview of the key 
     *   Isolates project-specific dependencies (like Django, Django REST framework) from other Python projects on your system.
 
 This structure helps in organizing code logically, making it easier to manage and scale the application.
+
+## Development Setup
+
+### Backend (Django)
+
+1.  **Navigate to the backend directory:**
+    ```bash
+    cd anki_web_app
+    ```
+2.  **Activate your Python virtual environment** (e.g., Conda `py38` or your `venv`).
+3.  **Apply database migrations:**
+    ```bash
+    python manage.py migrate
+    ```
+4.  **(Optional) Import initial data from CSV:**
+    Make sure your CSV file (e.g., `data/Spanish - 2000 words in context_may_15th_2025.csv`) is in the `anki_web_app/data/` directory.
+    ```bash
+    python manage.py import_csv data/your_csv_file_name.csv
+    ```
+5.  **Run the Django development server:**
+    ```bash
+    python manage.py runserver
+    ```
+    The backend API will typically be available at `http://127.0.0.1:8000/`.
+
+### Frontend (Vue.js)
+
+1.  **Navigate to the frontend directory:**
+    ```bash
+    cd anki_web_app/spanish_anki_frontend 
+    ```
+    (If you are in the `anki_web_app` directory, use `cd spanish_anki_frontend`)
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Run the Vue development server:**
+    ```bash
+    npm run serve
+    ```
+    The frontend application will typically be available at `http://localhost:8080/`.
+
+## Running Tests
+
+This project includes backend tests (Django), frontend unit tests (Jest), and frontend end-to-end tests (Cypress).
+
+### Run All Tests (Recommended)
+
+A script is provided in the project root to run all test suites sequentially:
+
+1.  **Navigate to the project root directory:**
+    ```bash
+    cd /path/to/your/spanish_anki_project # Or simply `cd ..` if you are in `anki_web_app`
+    ```
+2.  **Make the script executable (if you haven't already):**
+    ```bash
+    chmod +x run_all_tests.sh
+    ```
+3.  **Execute the script:**
+    ```bash
+    ./run_all_tests.sh
+    ```
+    This will run Django tests, then Jest unit tests, then Cypress E2E tests.
+
+### Individual Test Suites
+
+You can also run each test suite individually:
+
+*   **Backend Django Tests:**
+    Navigate to the `anki_web_app` directory and run:
+    ```bash
+    python manage.py test
+    ```
+
+*   **Frontend Unit Tests (Jest):**
+    Navigate to the `anki_web_app/spanish_anki_frontend` directory and run:
+    ```bash
+    npm run test:unit
+    ```
+
+*   **Frontend E2E Tests (Cypress):**
+    Navigate to the `anki_web_app/spanish_anki_frontend` directory.
+    To run in headless mode:
+    ```bash
+    npx cypress run
+    ```
+    To open the Cypress Test Runner UI:
+    ```bash
+    npx cypress open
+    ```
