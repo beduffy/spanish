@@ -16,10 +16,14 @@
     </div>
 
     <div v-if="!isLoading && currentCard" class="flashcard-container">
+      <div class="card-header">
+        <span class="card-type-badge">{{ cardType }}</span>
+        <span v-if="currentCard.csv_number" class="card-csv-number">#{{ currentCard.csv_number }}</span>
+      </div>
       <!-- Front of the Card -->
       <div class="card-front">
-        <h2>{{ currentCard.key_spanish_word }}</h2>
-        <p class="spanish-sentence">{{ currentCard.spanish_sentence_example }}</p>
+        <h2>{{ promptKeyWord }}</h2>
+        <p class="sentence-display">{{ promptSentence }}</p>
         <p v-if="currentCard.last_reviewed_date" class="last-reviewed">
           Last reviewed: {{ formatDate(currentCard.last_reviewed_date) }}
         </p>
@@ -31,8 +35,8 @@
       <!-- Back of the Card (shown after clicking "Show Answer") -->
       <div v-if="showAnswer" class="card-back">
         <hr>
-        <p><strong>Key Word Translation:</strong> {{ currentCard.key_word_english_translation }}</p>
-        <p><strong>Sentence Translation:</strong> {{ currentCard.english_sentence_example }}</p>
+        <p><strong>Key Word Translation:</strong> {{ answerKeyWordTranslation }}</p>
+        <p><strong>Sentence Translation:</strong> {{ answerSentenceTranslation }}</p>
         
         <div v-if="currentCard.base_comment" class="comments-section">
           <strong>Base Comment:</strong>
@@ -81,6 +85,31 @@ export default {
       allCardsDone: false, // Flag to indicate no more cards
       errorMessage: '',
     };
+  },
+  computed: {
+    isS2E() {
+      return this.currentCard && this.currentCard.translation_direction === 'S2E';
+    },
+    promptKeyWord() {
+      if (!this.currentCard) return '';
+      return this.isS2E ? this.currentCard.key_spanish_word : this.currentCard.key_word_english_translation;
+    },
+    promptSentence() {
+      if (!this.currentCard) return '';
+      return this.isS2E ? this.currentCard.spanish_sentence_example : this.currentCard.english_sentence_example;
+    },
+    answerKeyWordTranslation() {
+      if (!this.currentCard) return '';
+      return this.isS2E ? this.currentCard.key_word_english_translation : this.currentCard.key_spanish_word;
+    },
+    answerSentenceTranslation() {
+      if (!this.currentCard) return '';
+      return this.isS2E ? this.currentCard.english_sentence_example : this.currentCard.spanish_sentence_example;
+    },
+    cardType() {
+      if (!this.currentCard) return '';
+      return this.currentCard.translation_direction === 'S2E' ? 'Spanish to English' : 'English to Spanish';
+    }
   },
   methods: {
     async fetchNextCard() {
@@ -157,6 +186,28 @@ export default {
   font-family: Arial, sans-serif;
 }
 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.card-type-badge {
+  background-color: #e0e0e0;
+  color: #333;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 0.8em;
+}
+
+.card-csv-number {
+  font-size: 0.9em;
+  color: #777;
+}
+
 .loading-message, .no-cards-message, .all-done-message, .error-message {
   text-align: center;
   padding: 20px;
@@ -191,7 +242,7 @@ export default {
   margin-bottom: 5px;
 }
 
-.spanish-sentence {
+.sentence-display {
   font-size: 1.2em;
   color: #555;
   margin-bottom: 15px;
