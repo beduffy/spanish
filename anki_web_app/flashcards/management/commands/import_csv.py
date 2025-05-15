@@ -46,7 +46,7 @@ class Command(BaseCommand):
                         key_word_english_translation = row['English Translation']
                         spanish_sentence_example = row['Spanish Example']
                         english_sentence_example = row['English Example']
-                        base_comment = row.get('Comment', '') # Optional field
+                        base_comment = row.get('Comment') # Changed: Allow None if column missing, or actual value (empty string if cell is empty)
                         
                         # Concatenate AI explanations if they exist, otherwise leave as None
                         chat_gpt_explanation = row.get('Chat GPTs explanation', '').strip()
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                             key_word_english_translation=key_word_english_translation,
                             spanish_sentence_example=spanish_sentence_example,
                             english_sentence_example=english_sentence_example,
-                            base_comment=base_comment if base_comment else None,
+                            base_comment=base_comment, # Changed: Directly pass the value
                             ai_explanation=ai_explanation,
                             # SRS defaults are set in the model definition
                             # (ease_factor, interval_days, next_review_date, is_learning, consecutive_correct_reviews)
