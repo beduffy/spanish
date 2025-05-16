@@ -869,16 +869,25 @@ class StatisticsAPITests(APITestCase):
             ease_factor=2.8
         )
 
-        # Reviews Today
-        self._create_review(s1, 0.9, timezone.now(), interval_at_review=0) # New card review today
-        self._create_review(s2, 0.8, timezone.now() - timedelta(hours=1), interval_at_review=5) # Existing card review today
+        # Reviews Today - make timestamps deterministic relative to self.today
+        # Ensure these are distinct, aware datetime objects for 'today'
+        review_time_today_1 = timezone.make_aware(datetime.combine(self.today, datetime.min.time())) + timedelta(hours=10)
+        review_time_today_2 = timezone.make_aware(datetime.combine(self.today, datetime.min.time())) + timedelta(hours=12)
+
+        self._create_review(s1, 0.9, review_time_today_1, interval_at_review=0) # New card review today
+        self._create_review(s2, 0.8, review_time_today_2, interval_at_review=5) # Existing card review today
         
         # Reviews This Week (but not today)
-        self._create_review(s1, 0.7, self.one_day_ago, interval_at_review=1)
-        self._create_review(s2, 0.7, self.three_days_ago, interval_at_review=10)
+        # Ensure these are also distinct, aware datetime objects for their respective days
+        review_time_one_day_ago = timezone.make_aware(datetime.combine(self.one_day_ago, datetime.min.time())) + timedelta(hours=10)
+        review_time_three_days_ago = timezone.make_aware(datetime.combine(self.three_days_ago, datetime.min.time())) + timedelta(hours=10)
+
+        self._create_review(s1, 0.7, review_time_one_day_ago, interval_at_review=1)
+        self._create_review(s2, 0.7, review_time_three_days_ago, interval_at_review=10)
 
         # Reviews Older than a week
-        self._create_review(s4_mastered, 0.9, self.eight_days_ago, interval_at_review=20)
+        review_time_eight_days_ago = timezone.make_aware(datetime.combine(self.eight_days_ago, datetime.min.time())) + timedelta(hours=10)
+        self._create_review(s4_mastered, 0.9, review_time_eight_days_ago, interval_at_review=20)
 
         response = self.client.get(self.stats_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

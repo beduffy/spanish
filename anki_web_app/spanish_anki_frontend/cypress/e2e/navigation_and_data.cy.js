@@ -87,7 +87,7 @@ describe('Navigation and Data Verification', () => {
                 cy.get('button.action-button', { timeout: 10000 }).contains('Submit & Next').click();
                 cy.wait('@submitReview', { timeout: 15000 }).its('response.statusCode').should('be.oneOf', [200, 201]);
                 cy.log('Test: reflects review activity - Review submitted and API call confirmed.');
-
+                
                 // Explicit wait for potential UI updates or loading messages after submit
                 // This is a general wait, adjust if a specific loading indicator exists and is reliable
                 cy.wait(1000); // Wait 1 second for UI to settle, adjust as needed
