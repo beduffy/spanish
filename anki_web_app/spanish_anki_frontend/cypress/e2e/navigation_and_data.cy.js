@@ -123,12 +123,17 @@ describe('Navigation and Data Verification', () => {
                 // Verify review history on Sentence Detail page
                 cy.log('Test: reflects review activity - Verifying review history table on sentence detail page.');
                 cy.get('.review-history table tbody tr', { timeout: 10000 }).should('have.length.above', 0);
-                cy.get('.review-history table tbody tr').first().within(() => {
+
+                cy.get('.review-history table tbody tr').first().as('firstReviewRow');
+
+                cy.get('@firstReviewRow').then(($row) => {
+                    cy.log('CI DEBUG - HTML of first review row:', $row.html());
+                });
+
+                cy.get('@firstReviewRow').within(() => {
                     cy.get('td').eq(0).should('not.be.empty'); // Date column
-                    cy.get('td').eq(1).should('contain', '3'); // MODIFIED: Changed from 4 to 3, assuming 0.7 score -> q=3
-                    // The comment might include the timestamp, or be just the comment text
-                    // Based on screenshot, the comment text is what we want to check in td.eq(2)
-                    cy.get('td').eq(2).should('contain', 'E2E test - dashboard/detail check');
+                    cy.get('td').eq(1).should('contain', '0.7'); // Score column
+                    cy.get('td').eq(4).should('contain', 'E2E test - dashboard/detail check'); // Comment column (index 4)
                 });
 
                 // 5. Navigate to Dashboard and verify updated stats (e.g., reviews_done)
