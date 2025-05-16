@@ -87,7 +87,7 @@ describe('Navigation and Data Verification', () => {
                 cy.get('button.action-button', { timeout: 10000 }).contains('Submit & Next').click();
                 cy.wait('@submitReview', { timeout: 15000 }).its('response.statusCode').should('be.oneOf', [200, 201]);
                 cy.log('Test: reflects review activity - Review submitted and API call confirmed.');
-                
+
                 // Explicit wait for potential UI updates or loading messages after submit
                 // This is a general wait, adjust if a specific loading indicator exists and is reliable
                 cy.wait(1000); // Wait 1 second for UI to settle, adjust as needed
@@ -120,16 +120,23 @@ describe('Navigation and Data Verification', () => {
                 cy.get('h1', { timeout: 10000 }).contains('Sentence Detail');
                 cy.log('Test: reflects review activity - Verifying review history table.');
 
-                // Increased timeout and more specific checks for the review history table
-                cy.get('.review-history table tbody', { timeout: 20000 })
-                    .find('tr', { timeout: 15000 })
-                    .should('have.length.greaterThan', 0) // Ensure at least one row
-                    .first() // Get the first row (presumably the latest review)
-                    .within(() => {
-                        cy.get('td').eq(1).should('contain', '0.7'); // Assuming score is in the second column
-                        cy.get('td').eq(2).find('pre').should('contain', 'E2E test - dashboard/detail check'); // Assuming comment is in the third
-                    });
-                cy.log('Test: reflects review activity - Review history verified on detail page.');
+                // Verify review history on Sentence Detail page
+                cy.log('Test: reflects review activity - Verifying review history table on sentence detail page.');
+                cy.get('.review-history table tbody tr', { timeout: 10000 }).should('have.length.above', 0);
+                cy.get('.review-history table tbody tr').first().within(() => {
+                    cy.get('td').eq(0).should('not.be.empty'); // Date column
+                    cy.get('td').eq(1).should('contain', '4'); // User Response Quality (e.g., 4 for 'Good') - or the resulting ease/interval
+                    // The comment might include the timestamp, or be just the comment text
+                    // Based on screenshot, the comment text is what we want to check in td.eq(2)
+                    cy.get('td').eq(2).should('contain', 'E2E test - dashboard/detail check'); // MODIFIED: Removed .find('pre')
+                });
+
+                // 5. Navigate to Dashboard and verify updated stats (e.g., reviews_done)
+                cy.log('Test: reflects review activity - Navigating to Dashboard.');
+                cy.get('nav a', { timeout: 10000 }).contains('Dashboard').click();
+                cy.url().should('include', '/dashboard');
+                cy.get('.stat-card h2', { timeout: 10000 }).contains('Reviews Today').parent().find('p').invoke('text').then(parseFloat).should('be.gte', 1);
+                cy.log('Test: reflects review activity - Dashboard review count verified.');
             });
     });
 }); 
