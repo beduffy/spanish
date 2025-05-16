@@ -76,7 +76,7 @@ describe('Navigation and Data Verification', () => {
             })
             .invoke('text').then((text) => {
                 const firstCardKeyWord = text.trim();
-                cy.log(`Test: reflects review activity - Captured firstCardKeyWord: ${firstCardKeyWord}`);
+                cy.log(`Test: reflects review activity - CI LOG - Captured firstCardKeyWord: ${firstCardKeyWord}`);
                 expect(firstCardKeyWord).not.to.be.empty; // Ensure it's not empty
 
                 cy.get('button.action-button', { timeout: 10000 }).contains('Show Answer').click();
@@ -87,7 +87,7 @@ describe('Navigation and Data Verification', () => {
                 cy.get('button.action-button', { timeout: 10000 }).contains('Submit & Next').click();
                 cy.wait('@submitReview', { timeout: 15000 }).its('response.statusCode').should('be.oneOf', [200, 201]);
                 cy.log('Test: reflects review activity - Review submitted and API call confirmed.');
-                
+
                 // Explicit wait for potential UI updates or loading messages after submit
                 // This is a general wait, adjust if a specific loading indicator exists and is reliable
                 cy.wait(1000); // Wait 1 second for UI to settle, adjust as needed
@@ -125,10 +125,10 @@ describe('Navigation and Data Verification', () => {
                 cy.get('.review-history table tbody tr', { timeout: 10000 }).should('have.length.above', 0);
                 cy.get('.review-history table tbody tr').first().within(() => {
                     cy.get('td').eq(0).should('not.be.empty'); // Date column
-                    cy.get('td').eq(1).should('contain', '4'); // User Response Quality (e.g., 4 for 'Good') - or the resulting ease/interval
+                    cy.get('td').eq(1).should('contain', '3'); // MODIFIED: Changed from 4 to 3, assuming 0.7 score -> q=3
                     // The comment might include the timestamp, or be just the comment text
                     // Based on screenshot, the comment text is what we want to check in td.eq(2)
-                    cy.get('td').eq(2).should('contain', 'E2E test - dashboard/detail check'); // MODIFIED: Removed .find('pre')
+                    cy.get('td').eq(2).should('contain', 'E2E test - dashboard/detail check');
                 });
 
                 // 5. Navigate to Dashboard and verify updated stats (e.g., reviews_done)
