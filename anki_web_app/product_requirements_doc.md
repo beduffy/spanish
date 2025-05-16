@@ -199,7 +199,38 @@ This document outlines the requirements for a web application designed to help t
 *   **Handling of `Chat GPTs explanation` and `Gemini explanation` columns (Answered):** These will be imported into a single `ai_explanation` field in the `Sentences` table. Initially, this field can be NULL or empty if the CSV columns are blank. We can decide later if we need to merge them if both are present or prefer one.
 *   **Bidirectional Learning (Clarification for V2+):** The current (Phase 1) implementation focuses on Spanish to English translation. Each `Sentence` object has one set of SRS parameters. True bidirectional learning (English to Spanish) with independent SRS tracking for each direction for the same conceptual sentence is a V2+ consideration. This might involve treating forward and backward translations as separate "cards" with their own SRS schedules (e.g., by creating two `Sentence` objects per original CSV row or a more complex linked model).
 
-## Phases
+## 9. Application Architecture & Data Flow
+
+### 9.1. Overall Architecture
+
+The application follows a modern client-server architecture:
+
+1.  **User Interaction:** The user interacts with the application through a web browser.
+2.  **Frontend (Client-Side):** The user interface is a Single Page Application (SPA) built with **Vue.js**. It runs entirely in the user's browser.
+    *   It fetches data from and sends data to the backend via HTTP API calls (typically using a library like Axios).
+    *   It handles displaying flashcards, user inputs (scores, comments), and navigating between views (Dashboard, Sentences List, etc.).
+3.  **Backend (Server-Side):** The backend is a **Django (Python)** application.
+    *   It serves a RESTful API that the Vue.js frontend consumes.
+    *   It contains the core business logic, including the Spaced Repetition System (SRS) algorithm for scheduling flashcards.
+    *   It interacts with the **SQLite database** to store and retrieve all application data (sentences, reviews, user progress).
+4.  **Database:** An **SQLite** database stores all persistent data.
+5.  **Containerization (Docker):** Both the Django backend and the Vue.js frontend (served by a simple static server like Nginx in production, or Vue CLI's dev server in development) are containerized using **Docker**. `docker-compose.yml` defines and manages these services, ensuring consistent environments for development, testing, and deployment.
+
+Visualized Simply:
+`User <-> Browser (Vue.js Frontend) <-> HTTP API <-> Django Backend <-> SQLite DB`
+
+### 9.2. Data Flow Summary
+
+1.  **Initial Setup:** Sentence data (Spanish words, examples, translations, initial comments) is imported from a `.csv` file into the SQLite database using a custom Django management command (`manage.py import_csv`).
+2.  **Review Cycle:**
+    *   The Vue.js frontend requests the next flashcard from the Django API (`/api/flashcards/next-card/`).
+    *   The Django backend, using its SRS logic and database queries, determines the appropriate card and sends its data (Spanish content) to the frontend.
+    *   The user reviews the card, decides on a score, and optionally adds a comment.
+    *   The frontend submits this review data to the Django API (`/api/flashcards/submit-review/`).
+    *   The backend validates the data, records the review in the database, updates the SRS parameters for that sentence (e.g., `next_review_date`, `ease_factor`), and appends the comment.
+3.  **Statistics & Reporting:** The frontend requests aggregated statistics or detailed sentence data from various Django API endpoints, which query the database to provide this information.
+
+## 10. Phases
 
 **Phase 1: Backend Core (Django) - COMPLETE**
 
@@ -221,30 +252,41 @@ This document outlines the requirements for a web application designed to help t
     *   `GET /api/flashcards/sentences/`: Provides a paginated list of all sentences with key stats.
     *   `GET /api/flashcards/sentences/<id>/`: Provides detailed history for a specific sentence.
 
-**Phase 2: Frontend (Vue.js) - NEXT**
+**Phase 2: Frontend (Vue.js) - Core Functionality Implemented**
 
-*   **Vue.js Project Setup & Basic Structure:**
-    *   Set up a new Vue.js project (e.g., using Vue CLI).
-    *   Organize components (e.g., FlashcardView, DashboardView, SentenceListView).
-    *   Set up Vue Router for navigation.
-    *   Create services/helpers (e.g., using Axios) to communicate with the Django backend APIs.
-    *   Flashcard Interface:
-        *   Develop the main flashcard component:
-            *   Display front of the card ([Key Spanish Word]: [Spanish Example Sentence]).
-            *   Button to "Show Answer".
-            *   Display back of the card (translations, original Spanish, comments).
-            *   Input fields for score and new comment.
-            *   Button to "Submit & Next", which calls the backend API.
-    *   Statistics & Dashboard:
-        *   Create Vue components to display the statistics fetched from the /api/statistics/ endpoint.
-    *   Sentence Management Page:
-        *   Create Vue components to display the list of all sentences and their individual statistics/history fetched from /api/sentences/ and /api/sentences/<id>/.
-        *   Implement filtering/sorting if desired.
-*   **Backup and restore functionality for the database.**
+*   **Vue.js Project Setup & Basic Structure (COMPLETE):**
+    *   Vue.js project established (using Vue CLI).
+    *   Component structure organized (e.g., FlashcardView, DashboardView, SentenceListView).
+    *   Vue Router set up for navigation.
+    *   Services/helpers (using Axios) created for communication with the Django backend APIs.
+*   **Core User Interface & API Integration (COMPLETE):**
+    *   Flashcard Interface Developed:
+        *   Main flashcard component displays front of the card ([Key Spanish Word]: [Spanish Example Sentence]).
+        *   "Show Answer" button reveals card back.
+        *   Back of the card displays translations, original Spanish, and comments.
+        *   Input fields for score and new comment are functional.
+        *   "Submit & Next" button calls the backend API and fetches the next card.
+    *   Statistics & Dashboard Implemented:
+        *   Vue components display statistics fetched from the `/api/statistics/` endpoint.
+    *   Sentence Management Page Implemented:
+        *   Vue components display the list of all sentences and their individual statistics/history fetched from `/api/sentences/` and `/api/sentences/<id>/`.
+*   **Further Enhancements (Future Considerations for Phase 2 or V2+):**
+    *   Advanced filtering/sorting on the Sentence Management Page.
+    *   More polished UI/UX refinements.
+    *   Backup and restore functionality for the database (this might also involve backend changes).
 
 
 Testing Plan
-We'll approach this in phases, building up from backend tests to frontend and E2E tests.
+
+A multi-layered testing strategy is employed to ensure the application is robust, reliable, and meets the specified requirements. Each layer focuses on different aspects of the application:
+
+*   **Backend Unit Tests:** Verify the smallest pieces of Django code (e.g., individual functions, model methods) work correctly in isolation.
+*   **Backend API/Integration Tests:** Ensure different parts of the Django application (models, views, serializers) work together correctly when an API endpoint is hit, including database interactions.
+*   **Frontend Unit Tests:** Validate individual Vue.js components in isolation, checking their rendering, methods, and interactions with mocked data/services.
+*   **Frontend End-to-End (E2E) Tests:** Simulate real user scenarios in a browser, testing the entire application stack (frontend + backend integration) to ensure features work as expected from the user's perspective.
+
+This comprehensive approach helps catch bugs early, from low-level logic errors to high-level feature malfunctions.
+
 Phase 1: Strengthen Backend API/Integration Tests (Django)
 You already have a foundation for API tests with NextCardAPITests. We need to ensure these are complete and then add tests for the other API endpoints. These tests verify that different parts of your Django application (models, views, serializers) work together correctly when an API endpoint is hit.
 Location: anki_web_app/flashcards/tests.py
@@ -325,8 +367,8 @@ Renders sentence details and review history.
 averageScore computed property.
 Phase 4: Frontend E2E (End-to-End) Tests (Vue.js)
 These tests simulate real user interactions in a browser, testing the entire application stack (frontend + backend).
-Location: anki_web_app/spanish_anki_frontend/tests/e2e/specs/ (typical for Cypress).
-Tool: Cypress or Playwright. (We'll need to set this up).
+Location: `anki_web_app/spanish_anki_frontend/cypress/e2e/` (or similar, e.g., `anki_web_app/spanish_anki_frontend/cypress/e2e/*.cy.js`)
+Tool: Cypress.
 Key User Flows to Test:
 Full Review Cycle:
 Open app, see first card.
@@ -345,6 +387,12 @@ Click "View Details" for a sentence.
 Verify sentence details page loads with correct data, including review history matching actions from flow #1.
 No Cards Scenario: Test what happens if the API initially returns no cards.
 Handling API Errors (Optional but good): If possible, mock API errors at the network level to see how the frontend responds.
+
+**Executing Tests:**
+
+The primary way to run all tests (Backend Django, Frontend Unit Jest, Frontend E2E Cypress) in a consistent, containerized environment is by using the `run_all_tests.sh` script located in the project root. This script utilizes `docker-compose` to build and orchestrate the necessary services.
+
+For simulating the CI environment locally before pushing changes, `act` can be used to run the GitHub Actions workflow defined in `.github/workflows/ci.yml`.
 
 ---
 
