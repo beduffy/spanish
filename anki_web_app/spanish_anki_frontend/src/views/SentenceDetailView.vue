@@ -186,10 +186,16 @@ export default {
 
 <style scoped>
 .sentence-detail-view {
-  padding: 20px;
+  padding: 10px; /* Base padding for small screens */
   font-family: Arial, sans-serif;
-  max-width: 900px;
+  /* max-width: 900px; // Max-width will be handled by media query */
   margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.review-history {
+  overflow-x: auto; /* Allow horizontal scrolling for the review history table container */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 /* Badge styles copied from SentenceListView */
@@ -197,10 +203,10 @@ export default {
 .badge-e2s {
   padding: 3px 8px;
   border-radius: 10px;
-  font-size: 0.7em; /* Slightly smaller for header */
+  font-size: 0.65em; /* Further adjust for smaller screens */
   font-weight: bold;
   color: white;
-  margin-left: 10px;
+  margin-left: 5px; /* Reduced margin */
   vertical-align: middle;
 }
 
@@ -214,10 +220,11 @@ export default {
 
 .loading-message, .error-message, .no-data-message {
   text-align: center;
-  padding: 20px;
+  padding: 15px; /* Adjusted padding */
   background-color: #f0f0f0;
   border-radius: 8px;
-  margin: 20px auto;
+  margin: 15px auto; /* Adjusted margin */
+  box-sizing: border-box;
 }
 
 .error-message {
@@ -227,36 +234,38 @@ export default {
 
 .back-link {
   display: inline-block;
-  margin-bottom: 20px;
+  margin-bottom: 15px; /* Adjusted margin */
   color: #007bff;
   text-decoration: none;
+  font-size: 0.9em; /* Slightly smaller for mobile */
 }
 .back-link:hover {
   text-decoration: underline;
 }
 
 .sentence-content h1 {
-  margin-bottom: 20px;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 10px;
+  margin-bottom: 15px; /* Adjusted margin */
+  border-bottom: 1px solid #eee; /* Lighter border */
+  padding-bottom: 8px; /* Adjusted padding */
+  font-size: 1.4em; /* Adjusted font size for mobile */
 }
 
 .sentence-card {
   background-color: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 25px;
+  padding: 15px; /* Reduced padding */
+  margin-bottom: 20px; /* Reduced margin */
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .sentence-card h2 {
   margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 1.3em;
+  margin-bottom: 12px; /* Adjusted margin */
+  font-size: 1.2em; /* Adjusted font size */
   color: #333;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0; /* Lighter border */
+  padding-bottom: 6px; /* Adjusted padding */
 }
 
 .divider {
@@ -267,20 +276,24 @@ export default {
 }
 
 .detail-item {
-  margin-bottom: 10px;
-  line-height: 1.5;
+  margin-bottom: 8px; /* Reduced margin */
+  line-height: 1.4; /* Adjusted line height */
+  font-size: 0.9em; /* Base font size for detail items */
 }
 
 .detail-item strong {
-  color: #555;
+  color: #444; /* Slightly darker for better contrast */
+  margin-right: 5px;
 }
 
 .spanish-text, .english-text {
-  font-size: 1.1em;
+  font-size: 1.0em; /* Adjusted font size */
 }
 
 .sentence-display { /* Added for consistency with FlashcardView if specific styling is needed */
-  font-size: 1.1em;
+  font-size: 1.0em; /* Adjusted font size */
+  display: block; /* Ensure it takes its own line if long */
+  margin-top: 3px;
 }
 
 pre {
@@ -294,6 +307,7 @@ pre {
   border-radius: 4px;
   border: 1px solid #eee;
   font-family: inherit;
+  font-size: 0.9em; /* Ensure preformatted text is also responsive */
 }
 
 .review-history table {
@@ -304,9 +318,10 @@ pre {
 
 .review-history th, .review-history td {
   border: 1px solid #ddd;
-  padding: 8px 10px;
+  padding: 6px 8px; /* Reduced padding */
   text-align: left;
-  font-size: 0.9em;
+  font-size: 0.8em; /* Reduced font size */
+  word-break: break-word;
 }
 
 .review-history thead {
@@ -316,4 +331,87 @@ pre {
 .review-history tr:nth-child(even) {
   background-color: #f9f9f9;
 }
-</style> 
+
+/* Media Query for larger screens (tablets and desktops) */
+@media (min-width: 768px) {
+  .sentence-detail-view {
+    padding: 20px; /* Original padding */
+    max-width: 900px; /* Restore max-width */
+  }
+
+  .loading-message, .error-message, .no-data-message {
+    padding: 20px; /* Original padding */
+    margin: 20px auto; /* Original margin */
+  }
+  
+  .back-link {
+    margin-bottom: 20px; /* Original margin */
+    font-size: 1em; /* Original font size */
+  }
+
+  .sentence-content h1 {
+    margin-bottom: 20px; /* Original margin */
+    border-bottom: 2px solid #eee; /* Original border */
+    padding-bottom: 10px; /* Original padding */
+    font-size: 1.6em; /* Original font size */
+  }
+  
+  .badge-s2e, .badge-e2s {
+    font-size: 0.7em; /* Original size */
+    margin-left: 10px; /* Original margin */
+  }
+
+  .sentence-card {
+    padding: 20px; /* Original padding */
+    margin-bottom: 25px; /* Original margin */
+  }
+
+  .sentence-card h2 {
+    margin-bottom: 15px; /* Original margin */
+    font-size: 1.3em; /* Original font size */
+    border-bottom: 1px solid #eee; /* Original border */
+    padding-bottom: 8px; /* Original padding */
+  }
+
+  .detail-item {
+    margin-bottom: 10px; /* Original margin */
+    font-size: 1em; /* Original font size */
+  }
+
+  .spanish-text, .english-text, .sentence-display {
+    font-size: 1.1em; /* Original font size */
+  }
+  
+  pre {
+    font-size: 1em; /* Original font size */
+  }
+
+  .review-history th, .review-history td {
+    padding: 8px 10px; /* Original padding */
+    font-size: 0.9em; /* Original font size */
+  }
+}
+
+/* Minor adjustments for very small screens if needed */
+@media (max-width: 360px) {
+  .sentence-content h1 {
+    font-size: 1.3em;
+  }
+  .badge-s2e, .badge-e2s {
+    font-size: 0.6em;
+  }
+  .sentence-card h2 {
+    font-size: 1.1em;
+  }
+  .detail-item {
+    font-size: 0.85em;
+  }
+  .spanish-text, .english-text, .sentence-display {
+    font-size: 0.95em;
+  }
+  .review-history th, .review-history td {
+    font-size: 0.75em;
+    padding: 5px;
+  }
+}
+</style>

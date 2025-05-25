@@ -180,10 +180,11 @@ export default {
 
 <style scoped>
 .flashcard-view {
-  padding: 20px;
-  max-width: 600px;
+  padding: 10px; /* Adjusted padding for smaller screens */
+  max-width: 100%; /* Allow full width on mobile */
   margin: 0 auto;
   font-family: Arial, sans-serif;
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 
 .card-header {
@@ -318,15 +319,45 @@ export default {
 
 .review-inputs input[type="number"],
 .review-inputs textarea {
-  width: calc(100% - 22px); /* Account for padding and border */
-  padding: 10px;
+  width: 100%; /* Make inputs take full available width */
+  padding: 12px; /* Increased padding for easier tapping */
   border: 1px solid #ccc;
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
   border-radius: 4px;
   font-size: 1em;
 }
 
 .review-inputs textarea {
   resize: vertical;
-  min-height: 60px;
+  min-height: 70px; /* Slightly taller for easier typing */
 }
-</style> 
+
+/* Media Query for medium screens and up (tablets, desktops) */
+@media (min-width: 601px) {
+  .flashcard-view {
+    padding: 20px;
+    max-width: 600px; /* Original max-width for larger screens */
+  }
+
+  .review-inputs input[type="number"],
+  .review-inputs textarea {
+    width: calc(100% - 22px); /* Original width calculation for larger screens */
+  }
+}
+
+/* Media Query for very small screens (additional fine-tuning if necessary) */
+@media (max-width: 360px) {
+  .sentence-display {
+    font-size: 1.1em; /* Slightly reduce font size for very small screens */
+  }
+
+  .action-button {
+    padding: 10px 15px; /* Adjust padding for smaller buttons */
+    font-size: 0.95em;
+  }
+
+  .review-inputs label {
+    font-size: 0.95em;
+  }
+}
+</style>
