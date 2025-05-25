@@ -1,0 +1,53 @@
+version: '3.8'
+
+volumes:
+  db_data: # Persists the SQLite database
+
+services:
+  backend:
+    # Image name will be DOCKER_REGISTRY/anki_backend:BACKEND_TAG
+    # Example: mycompany/anki_backend:v1.0.1 or anki_backend:latest if DOCKER_REGISTRY is not set
+    image: ${DOCKER_REGISTRY:-}${BACKEND_IMAGE_NAME:-anki_backend}:${BACKEND_TAG:-latest}
+    container_name: anki_backend_prod
+    restart: unless-stopped
+    env_file:
+      - .env # Contains SECRET_KEY, DEBUG, ALLOWED_HOSTS, DATABASE_URL etc.
+    volumes:
+      - db_data:/app/db # Mount the volume for the SQLite database
+      # If you have other persistent media files, mount them here too
+      # - media_volume:/app/media 
+    expose:
+      - "8000" # Expose port 8000 to other services on the Docker network, not to the host
+    networks:
+      - anki_app_network
+    depends_on:
+      - frontend # Optional: ensure frontend (Nginx) starts after backend if there's a specific startup order desired, though usually Nginx handles backend being temporarily unavailable.
+
+  frontend:
+    # Image name will be DOCKER_REGISTRY/anki_frontend:FRONTEND_TAG
+    # Example: mycompany/anki_frontend:v1.0.1 or anki_frontend:latest if DOCKER_REGISTRY is not set
+    image: ${DOCKER_REGISTRY:-}${FRONTEND_IMAGE_NAME:-anki_frontend}:${FRONTEND_TAG:-latest}
+    container_name: anki_frontend_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"   # For initial HTTP traffic and Let's Encrypt ACME challenge
+      - "443:443" # For HTTPS traffic after SSL setup
+    volumes:
+      # Volume for Nginx logs (optional, can also log to stdout/stderr)
+      - ./logs/nginx:/var/log/nginx 
+      # Volumes for Let's Encrypt certificates (managed by Certbot on the host)
+      # These paths must match where Certbot stores the live certificates.
+      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
+      # If you created options-ssl-nginx.conf and ssl-dhparams.pem with Certbot:
+      - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro
+      - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
+    networks:
+      - anki_app_network
+    # depends_on: # Not strictly necessary for Nginx to depend on backend, as Nginx can handle backend being temporarily down.
+      # - backend
+
+networks:
+  anki_app_network:
+    driver: bridge
+    name: anki_prod_network

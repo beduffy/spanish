@@ -95,17 +95,19 @@ export default {
 
 <style scoped>
 .dashboard-view {
-  padding: 20px;
+  padding: 10px; /* Base padding for small screens */
   font-family: Arial, sans-serif;
+  box-sizing: border-box;
 }
 
 .loading-message, .error-message, .no-data-message {
   text-align: center;
-  padding: 20px;
+  padding: 15px; /* Adjusted padding */
   background-color: #f0f0f0;
   border-radius: 8px;
-  margin: 20px auto;
-  max-width: 500px;
+  margin: 15px auto; /* Adjusted margin */
+  max-width: 100%; /* Ensure it doesn't overflow */
+  box-sizing: border-box;
 }
 
 .error-message {
@@ -115,31 +117,64 @@ export default {
 
 .statistics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  /* Adjust minmax for smaller screens if necessary, 150px might be better for very small devices */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+  gap: 10px; /* Reduced gap for smaller screens */
+  margin-top: 15px;
 }
 
 .stat-card {
   background-color: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 20px;
+  padding: 15px; /* Reduced padding */
   text-align: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .stat-card h2 {
-  font-size: 1.1em;
+  font-size: 1.0em; /* Adjusted font size */
   color: #333;
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 8px; /* Adjusted margin */
 }
 
 .stat-card p {
-  font-size: 1.8em;
+  font-size: 1.6em; /* Adjusted font size */
   color: #007bff;
   margin: 0;
   font-weight: bold;
 }
-</style> 
+
+/* Media Query for larger screens (tablets and desktops) */
+@media (min-width: 600px) {
+  .dashboard-view {
+    padding: 20px; /* Original padding for larger screens */
+  }
+
+  .loading-message, .error-message, .no-data-message {
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 500px; /* Original max-width */
+  }
+
+  .statistics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Original grid setup */
+    gap: 20px; /* Original gap */
+    margin-top: 20px;
+  }
+
+  .stat-card {
+    padding: 20px; /* Original padding */
+  }
+
+  .stat-card h2 {
+    font-size: 1.1em; /* Original font size */
+    margin-bottom: 10px; /* Original margin */
+  }
+
+  .stat-card p {
+    font-size: 1.8em; /* Original font size */
+  }
+}
+</style>

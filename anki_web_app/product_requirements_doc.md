@@ -164,6 +164,15 @@ This document outlines the requirements for a web application designed to help t
 - **Data Storage:** SQLite database. The database file should be stored within the application directory (e.g., `anki_web_app/database/app.db`).
 - **User Interface:** Simple, clean, and fast. Minimal distractions. Optimized for quick review cycles.
 - **Accessibility:** Basic web accessibility considerations (e.g., keyboard navigation, sufficient contrast).
+### 6.2.1 Mobile Accessibility
+- The application frontend has been designed to be responsive and accessible on mobile devices.
+- Key considerations implemented include:
+    - Viewport meta tag for proper scaling.
+    - CSS Media Queries to adapt layouts, font sizes, and spacing for various screen sizes (mobile, tablet, desktop).
+    - Flexible/fluid layouts (e.g., using percentages, flexbox, CSS grid) instead of fixed-width designs.
+    - Touch-friendly UI elements with adequate sizing and spacing for tappable items like buttons and input fields.
+    - Horizontal scrolling for wide table data (e.g., Sentence List, Review History) on smaller screens to prevent layout breakage while keeping data accessible.
+- The aim is to provide a seamless user experience when accessing the application via a mobile web browser.
 - **Security (for single-user self-hosted):** If deployed to a publicly accessible server, implement basic HTTP authentication (e.g., via Nginx) to restrict access. For local-only use, this is a lower priority.
 - **Performance:** App should load quickly and card transitions should be snappy.
 
@@ -225,7 +234,23 @@ Visualized Simply:
     - The backend validates the data, records the review in the database, updates the SRS parameters for that sentence (e.g., `next_review_date`, `ease_factor`), and appends the comment.
 3.  **Statistics & Reporting:** The frontend requests aggregated statistics or detailed sentence data from various Django API endpoints, which query the database to provide this information.
 
-## 10. Phases
+## 10. Deployment Strategy
+
+- **Overview:** The application is designed to be deployed using Docker and Docker Compose, with Nginx as a reverse proxy and for serving the frontend.
+- **Key Components:**
+    - **Docker Images:** Separate Docker images are built for the Django backend and the Vue.js frontend (which includes Nginx for serving static files).
+    - **Docker Compose:** A `docker-compose.prod.yml` orchestrates the services (backend, frontend-nginx), manages networking, and persistent volumes (e.g., for the database).
+    - **Nginx Configuration:** A production-ready Nginx configuration (`nginx.prod.conf`) handles incoming traffic, serves static frontend assets, proxies API requests to the backend, and includes placeholders for SSL/TLS (e.g., via Let's Encrypt).
+- **Deployment Process Summary:**
+    - Detailed step-by-step instructions are available in `DEPLOYMENT.md`.
+    - The process involves server prerequisite setup (Docker, Nginx), code checkout, configuration (environment variables for backend, Nginx setup), building/pulling tagged Docker images, and running `docker-compose -f docker-compose.prod.yml up -d`.
+- **Release Management:**
+    - Releases are managed using Git tags (Semantic Versioning, e.g., `v1.0.0`).
+    - `build.sh` and `deploy.sh` scripts are provided to facilitate building Docker images from specific tags and deploying them.
+    - This allows for consistent and versioned deployments.
+- **Mobile Access:** Once deployed, the application is accessible via a web browser on desktop and mobile devices through the server's domain name.
+
+## 11. Phases
 
 **Phase 1: Backend Core (Django) - COMPLETE**
 
@@ -270,7 +295,7 @@ Visualized Simply:
     - More polished UI/UX refinements.
     - Backup and restore functionality for the database (this might also involve backend changes).
 
-## 11. Testing Plan
+## 12. Testing Plan
 
 A multi-layered testing strategy is employed to ensure the application is robust, reliable, and meets the specified requirements. Each layer focuses on different aspects of the application:
 
@@ -281,7 +306,7 @@ A multi-layered testing strategy is employed to ensure the application is robust
 
 This comprehensive approach helps catch bugs early, from low-level logic errors to high-level feature malfunctions.
 
-### 11.1. Phase 1: Strengthen Backend API/Integration Tests (Django)
+### 12.1. Phase 1: Strengthen Backend API/Integration Tests (Django)
 You already have a foundation for API tests with `NextCardAPITests`. We need to ensure these are complete and then add tests for the other API endpoints. These tests verify that different parts of your Django application (models, views, serializers) work together correctly when an API endpoint is hit.
 
 - **Location:** `anki_web_app/flashcards/tests.py`
@@ -322,7 +347,7 @@ You already have a foundation for API tests with `NextCardAPITests`. We need to 
 - Ensure nested reviews data is correct and complete.
 - Test for a non-existent sentence ID (should return 404).
 
-### 11.2. Phase 2: Backend Unit Tests (Django)
+### 12.2. Phase 2: Backend Unit Tests (Django)
 These tests focus on individual functions or methods in isolation. Your existing 42 tests likely include many of these. We should ensure comprehensive coverage.
 
 - **Location:** `anki_web_app/flashcards/tests.py` (can be in the same file or separate files for organization).
@@ -342,7 +367,7 @@ These tests focus on individual functions or methods in isolation. Your existing
 - Test handling of malformed rows or missing required CSV columns.
 - Test error if CSV file not found.
 
-### 11.3. Phase 3: Frontend Unit Tests (Vue.js)
+### 12.3. Phase 3: Frontend Unit Tests (Vue.js)
 These test individual Vue components in isolation.
 
 - **Location:** `anki_web_app/spanish_anki_frontend/src/views/*.spec.js` (or in a `tests/unit` directory).
@@ -375,7 +400,7 @@ These test individual Vue components in isolation.
     - Renders sentence details and review history.
     - `averageScore` computed property.
 
-### 11.4. Phase 4: Frontend E2E (End-to-End) Tests (Vue.js)
+### 12.4. Phase 4: Frontend E2E (End-to-End) Tests (Vue.js)
 These tests simulate real user interactions in a browser, testing the entire application stack (frontend + backend).
 
 - **Location:** `anki_web_app/spanish_anki_frontend/cypress/e2e/` (or similar, e.g., `anki_web_app/spanish_anki_frontend/cypress/e2e/*.cy.js`)
@@ -400,7 +425,7 @@ These tests simulate real user interactions in a browser, testing the entire app
 - No Cards Scenario: Test what happens if the API initially returns no cards.
 - Handling API Errors (Optional but good): If possible, mock API errors at the network level to see how the frontend responds.
 
-### 11.5. Further Testing Considerations
+### 12.5. Further Testing Considerations
 Beyond the core unit, integration, and E2E tests, the following strategies could further enhance application quality and robustness:
 
 - **Usability Testing:**
@@ -424,31 +449,31 @@ Beyond the core unit, integration, and E2E tests, the following strategies could
     - Manually test the Vue.js frontend on the latest versions of major web browsers (e.g., Chrome, Firefox, Safari, Edge) to ensure consistent functionality and appearance.
     - Consider testing on different operating systems if a wider user base is anticipated.
 
-## 12. Executing Tests
+## 13. Executing Tests
 
 The primary way to run all tests (Backend Django, Frontend Unit Jest, Frontend E2E Cypress) in a consistent, containerized environment is by using the `run_all_tests.sh` script located in the project root. This script utilizes `docker-compose` to build and orchestrate the necessary services.
 
 For simulating the CI environment locally before pushing changes, `act` can be used to run the GitHub Actions workflow defined in `.github/workflows/ci.yml`.
 
-## 13. TODO List / Next Steps
+## 14. TODO List / Next Steps
 
 This section outlines the remaining tasks to complete the application based on the phases and testing plan described above.
 
-### 13.1. Frontend Enhancements
+### 14.1. Frontend Enhancements
 - Implement advanced filtering/sorting on the Sentence Management Page.
 - Perform UI/UX refinements for a more polished experience.
 - Implement backup and restore functionality for the database (may require backend changes).
 
-### 13.2. Testing Plan Implementation
+### 14.2. Testing Plan Implementation
 
-#### 13.2.1. Backend API/Integration Tests (Django)
+#### 14.2.1. Backend API/Integration Tests (Django)
 - Review and enhance `NextCardAPITests` (cover edge cases like `next_review_date` far in the future, ensure overall reliability).
 - Create `SubmitReviewAPITests` (New).
 - Create `StatisticsAPITests` (New).
 - Create `SentenceListAPITests` (New).
 - Create `SentenceDetailAPITests` (New).
 
-#### 13.2.2. Backend Unit Tests (Django)
+#### 14.2.2. Backend Unit Tests (Django)
 - Ensure comprehensive coverage for Backend Unit Tests, focusing on:
     - `Sentence.process_review()` (all logic paths for SRS updates).
     - `Sentence._get_quality_from_score()` (all score ranges).
@@ -456,7 +481,7 @@ This section outlines the remaining tasks to complete the application based on t
     - Serializers (`flashcards/serializers.py`): `SentenceSerializer.get_average_score()`, `get_last_reviewed_date()`, and validation logic in `ReviewInputSerializer`.
     - Management Commands (`import_csv.py`): Successful import, skipping duplicates, handling malformed rows, and file not found errors.
 
-#### 13.2.3. Frontend Unit Tests (Vue.js)
+#### 14.2.3. Frontend Unit Tests (Vue.js)
 - Set up the testing environment for Vue Test Utils with Jest or Vitest.
 - Implement Frontend Unit Tests for the following components:
     - `FlashcardView.vue`
@@ -464,7 +489,7 @@ This section outlines the remaining tasks to complete the application based on t
     - `SentenceListView.vue`
     - `SentenceDetailView.vue`
 
-#### 13.2.4. Frontend E2E Tests (Vue.js)
+#### 14.2.4. Frontend E2E Tests (Vue.js)
 - Implement Frontend E2E Tests using Cypress for key user flows:
     - Full Review Cycle.
     - Dashboard Verification.

@@ -146,10 +146,17 @@ export default {
 
 <style scoped>
 .sentence-list-view {
-  padding: 20px;
+  padding: 10px; /* Base padding for small screens */
   font-family: Arial, sans-serif;
-  max-width: 1200px;
+  /* max-width: 1200px; // Max-width will be handled by media query */
   margin: 0 auto;
+  box-sizing: border-box;
+  overflow-x: hidden; /* Prevent horizontal scroll on the view itself */
+}
+
+.sentences-container {
+  overflow-x: auto; /* Allow horizontal scrolling for the table container */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .badge-s2e,
@@ -202,10 +209,11 @@ thead {
 }
 
 th, td {
-  padding: 10px 12px;
+  padding: 8px 10px; /* Reduced padding */
   border: 1px solid #ddd;
   text-align: left;
-  font-size: 0.9em;
+  font-size: 0.85em; /* Slightly reduced font size */
+  word-break: break-word; /* Help break long words if needed */
 }
 
 tr:nth-child(even) {
@@ -244,17 +252,71 @@ tr:hover {
 }
 
 .pagination-controls span {
-  margin: 0 10px;
+  margin: 0 5px; /* Reduced margin */
   vertical-align: middle;
+  font-size: 0.9em; /* Smaller font for page indicator */
 }
 
 .action-link {
   color: #007bff;
   text-decoration: none;
-  margin-left: 10px;
+  /* margin-left: 10px; // Removed margin, padding is on cell */
+  display: inline-block; /* Allows padding and better touch target */
+  padding: 5px;
 }
 
 .action-link:hover {
   text-decoration: underline;
 }
-</style> 
+
+
+/* Media Query for larger screens (tablets and desktops) */
+@media (min-width: 768px) {
+  .sentence-list-view {
+    padding: 20px; /* Original padding */
+    max-width: 1200px; /* Restore max-width for larger screens */
+  }
+
+  .sentences-container {
+    overflow-x: visible; /* No horizontal scroll needed for wider screens */
+  }
+
+  th, td {
+    padding: 10px 12px; /* Original padding */
+    font-size: 0.9em; /* Original font size */
+  }
+
+  .pagination-controls button {
+    padding: 8px 15px; /* Original padding */
+    margin: 0 5px; /* Original margin */
+  }
+  
+  .pagination-controls span {
+    margin: 0 10px; /* Original margin */
+    font-size: 1em; /* Original font size */
+  }
+}
+
+/* Further adjustments for very small screens if table still too cramped */
+@media (max-width: 480px) {
+  th, td {
+    font-size: 0.75em; /* Even smaller font for very small screens */
+    padding: 6px 8px;
+  }
+  .badge-s2e, .badge-e2s {
+    font-size: 0.7em;
+    padding: 2px 5px;
+  }
+  .pagination-controls button {
+    padding: 6px 10px;
+    font-size: 0.85em;
+  }
+  .pagination-controls span {
+    font-size: 0.85em;
+  }
+  .action-link {
+    padding: 3px;
+    font-size: 0.85em;
+  }
+}
+</style>
