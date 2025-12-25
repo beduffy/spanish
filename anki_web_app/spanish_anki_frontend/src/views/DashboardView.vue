@@ -25,8 +25,11 @@
         <p>{{ statistics.total_reviews_all_time }}</p>
       </div>
       <div class="stat-card">
-        <h2>Avg. Score</h2>
-        <p>{{ formatScore(statistics.overall_average_score) }}</p>
+        <h2>Average Score (All Cards)</h2>
+        <p class="score-display">{{ formatScoreAsPercentage(statistics.overall_average_score) }}</p>
+        <p v-if="statistics.overall_average_score !== null" class="score-subtitle">
+          {{ formatScore(statistics.overall_average_score) }} / 1.00
+        </p>
       </div>
       <div class="stat-card">
         <h2>Total Cards</h2>
@@ -114,6 +117,11 @@ export default {
     formatScore(score) {
         if (score === null || score === undefined) return 'N/A';
         return parseFloat(score).toFixed(2);
+    },
+    formatScoreAsPercentage(score) {
+        if (score === null || score === undefined) return 'N/A';
+        const percentage = parseFloat(score) * 100;
+        return `${percentage.toFixed(1)}%`;
     },
     async fetchStudySessions() {
       this.isLoadingSessions = true;
@@ -207,6 +215,19 @@ export default {
   color: #007bff;
   margin: 0;
   font-weight: bold;
+}
+
+.score-display {
+  font-size: 2.2em !important;
+  color: #28a745 !important;
+  margin-bottom: 5px !important;
+}
+
+.score-subtitle {
+  font-size: 0.9em !important;
+  color: #666 !important;
+  font-weight: normal !important;
+  margin-top: 5px !important;
 }
 
 .sessions-section {
