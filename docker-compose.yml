@@ -8,8 +8,7 @@ services:
     volumes:
       - ./anki_web_app:/app # Mounts the host's anki_web_app directory to /app in the container for development (hot-reloading for Python code)
       - ./data:/app/data # Mounts the host's data directory to /app/data in the container for CSV and DB persistence
-      # Mount .env file if it exists (optional for CI)
-      # - ./.env:/app/../.env:ro # Mount root .env file for Django to read Supabase config (optional, will use defaults if not present)
+      # Note: .env file is not mounted - settings.py reads from environment variables or uses defaults (optional, will use defaults if not present)
       # - db_data:/app/anki_web_app/data # Example for a named volume if you want Docker to manage it
     ports:
       - "8000:8000"
@@ -38,8 +37,7 @@ services:
     container_name: spanish_anki_frontend
     volumes:
       - ./anki_web_app/spanish_anki_frontend:/app # Mount the entire frontend directory for hot-reloading
-      # Mount .env file if it exists (optional for CI)
-      # - ./.env:/app/../../.env:ro # Mount root .env file so vue.config.js can read it (../../.env from /app resolves to project root)
+      # Note: .env file is not mounted - environment variables are passed directly
       # We need to mount the whole directory, not just src, because node_modules and other files are needed by `npm run serve`
       # Also, ensure .dockerignore in anki_web_app/spanish_anki_frontend/ excludes node_modules if you don't want host's node_modules to overwrite container's
     working_dir: /app # Set working directory for npm commands
