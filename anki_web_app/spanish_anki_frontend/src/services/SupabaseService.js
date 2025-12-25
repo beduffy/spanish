@@ -9,7 +9,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase URL or Anon Key not configured. Set VUE_APP_SUPABASE_URL and VUE_APP_SUPABASE_ANON_KEY in .env')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// For tests/Cypress: provide mock values if env vars are not set
+const finalSupabaseUrl = supabaseUrl || 'https://mock.supabase.co'
+const finalSupabaseAnonKey = supabaseAnonKey || 'mock-anon-key-for-testing'
+
+export const supabase = createClient(finalSupabaseUrl, finalSupabaseAnonKey)
 
 export default {
   async signIn(email, password) {
