@@ -1,6 +1,18 @@
 <template>
   <div class="flashcard-view">
-    <h1>Card Review</h1>
+    <div class="session-header">
+      <h1>Card Review</h1>
+      <div class="session-stats">
+        <div class="stat-box">
+          <span class="stat-label">Time:</span>
+          <span class="stat-value">{{ formatSessionTime(sessionTime) }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Reviewed:</span>
+          <span class="stat-value">{{ cardsReviewedThisSession }}</span>
+        </div>
+      </div>
+    </div>
 
     <div v-if="isLoading" class="loading-message">
       <p>Loading next card...</p>
@@ -71,6 +83,10 @@
             <strong>Ease Factor:</strong> {{ currentCard.ease_factor ? currentCard.ease_factor.toFixed(2) : '2.50' }}
             <span class="info-icon" title="Ease Factor controls how quickly review intervals grow. Higher values mean longer intervals between reviews.">ℹ️</span>
           </div>
+          <div class="stat-item interval-info" v-if="currentCard.interval_days !== null && currentCard.interval_days !== undefined">
+            <strong>Interval:</strong> {{ currentCard.interval_days }} day{{ currentCard.interval_days !== 1 ? 's' : '' }}
+            <span class="info-icon" title="Interval = days until next review. If interval is 4 days and you review today, the card will be due again in 4 days (not 4 days from now, but 4 calendar days later). You can review many cards in one day, but each card has its own 'next review date' based on its interval.">ℹ️</span>
+          </div>
         </div>
 
         <div class="review-inputs">
@@ -123,6 +139,10 @@ export default {
       allCardsDone: false,
       errorMessage: '',
       scoreShortcuts: [0, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0],
+      sessionStartTime: null,
+      sessionTime: 0,
+      sessionTimer: null,
+      cardsReviewedThisSession: 0,
     };
   },
   methods: {
@@ -175,6 +195,8 @@ export default {
           this.userComment,
           this.typedInput
         );
+        // Increment review counter
+        this.cardsReviewedThisSession++;
         await this.fetchNextCard();
       } catch (error) {
         console.error("Error submitting review:", error);
@@ -201,10 +223,37 @@ export default {
       if (diffDays === 0) return 'today';
       if (diffDays === 1) return 'tomorrow';
       return `in ${diffDays} days`;
+    },
+    formatSessionTime(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    },
+    startSessionTimer() {
+      this.sessionStartTime = Date.now();
+      this.sessionTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - this.sessionStartTime) / 1000);
+        this.sessionTime = elapsed;
+      }, 1000);
+    },
+    stopSessionTimer() {
+      if (this.sessionTimer) {
+        clearInterval(this.sessionTimer);
+        this.sessionTimer = null;
+      }
     }
   },
   mounted() {
+    this.startSessionTimer();
     this.fetchNextCard();
+  },
+  beforeUnmount() {
+    this.stopSessionTimer();
   },
 };
 </script>
@@ -215,6 +264,49 @@ export default {
   max-width: 700px;
   margin: 0 auto;
   font-family: Arial, sans-serif;
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.session-header h1 {
+  margin: 0;
+  font-size: 1.8em;
+}
+
+.session-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background-color: #f0f8ff;
+  padding: 8px 15px;
+  border-radius: 6px;
+  border: 1px solid #b3d9ff;
+}
+
+.stat-label {
+  font-size: 0.75em;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #007bff;
 }
 
 .card-header {
@@ -458,6 +550,21 @@ export default {
 }
 
 .ease-factor-info:hover .info-icon {
+  opacity: 1;
+}
+
+.interval-info {
+  position: relative;
+}
+
+.interval-info .info-icon {
+  cursor: help;
+  margin-left: 5px;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+.interval-info:hover .info-icon {
   opacity: 1;
 }
 </style>
