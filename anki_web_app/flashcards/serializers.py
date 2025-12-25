@@ -274,8 +274,10 @@ class CardCreateSerializer(serializers.ModelSerializer):
             pair_id=forward.pair_id,
             front=forward.back,
             back=forward.front,
+            language=forward.language or '',  # Copy language if set, default to empty string
             tags=forward.tags,
             notes=forward.notes,
+            source=forward.source or '',  # Copy source if set, default to empty string
             user=user,
             next_review_date=timezone.now().date(),  # Ensure reverse card is also due today
         )
