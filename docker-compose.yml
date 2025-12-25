@@ -21,7 +21,7 @@ services:
       - app_services_network
     # Add healthcheck to ensure backend is ready
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/flashcards/')"]
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 8000)); s.close()"]
       interval: 10s
       timeout: 5s
       retries: 5
