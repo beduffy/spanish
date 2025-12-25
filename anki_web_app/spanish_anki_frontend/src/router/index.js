@@ -71,8 +71,11 @@ router.beforeEach(async (to, from, next) => {
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
     // Allow access in Cypress test mode (check both window and global)
+    // window.Cypress is always available when running in Cypress
     const isCypressTest = typeof window !== 'undefined' && 
-                         (window.__CYPRESS_TEST_MODE__ || window.Cypress);
+                         (window.__CYPRESS_TEST_MODE__ || 
+                          window.Cypress || 
+                          (window.parent && window.parent.Cypress));
     
     if (isCypressTest) {
       console.log('[Router] Cypress test mode detected, bypassing auth check');

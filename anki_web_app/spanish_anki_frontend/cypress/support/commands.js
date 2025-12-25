@@ -33,13 +33,9 @@ Cypress.Commands.add('login', () => {
 
 // Visit a page and ensure we're logged in
 Cypress.Commands.add('visitAsAuthenticated', (url) => {
-  // Set the flag before visiting
-  cy.window().then((win) => {
-    win.__CYPRESS_TEST_MODE__ = true;
-  });
   cy.visit(url, {
     onBeforeLoad(win) {
-      // Ensure flag is set before page loads
+      // Ensure flag is set before page loads and router initializes
       win.__CYPRESS_TEST_MODE__ = true;
     }
   });
