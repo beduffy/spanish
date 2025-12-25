@@ -253,6 +253,7 @@ class CardListCreateAPIView(UserScopedMixin, ListCreateAPIView):
 
     queryset = Card.objects.all().order_by('-creation_date', 'card_id')
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -549,7 +550,13 @@ class CardImportAPIView(APIView):
                     # Optional fields
                     tags = []
                     if 'tags' in row and row['tags']:
-                        tags = [tag.strip() for tag in row['tags'].split(',') if tag.strip()]
+                        # Support both comma and space-separated tags
+                        tag_string = row['tags'].strip()
+                        if ',' in tag_string:
+                            tags = [tag.strip() for tag in tag_string.split(',') if tag.strip()]
+                        else:
+                            # Space-separated tags
+                            tags = [tag.strip() for tag in tag_string.split() if tag.strip()]
                     
                     notes = row.get('notes', '').strip()
                     source = row.get('source', '').strip()

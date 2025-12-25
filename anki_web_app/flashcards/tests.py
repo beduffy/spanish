@@ -1574,6 +1574,7 @@ class CardAPITests(APITestCase):
             'front_column': 'front',
             'back_column': 'back',
             'delimiter': '\t',
+            'create_reverse': 'false',  # Don't create reverse card for this test
             'preview_only': 'false'
         }
 
