@@ -6,6 +6,31 @@ todos: []
 
 # Personal Anki v2 (Redesign + Deploy)
 
+## How this plan doc works (Cursor plan mode vs version control)
+
+- **This file is just markdown in your repo**: it’s version-controlled the same as any other `.md` once we commit it.
+- **“Plan mode” in Cursor**: a safety mode that can block edits/commands. It doesn’t change how git works; it only controls what the assistant is allowed to do.
+- **Our workflow**:
+  - We edit this doc as the spec.
+  - We commit it periodically so decisions are tracked.
+
+## Decision log (keep this stable even if other sections move around)
+
+### Confirmed (latest chat)
+
+- **Users**: email/password (you + girlfriend).
+- **One collection per user** (no decks). You’ll use different emails for different languages.
+- **Cards**: general two-sided front/back; no explicit card types. Sentences/words/cloze are conventions in the content.
+- **Bidirectional**: creating a card auto-creates the reverse card and links them; each direction has separate SRS/stats.
+- **Typed input**: optional text entry stored on the review (not graded yet).
+- **Score shortcuts**: `0, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0` quick-picks (stored as float).
+- **AFK threshold**: 90 seconds default for “active minutes”.
+- **Hosting**: app on Hetzner (Docker + reverse proxy); **Supabase** for Auth + Postgres.
+
+### Open (intentionally not locked yet)
+
+- **Import timing**: do we build manual-create first, or import-first? (Either way we’ll support CSV/TSV.)
+
 ## Current state (what you already built)
 
 - **Stack**: Django REST API + Vue SPA, wired via Docker Compose. Backend runs `:8000`, frontend dev server runs `:8080`.
@@ -30,12 +55,12 @@ This is almost always **Python-installed docker-compose v1** (`~/.local/bin/dock
 
 Plan to fix (pick one; we’ll implement the simplest):
 
-- **Preferred**: use Docker Compose v2 plugin (`docker compose ...`) and stop using the Python `docker-compose` binary.
-- **Fallback**: pin compatible versions of `docker-compose` v1 + `docker` python library (more fragile long-term).
+- **Preferred**: use a modern Docker Compose (v2 or newer) and stop using legacy Python `docker-compose` v1.
+- **Fallback**: pin compatible versions of `docker-compose` v1 + `docker` python library (fragile long-term).
 
 Once fixed, local run is:
 
-- `docker compose up -d --build` (or `docker-compose up -d --build` if v1 is working)
+- `docker-compose up -d --build`
 - Frontend at `http://localhost:8080`, backend at `http://localhost:8000`
 
 ## v2 product requirements (what we’re designing toward)
@@ -81,7 +106,8 @@ Track *everything* now; later choose a “main” KPI.
 ### Study time + AFK
 
 - Add a lightweight **client heartbeat + activity events**.
-- Server computes “active minutes” by ignoring gaps > N minutes (configurable) even on mobile.
+- Server computes “active minutes” by ignoring gaps > N seconds (configurable) even on mobile.
+- Default AFK threshold: 90 seconds.
 
 ## Architecture choice (fits your decision)
 
@@ -155,6 +181,31 @@ sequenceDiagram
 - Add production `docker-compose.prod.yml` (or profiles) + Nginx reverse proxy.
 - Add TLS via Let’s Encrypt (Nginx + certbot container or Caddy).
 - Set env vars for Supabase + Django settings.
+
+## Deployment on Hetzner: manual Docker+Nginx vs Coolify
+
+### Option A: Manual (Docker Compose + Nginx + TLS)
+
+- **Pros**: you learn the fundamentals; minimal moving parts; easy to debug with SSH + logs.
+- **Cons**: more repeated “ops glue” (TLS renewals, env management, deploy scripts, backups, rollbacks).
+
+### Option B: Coolify (self-hosted PaaS on your Hetzner box)
+
+Coolify is marketed as a **self-hostable alternative to Vercel/Heroku/Netlify/Railway**, with features like **push-to-deploy**, **free SSL certificates**, and **automatic DB backups** ([Coolify](https://coolify.io/)). That fits your goal of “easy deployments later” while still owning the server.
+
+- **Pros**:
+  - Git-based deployments (push-to-deploy)
+  - Automated TLS/Let’s Encrypt
+  - UI for env vars, logs, rollbacks, monitoring
+- **Cons**:
+  - Another control-plane service to run/maintain on the box
+  - Slight abstraction over “plain Docker”, so you learn *different* ops first
+
+### Recommendation
+
+- Start with **manual Docker Compose + Nginx** for v2 (to learn), then migrate to Coolify when the app stabilizes and you want faster iteration.
+- If you want “easy deploy” ASAP, start with Coolify from day 1 and treat it as your “self-hosted Vercel”.
+
 
 ### Phase 7 — Cleanup + rename
 
