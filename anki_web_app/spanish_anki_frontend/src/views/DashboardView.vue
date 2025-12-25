@@ -127,7 +127,7 @@ export default {
       this.isLoadingSessions = true;
       try {
         const response = await ApiService.getStudySessions();
-        if (response.status === 200 && response.data) {
+        if (response && response.status === 200 && response.data) {
           this.studySessions = response.data.sessions || [];
         }
       } catch (error) {

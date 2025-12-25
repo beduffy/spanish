@@ -38,6 +38,8 @@ describe('DashboardView.vue', () => {
         // Note: If ApiService was a class, mocking would be different.
         // If the auto-mock is sufficient, we might not need this line, but it adds explicitness.
         ApiService.getCardStatistics = jest.fn();
+        // Mock getStudySessions to prevent errors during mount
+        ApiService.getStudySessions = jest.fn().mockResolvedValue({ status: 200, data: { sessions: [] } });
     });
 
     it('renders the dashboard title', async () => {
@@ -93,8 +95,8 @@ describe('DashboardView.vue', () => {
         expect(statCards.at(1).find('h2').text()).toBe('New Cards Today');
         expect(statCards.at(1).find('p').text()).toBe(mockStatistics.new_cards_reviewed_today.toString());
 
-        expect(statCards.at(4).find('h2').text()).toBe('Avg. Score');
-        expect(statCards.at(4).find('p').text()).toBe('0.85'); // From formatScore
+        expect(statCards.at(4).find('h2').text()).toBe('Average Score (All Cards)');
+        expect(statCards.at(4).find('p').text()).toBe('85.0%'); // From formatScoreAsPercentage
 
         expect(statCards.at(5).find('h2').text()).toBe('Total Cards');
         expect(statCards.at(5).find('p').text()).toBe(mockStatistics.total_cards.toString());
