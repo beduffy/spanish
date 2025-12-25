@@ -73,7 +73,8 @@ sleep $SLEEP_SECONDS
 print_message "Phase 1: Backend Django tests"
 echo "Running backend Django tests with coverage inside the 'backend' container..."
 # The command to run tests and generate coverage.xml. Output will be in /app/coverage.xml inside the container.
-$DC_COMMAND exec -T backend coverage run manage.py test flashcards --noinput
+# Run all test modules: tests.py and tests_card_functionality.py
+$DC_COMMAND exec -T backend coverage run manage.py test flashcards.tests flashcards.tests_card_functionality --noinput
 # Generate XML report from coverage data
 $DC_COMMAND exec -T backend coverage xml -o /app/coverage.xml
 echo "Backend Django tests completed and coverage report generated (coverage.xml in anki_web_app/)."
@@ -95,34 +96,38 @@ echo "Frontend unit tests completed."
 
 
 # --- Phase 3: Frontend E2E tests (Cypress) ---
-# NOTE: E2E tests are currently skipped because they test the old Sentence-based architecture.
-# The app has been refactored to use Card model with authentication.
-# E2E tests need to be updated to test the new Card endpoints and handle authentication.
-# See E2E_TESTS_STATUS.md for details.
-print_message "Phase 3: Frontend E2E tests (Cypress) - SKIPPED"
-echo "E2E tests skipped: Need update for new Card model + authentication architecture"
-echo "See E2E_TESTS_STATUS.md for details"
-# Uncomment below to re-enable E2E tests after updating them:
-# print_message "Phase 3: Frontend E2E tests (Cypress)"
-# echo "Running frontend E2E tests (Cypress) from host against Dockerized frontend..."
-# Assuming Cypress is installed globally on the host or as a dev dependency in the project root's package.json
+print_message "Phase 3: Frontend E2E tests (Cypress)"
+echo "Running frontend E2E tests (Cypress) from host against Dockerized frontend..."
 # The baseUrl for Cypress tests is configured in cypress.config.js to point to the frontend service (e.g., http://localhost:8080)
 # Ensure the frontend service is accessible from the host machine at the configured baseUrl.
-# Note: If running in a CI environment without a display, Cypress might need to run in headless mode.
-# This is usually handled by Cypress itself or by adding flags like `--headless --browser chrome` or electron (default)
+# Cypress runs in headless mode for CI environments.
 
-# Change to the frontend directory to run Cypress commands if Cypress is installed there
-# Make sure to adjust paths if your Cypress setup is different.
-# E2E tests are skipped - they need update for new Card model + authentication
-# Uncomment below to re-enable E2E tests after updating them:
-# EXPECTED_CYPRESS_PROJECT_PATH="./anki_web_app/spanish_anki_frontend"
-# if [ -d "$EXPECTED_CYPRESS_PROJECT_PATH" ]; then
-#     echo "Changing to $EXPECTED_CYPRESS_PROJECT_PATH to run Cypress tests..."
-#     pushd "$EXPECTED_CYPRESS_PROJECT_PATH" > /dev/null
-#     npx cypress run
-#     popd > /dev/null
-#     echo "Cypress E2E tests completed."
-# fi
+EXPECTED_CYPRESS_PROJECT_PATH="./anki_web_app/spanish_anki_frontend"
+if [ -d "$EXPECTED_CYPRESS_PROJECT_PATH" ]; then
+    echo "Changing to $EXPECTED_CYPRESS_PROJECT_PATH to run Cypress tests..."
+    pushd "$EXPECTED_CYPRESS_PROJECT_PATH" > /dev/null
+    
+    # Check if Cypress is installed, if not install it
+    if ! command -v npx &> /dev/null || ! npx cypress version &> /dev/null; then
+        echo "Cypress not found, installing dependencies..."
+        npm install
+    fi
+    
+    # Run Cypress tests in headless mode
+    npx cypress run --headless || {
+        echo "Cypress tests failed or Cypress not available"
+        echo "If Cypress is not installed, you can skip E2E tests or install it:"
+        echo "  cd $EXPECTED_CYPRESS_PROJECT_PATH && npm install"
+        popd > /dev/null
+        exit 1
+    }
+    
+    popd > /dev/null
+    echo "Cypress E2E tests completed."
+else
+    echo "WARNING: Cypress project path not found: $EXPECTED_CYPRESS_PROJECT_PATH"
+    echo "Skipping E2E tests."
+fi
 
 
 print_message "Bringing down Docker services..."

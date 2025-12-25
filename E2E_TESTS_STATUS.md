@@ -2,58 +2,62 @@
 
 ## Current Situation
 
-The E2E tests (`cypress/e2e/*.cy.js`) are testing the **old Sentence-based architecture**, but the app has been refactored to use the **new Card model** with authentication.
+✅ **E2E tests have been updated** to work with the new Card-based architecture.
 
 ## What Changed
 
 ### Architecture Changes
 - **Old**: Sentence model with `/api/flashcards/next-card/` (Sentence-based)
 - **New**: Card model with `/api/flashcards/cards/next-card/` (Card-based)
-- **New**: All API endpoints now require authentication
-- **New**: Routes exist for both old (`/sentences`) and new (`/cards`) models
+- **New**: All API endpoints require authentication (auto-login as testuser in DEBUG mode)
 
 ### Routes Available
-- `/` - FlashcardView (old Sentence-based)
-- `/cards/review` - CardFlashcardView (new Card-based)
-- `/cards` - CardListView (new Card model)
-- `/cards/create` - CardEditorView
-- `/cards/import` - ImportCardsView
-- `/sentences` - SentenceListView (legacy, still works)
-- `/dashboard` - DashboardView
-- `/login` - LoginView (new, required for auth)
+- `/` - CardFlashcardView (Card review - main page)
+- `/cards` - CardListView (all cards)
+- `/cards/create` - CardEditorView (create new card)
+- `/cards/:id/edit` - CardEditorView (edit card)
+- `/cards/import` - ImportCardsView (import from CSV)
+- `/dashboard` - DashboardView (statistics)
+
+### Legacy Routes (Removed)
+- `/sentences` - Removed (v1 legacy)
+- `/login` - Removed (Supabase handles auth)
 
 ## Test Status
 
-### ✅ Fixed
-- **Supabase env vars**: Mock values provided for Cypress tests
-- **Uncaught exception handling**: Added to ignore Supabase errors in test env
+### ✅ Updated
+- **New E2E tests**: `card_flow.cy.js` and `card_navigation.cy.js` test Card functionality
+- **Authentication**: Backend auto-logs in as `testuser` in DEBUG mode (no auth tokens needed)
+- **Card endpoints**: Tests use `/api/flashcards/cards/*` endpoints
+- **Card routes**: Tests use `/` (Card review) and `/cards` routes
 
-### ⚠️ Needs Update
-The E2E tests need to be updated to:
-1. **Authenticate first** - All API calls now require auth tokens
-2. **Test new Card endpoints** - Use `/api/flashcards/cards/*` instead of `/api/flashcards/*`
-3. **Use new routes** - Test `/cards/review` instead of `/` for Card-based flow
-4. **Handle auth state** - Mock or bypass Supabase auth for tests
+### ✅ Test Coverage
+- Card review flow (load card, show answer, submit review)
+- Card navigation (Dashboard, Cards List)
+- Card creation
+- Review activity reflection in Dashboard
+- Mastery level display
 
-## Options
+## Running Tests
 
-### Option 1: Update Tests (Recommended)
-Update E2E tests to:
-- Mock authentication (bypass Supabase, use test tokens)
-- Test new Card-based endpoints
-- Test new routes (`/cards/review`, `/cards`, etc.)
+All tests are now enabled in `run_all_tests.sh`:
+1. ✅ Backend Django tests (includes `tests.py` and `tests_card_functionality.py`)
+2. ✅ Frontend unit tests (Jest)
+3. ✅ Frontend E2E tests (Cypress)
 
-### Option 2: Skip E2E Tests Temporarily
-Comment out E2E test phase in `run_all_tests.sh` until tests are updated.
+Run all tests:
+```bash
+./run_all_tests.sh
+```
 
-### Option 3: Keep Legacy Tests
-Keep testing old Sentence endpoints (they still work) but add new Card tests.
+## Test Files
 
-## Recommendation
+### Backend Tests
+- `flashcards/tests.py` - Original tests (64 tests)
+- `flashcards/tests_card_functionality.py` - Comprehensive Card functionality tests (15 tests)
 
-**Skip E2E tests for now** and focus on:
-1. ✅ Backend tests (64/64 passing)
-2. ✅ Frontend unit tests (37/37 passing)
-3. ⏭️ E2E tests (needs refactor for new architecture)
-
-Update E2E tests in Phase 4 (Review UX) when the Card review flow is finalized.
+### Frontend E2E Tests
+- `cypress/e2e/card_flow.cy.js` - Card review flow tests
+- `cypress/e2e/card_navigation.cy.js` - Navigation and card management tests
+- `cypress/e2e/flashcard_flow.cy.js` - Legacy (may need update or removal)
+- `cypress/e2e/navigation_and_data.cy.js` - Legacy (may need update or removal)
