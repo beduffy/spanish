@@ -8,15 +8,24 @@ services:
     volumes:
       - ./anki_web_app:/app # Mounts the host's anki_web_app directory to /app in the container for development (hot-reloading for Python code)
       - ./data:/app/data # Mounts the host's data directory to /app/data in the container for CSV and DB persistence
-      - ./.env:/app/../.env:ro # Mount root .env file for Django to read Supabase config
+      - ./.env:/app/../.env:ro # Mount root .env file for Django to read Supabase config (optional, will use defaults if not present)
       # - db_data:/app/anki_web_app/data # Example for a named volume if you want Docker to manage it
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal
+      # Set default SECRET_KEY for CI if .env doesn't exist
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-test-key-for-ci-only}
       # - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings # If needed
     networks:
       - app_services_network
+    # Add healthcheck to ensure backend is ready
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/flashcards/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend:
     build:

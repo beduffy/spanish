@@ -57,20 +57,50 @@ echo "Showing logs for the frontend service shortly after startup:"
 $DC_COMMAND logs --tail="20" frontend || echo "Could not get frontend logs yet."
 
 
-# A more robust wait: check for a specific log message or port availability if possible.
-# For now, a simple sleep is used, but this could be improved.
-# Example: Wait for Django migrations to complete in backend
-# This is a placeholder; a more robust check would be `docker-compose exec -T backend python manage.py showmigrations --plan | grep -q "\[ \]"`
-# or checking if the port is open and responsive.
-
-# Simple sleep for now, can be improved with health checks
+# Wait for services to be ready with health checks
 SLEEP_SECONDS=15 
 echo "Sleeping for $SLEEP_SECONDS seconds to allow services to fully initialize..."
+
+# Check if backend is running
+echo "Checking if backend service is running..."
+for i in {1..12}; do
+  if $DC_COMMAND ps backend | grep -q "Up"; then
+    echo "Backend service is running."
+    break
+  else
+    echo "Waiting for backend service to start... ($i/12)"
+    sleep 2
+  fi
+done
+
+# Verify backend is actually running before proceeding
+if ! $DC_COMMAND ps backend | grep -q "Up"; then
+  echo "ERROR: Backend service failed to start!"
+  echo "Backend logs:"
+  $DC_COMMAND logs backend || true
+  echo "Frontend logs:"
+  $DC_COMMAND logs frontend || true
+  echo "All services status:"
+  $DC_COMMAND ps -a || true
+  exit 1
+fi
+
 sleep $SLEEP_SECONDS 
 
 
 # --- Phase 1: Backend Django tests ---
 print_message "Phase 1: Backend Django tests"
+
+# Verify backend is running before attempting tests
+if ! $DC_COMMAND ps backend | grep -q "Up"; then
+  echo "ERROR: Backend service is not running!"
+  echo "Backend logs:"
+  $DC_COMMAND logs backend || true
+  echo "All services status:"
+  $DC_COMMAND ps -a || true
+  exit 1
+fi
+
 echo "Running backend Django tests with coverage inside the 'backend' container..."
 # The command to run tests and generate coverage.xml. Output will be in /app/coverage.xml inside the container.
 # Run all test modules: tests.py and tests_card_functionality.py
