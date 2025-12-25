@@ -216,7 +216,7 @@ class Card(models.Model):
             return 1
         return 0
 
-    def process_review(self, user_score, review_comment=None, typed_input=None):
+    def process_review(self, user_score, review_comment=None, typed_input=None, session=None):
         # Store current state for the Review object
         interval_before_review = self.interval_days
         ease_factor_before_review = self.ease_factor
@@ -273,6 +273,7 @@ class Card(models.Model):
 
         CardReview.objects.create(
             card=self,
+            session=session,
             user_score=user_score,
             user_comment_addon=review_comment,
             typed_input=typed_input,
@@ -290,6 +291,7 @@ class Card(models.Model):
 class CardReview(models.Model):
     review_id = models.AutoField(primary_key=True)
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='reviews')
+    session = models.ForeignKey('StudySession', on_delete=models.SET_NULL, null=True, blank=True, related_name='card_reviews', help_text="Study session this review belongs to")
     review_timestamp = models.DateTimeField(default=timezone.now, help_text="Timestamp of the review")
     user_score = models.FloatField(help_text="Score given by user, 0.0 to 1.0")
     user_comment_addon = models.TextField(blank=True, null=True, help_text="Additional comment made by user during this specific review")

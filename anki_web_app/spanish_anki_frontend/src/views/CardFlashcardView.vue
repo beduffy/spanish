@@ -143,6 +143,7 @@ export default {
       sessionTime: 0,
       sessionTimer: null,
       cardsReviewedThisSession: 0,
+      currentSessionId: null,
     };
   },
   methods: {
@@ -193,7 +194,8 @@ export default {
           this.currentCard.card_id,
           this.userScore,
           this.userComment,
-          this.typedInput
+          this.typedInput,
+          this.currentSessionId
         );
         // Increment review counter
         this.cardsReviewedThisSession++;
@@ -234,17 +236,36 @@ export default {
       }
       return `${minutes}:${secs.toString().padStart(2, '0')}`;
     },
-    startSessionTimer() {
+    async startSessionTimer() {
       this.sessionStartTime = Date.now();
+      // Start a study session in the backend
+      try {
+        const response = await ApiService.startStudySession();
+        if (response.status === 201 && response.data) {
+          this.currentSessionId = response.data.session_id;
+        }
+      } catch (error) {
+        console.warn('Failed to start study session:', error);
+        // Continue without session tracking
+      }
       this.sessionTimer = setInterval(() => {
         const elapsed = Math.floor((Date.now() - this.sessionStartTime) / 1000);
         this.sessionTime = elapsed;
       }, 1000);
     },
-    stopSessionTimer() {
+    async stopSessionTimer() {
       if (this.sessionTimer) {
         clearInterval(this.sessionTimer);
         this.sessionTimer = null;
+      }
+      // End the study session in the backend
+      if (this.currentSessionId) {
+        try {
+          await ApiService.endStudySession(this.currentSessionId);
+        } catch (error) {
+          console.warn('Failed to end study session:', error);
+        }
+        this.currentSessionId = null;
       }
     }
   },

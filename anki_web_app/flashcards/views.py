@@ -317,7 +317,7 @@ class CardNextCardAPIView(APIView):
 class CardSubmitReviewAPIView(APIView):
     """
     Card version of submit-review.
-    Accepts card_id, user_score, optional user_comment_addon, optional typed_input.
+    Accepts card_id, user_score, optional user_comment_addon, optional typed_input, optional session_id.
     """
     permission_classes = [IsAuthenticated]
 
@@ -331,6 +331,7 @@ class CardSubmitReviewAPIView(APIView):
         user_score = validated_data.get('user_score')
         user_comment_addon = validated_data.get('user_comment_addon')
         typed_input = validated_data.get('typed_input')
+        session_id = request.data.get('session_id')  # Get from request.data, not validated_data
 
         try:
             queryset = Card.objects.all()
@@ -340,7 +341,19 @@ class CardSubmitReviewAPIView(APIView):
         except Card.DoesNotExist:
             return Response({"error": "Card not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        card.process_review(user_score, user_comment_addon, typed_input)
+        # Get or create active session if session_id provided
+        session = None
+        if session_id:
+            try:
+                session = StudySession.objects.get(
+                    session_id=session_id,
+                    user=request.user,
+                    is_active=True
+                )
+            except StudySession.DoesNotExist:
+                pass  # Session not found or not active, continue without session
+
+        card.process_review(user_score, user_comment_addon, typed_input, session=session)
 
         response_serializer = CardSerializer(card)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
@@ -694,4 +707,50 @@ class StudySessionEndAPIView(APIView):
             'start_time': session.start_time,
             'end_time': session.end_time,
             'active_minutes': round(active_minutes, 2),
+        }, status=status.HTTP_200_OK)
+
+
+class StudySessionListAPIView(APIView):
+    """
+    Get all study sessions for the current user with statistics.
+    Returns sessions with: time length, cards reviewed, average score.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        from django.db.models import Avg
+        
+        sessions = StudySession.objects.filter(user=request.user).order_by('-start_time')
+        
+        sessions_data = []
+        for session in sessions:
+            # Get reviews for this session
+            reviews = session.card_reviews.all()
+            cards_reviewed = reviews.count()
+            
+            # Calculate average score
+            avg_score = None
+            if cards_reviewed > 0:
+                avg_score = reviews.aggregate(Avg('user_score'))['user_score__avg']
+            
+            # Calculate active minutes
+            if session.is_active:
+                active_minutes = session.calculate_active_minutes()
+            else:
+                active_minutes = session.calculate_active_minutes() if session.end_time else 0
+            
+            sessions_data.append({
+                'session_id': session.session_id,
+                'start_time': session.start_time,
+                'end_time': session.end_time,
+                'is_active': session.is_active,
+                'active_minutes': round(active_minutes, 2),
+                'active_seconds': int(active_minutes * 60),
+                'cards_reviewed': cards_reviewed,
+                'average_score': round(avg_score, 3) if avg_score else None,
+            })
+        
+        return Response({
+            'sessions': sessions_data,
+            'total_sessions': len(sessions_data),
         }, status=status.HTTP_200_OK)

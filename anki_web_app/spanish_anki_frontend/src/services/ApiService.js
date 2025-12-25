@@ -76,13 +76,29 @@ export default {
         return apiClient.get('/cards/next-card/');
     },
 
-    submitCardReview(cardId, score, userCommentAddon, typedInput) {
-        return apiClient.post('/cards/submit-review/', {
+    submitCardReview(cardId, score, userCommentAddon, typedInput, sessionId = null) {
+        const payload = {
             card_id: cardId,
             user_score: score,
             user_comment_addon: userCommentAddon,
             typed_input: typedInput,
-        });
+        };
+        if (sessionId) {
+            payload.session_id = sessionId;
+        }
+        return apiClient.post('/cards/submit-review/', payload);
+    },
+
+    getStudySessions() {
+        return apiClient.get('/sessions/');
+    },
+
+    startStudySession() {
+        return apiClient.post('/sessions/start/');
+    },
+
+    endStudySession(sessionId) {
+        return apiClient.post('/sessions/end/', { session_id: sessionId });
     },
 
     getCardStatistics() {
