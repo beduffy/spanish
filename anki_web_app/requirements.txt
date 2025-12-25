@@ -3,4 +3,8 @@ coverage==7.4.1
 djangorestframework
 psycopg2-binary
 django-cors-headers
+PyJWT==2.8.0
+cryptography==42.0.5
+requests==2.31.0
+python-decouple==3.8
 # Add other backend dependencies here if any 

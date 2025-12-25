@@ -11,9 +11,22 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import Config, RepositoryEnv, config as default_config
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Root directory (parent of anki_web_app) - where .env file lives
+ROOT_DIR = BASE_DIR.parent
+
+# Configure python-decouple to read from root .env file
+# This allows both Django and Vue to use the same .env file
+ENV_FILE = ROOT_DIR / '.env'
+if ENV_FILE.exists():
+    config = Config(RepositoryEnv(str(ENV_FILE)))
+else:
+    # Fallback to default config if .env doesn't exist
+    config = default_config
 
 
 # Quick-start development settings - unsuitable for production
@@ -49,6 +62,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "flashcards.middleware.SupabaseJWTAuthenticationMiddleware",  # Supabase JWT auth middleware
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -136,8 +150,39 @@ CORS_ALLOWED_ORIGINS = [
 # CORS_ALLOW_ALL_ORIGINS = True
 
 # Optional: If you need to allow credentials (cookies, authorization headers)
-# CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # Optional: If you need to allow specific headers or methods beyond the defaults
-# CORS_ALLOW_HEADERS = list(default_headers) + ['my-custom-header']
-# CORS_ALLOW_METHODS = list(default_methods) + ['POKE']
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Supabase Authentication Configuration
+# Reads from root .env file (same file used by frontend)
+SUPABASE_URL = config('SUPABASE_URL', default=None)  # e.g., 'https://xxx.supabase.co'
+SUPABASE_JWT_SECRET = config('SUPABASE_JWT_SECRET', default=None)  # JWT secret from Supabase project settings
+SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default=None)  # Anon key (same as frontend uses)
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'flashcards.auth_backend.SupabaseJWTAuthenticationBackend',  # Supabase JWT auth
+    'django.contrib.auth.backends.ModelBackend',  # Fallback to Django's default
+]
+
+# REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',  # For admin/development
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',  # Require authentication by default
+    ],
+}
