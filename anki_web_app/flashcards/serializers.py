@@ -295,7 +295,11 @@ class CardCreateSerializer(serializers.ModelSerializer):
         Use CardSerializer for the response to ensure proper serialization
         of all fields including linked_card (as ID only).
         """
-        return CardSerializer(instance).data
+        # Create a new CardSerializer instance to avoid any potential recursion
+        # Pass context if available to maintain request context
+        context = getattr(self, '_context', {})
+        serializer = CardSerializer(instance, context=context)
+        return serializer.data
 
 
 class CardDetailSerializer(CardSerializer):
