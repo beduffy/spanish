@@ -1,10 +1,10 @@
 from django.test import TestCase
 import os
-from io import StringIO
+from io import StringIO, BytesIO
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
-from flashcards.models import Sentence, Review, LEARNING_STEPS_DAYS, GRADUATING_INTERVAL_DAYS, LAPSE_INTERVAL_DAYS, MIN_EASE_FACTOR
+from flashcards.models import Sentence, Review, Card, CardReview, LEARNING_STEPS_DAYS, GRADUATING_INTERVAL_DAYS, LAPSE_INTERVAL_DAYS, MIN_EASE_FACTOR
 from datetime import timedelta, date, datetime
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -1186,4 +1186,400 @@ class SentenceDetailAPITests(APITestCase):
         non_existent_pk = self.s1_s2e.pk + self.s1_e2s.pk + self.s2_no_reviews_s2e.pk + self.s2_no_reviews_e2s.pk + 100 # A PK that surely doesn't exist
         url = f'/api/flashcards/sentences/{non_existent_pk}/'
         response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class CardAPITests(APITestCase):
+    def setUp(self):
+        Card.objects.all().delete()
+        CardReview.objects.all().delete()
+        self.cards_url = "/api/flashcards/cards/"
+        self.card_next_url = "/api/flashcards/cards/next-card/"
+        self.card_submit_review_url = "/api/flashcards/cards/submit-review/"
+        self.card_stats_url = "/api/flashcards/cards/statistics/"
+        self.card_import_url = "/api/flashcards/cards/import/"
+
+    def test_create_card_auto_creates_reverse_and_links(self):
+        payload = {
+            "front": "hola",
+            "back": "hello",
+            "language": "es",
+            "tags": ["greeting"],
+            "notes": "basic greeting",
+            "source": "manual",
+            "create_reverse": True
+        }
+
+        response = self.client.post(self.cards_url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(Card.objects.count(), 2)
+
+        forward = Card.objects.get(front="hola", back="hello")
+        reverse = Card.objects.get(front="hello", back="hola")
+
+        self.assertEqual(forward.pair_id, reverse.pair_id)
+        self.assertEqual(forward.linked_card_id, reverse.card_id)
+        self.assertEqual(reverse.linked_card_id, forward.card_id)
+
+    def test_card_next_card_prioritizes_due_review_cards(self):
+        today = timezone.now().date()
+
+        # Due review card
+        due_review = Card.objects.create(
+            front="front-review",
+            back="back-review",
+            is_learning=False,
+            interval_days=10,
+            next_review_date=today - timedelta(days=1),
+        )
+
+        # Due learning card (should not be picked while a review due exists)
+        Card.objects.create(
+            front="front-learning",
+            back="back-learning",
+            is_learning=True,
+            interval_days=0,
+            next_review_date=today,
+        )
+
+        response = self.client.get(self.card_next_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["card_id"], due_review.card_id)
+
+    def test_card_submit_review_saves_typed_input(self):
+        card = Card.objects.create(front="hola", back="hello")
+
+        payload = {
+            "card_id": card.card_id,
+            "user_score": 0.9,
+            "user_comment_addon": "felt good",
+            "typed_input": "hello"
+        }
+
+        response = self.client.post(self.card_submit_review_url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        card.refresh_from_db()
+        self.assertEqual(card.total_reviews, 1)
+
+        self.assertEqual(card.reviews.count(), 1)
+        review = card.reviews.first()
+        self.assertEqual(review.typed_input, "hello")
+
+    def test_card_statistics_smoke(self):
+        response = self.client.get(self.card_stats_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("total_cards", response.data)
+        self.assertIn("total_reviews_all_time", response.data)
+
+    def test_list_cards(self):
+        """Test listing cards with pagination."""
+        # Create some test cards
+        Card.objects.create(front="test1", back="answer1")
+        Card.objects.create(front="test2", back="answer2")
+        Card.objects.create(front="test3", back="answer3")
+
+        response = self.client.get(self.cards_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("results", response.data)
+        self.assertGreaterEqual(len(response.data["results"]), 3)
+        self.assertEqual(response.data["count"], 3)
+
+    def test_list_cards_pagination(self):
+        """Test card list pagination works correctly."""
+        # Create more cards than default page size (100)
+        for i in range(5):
+            Card.objects.create(front=f"test{i}", back=f"answer{i}")
+
+        response = self.client.get(self.cards_url, {'page': 1, 'page_size': 2})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["count"], 5)
+        self.assertIsNotNone(response.data.get("next"))
+
+    def test_get_card_detail(self):
+        """Test retrieving a single card's details."""
+        card = Card.objects.create(
+            front="test front",
+            back="test back",
+            language="es",
+            tags=["test", "card"],
+            notes="test notes",
+            source="test source"
+        )
+
+        url = f"{self.cards_url}{card.card_id}/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["card_id"], card.card_id)
+        self.assertEqual(response.data["front"], "test front")
+        self.assertEqual(response.data["back"], "test back")
+        self.assertEqual(response.data["language"], "es")
+        self.assertEqual(response.data["tags"], ["test", "card"])
+
+    def test_update_card(self):
+        """Test updating a card."""
+        card = Card.objects.create(front="old front", back="old back", language="es")
+
+        url = f"{self.cards_url}{card.card_id}/update/"
+        payload = {
+            "front": "new front",
+            "back": "new back",
+            "language": "de",
+            "tags": ["updated"],
+            "notes": "updated notes",
+            "source": "updated source"
+        }
+
+        response = self.client.put(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        card.refresh_from_db()
+        self.assertEqual(card.front, "new front")
+        self.assertEqual(card.back, "new back")
+        self.assertEqual(card.language, "de")
+        self.assertEqual(card.tags, ["updated"])
+
+    def test_update_card_partial(self):
+        """Test partial update (PATCH) of a card."""
+        card = Card.objects.create(front="front", back="back", language="es")
+
+        url = f"{self.cards_url}{card.card_id}/update/"
+        payload = {
+            "front": "updated front"
+        }
+
+        response = self.client.patch(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        card.refresh_from_db()
+        self.assertEqual(card.front, "updated front")
+        self.assertEqual(card.back, "back")  # Should remain unchanged
+
+    def test_delete_card_without_linked_card(self):
+        """Test deleting a card without a linked reverse card."""
+        card = Card.objects.create(front="test", back="answer")
+
+        url = f"{self.cards_url}{card.card_id}/delete/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(Card.objects.filter(card_id=card.card_id).exists())
+
+    def test_delete_card_with_linked_card(self):
+        """Test deleting a card also deletes its linked reverse card."""
+        forward = Card.objects.create(front="hola", back="hello")
+        reverse = Card.objects.create(
+            front="hello",
+            back="hola",
+            pair_id=forward.pair_id
+        )
+        forward.linked_card = reverse
+        reverse.linked_card = forward
+        forward.save()
+        reverse.save()
+
+        url = f"{self.cards_url}{forward.card_id}/delete/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(Card.objects.filter(card_id=forward.card_id).exists())
+        self.assertFalse(Card.objects.filter(card_id=reverse.card_id).exists())
+
+    def test_import_cards_preview_only(self):
+        """Test preview mode of import endpoint."""
+        csv_content = "front,back,language\nhola,hello,es\nadiós,goodbye,es"
+        csv_file = BytesIO(csv_content.encode('utf-8'))
+        csv_file.name = 'test.csv'
+
+        # Preview mode can work with empty columns to just get column list
+        form_data = {
+            'file': csv_file,
+            'front_column': '',
+            'back_column': '',
+            'preview_only': 'true'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("columns", response.data)
+        self.assertIn("preview", response.data)
+        self.assertIn("total_rows", response.data)
+        self.assertEqual(response.data["total_rows"], 2)
+        self.assertEqual(Card.objects.count(), 0)  # No cards should be created in preview mode
+
+        # Preview with columns selected should show preview data
+        csv_file2 = BytesIO(csv_content.encode('utf-8'))
+        csv_file2.name = 'test2.csv'
+        form_data2 = {
+            'file': csv_file2,
+            'front_column': 'front',
+            'back_column': 'back',
+            'preview_only': 'true'
+        }
+
+        response2 = self.client.post(self.card_import_url, form_data2, format='multipart')
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(response2.data["preview"]), 0)
+
+    def test_import_cards_success(self):
+        """Test successful card import."""
+        csv_content = "front,back,language,tags\nhola,hello,es,greeting\nadiós,goodbye,es,greeting"
+        csv_file = BytesIO(csv_content.encode('utf-8'))
+        csv_file.name = 'test.csv'
+
+        form_data = {
+            'file': csv_file,
+            'front_column': 'front',
+            'back_column': 'back',
+            'language': 'es',
+            'create_reverse': 'true',
+            'preview_only': 'false'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("created_count", response.data)
+        self.assertEqual(response.data["created_count"], 2)  # 2 rows = 2 forward cards
+        self.assertEqual(Card.objects.count(), 4)  # 2 forward + 2 reverse cards
+
+        # Verify cards were created correctly
+        hola_card = Card.objects.get(front="hola", back="hello")
+        self.assertEqual(hola_card.language, "es")
+        self.assertIsNotNone(hola_card.linked_card)
+
+    def test_import_cards_without_reverse(self):
+        """Test importing cards without creating reverse cards."""
+        csv_content = "front,back\nhola,hello\nadiós,goodbye"
+        csv_file = BytesIO(csv_content.encode('utf-8'))
+        csv_file.name = 'test.csv'
+
+        form_data = {
+            'file': csv_file,
+            'front_column': 'front',
+            'back_column': 'back',
+            'create_reverse': 'false',
+            'preview_only': 'false'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Card.objects.count(), 2)  # Only forward cards
+
+    def test_import_cards_missing_columns(self):
+        """Test import fails when required columns are missing."""
+        csv_content = "front,back\nhola,hello"
+        csv_file = BytesIO(csv_content.encode('utf-8'))
+        csv_file.name = 'test.csv'
+
+        form_data = {
+            'file': csv_file,
+            'front_column': 'nonexistent',
+            'back_column': 'back',
+            'preview_only': 'false'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+    def test_import_cards_no_file(self):
+        """Test import fails when no file is provided."""
+        form_data = {
+            'front_column': 'front',
+            'back_column': 'back',
+            'preview_only': 'false'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+    def test_import_cards_tsv_format(self):
+        """Test importing TSV format."""
+        tsv_content = "front\tback\tlanguage\nhola\thello\tes"
+        tsv_file = BytesIO(tsv_content.encode('utf-8'))
+        tsv_file.name = 'test.tsv'
+
+        form_data = {
+            'file': tsv_file,
+            'front_column': 'front',
+            'back_column': 'back',
+            'delimiter': '\t',
+            'preview_only': 'false'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Card.objects.count(), 1)
+
+    def test_import_cards_with_optional_fields(self):
+        """Test import with optional fields like tags, notes, source."""
+        csv_content = "front,back,tags,notes,source\nhola,hello,tag1 tag2,some notes,manual"
+        csv_file = BytesIO(csv_content.encode('utf-8'))
+        csv_file.name = 'test.csv'
+
+        form_data = {
+            'file': csv_file,
+            'front_column': 'front',
+            'back_column': 'back',
+            'preview_only': 'false'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        card = Card.objects.get(front="hola")
+        self.assertEqual(card.back, "hello")
+        self.assertEqual(card.notes, "some notes")
+        self.assertEqual(card.source, "manual")
+        # Tags are parsed from comma-separated values in CSV
+        if card.tags:
+            self.assertIn("tag1", card.tags or [])
+
+    def test_import_cards_empty_rows_handled(self):
+        """Test that empty rows are handled gracefully."""
+        csv_content = "front,back\nhola,hello\n,\nadiós,goodbye"
+        csv_file = BytesIO(csv_content.encode('utf-8'))
+        csv_file.name = 'test.csv'
+
+        form_data = {
+            'file': csv_file,
+            'front_column': 'front',
+            'back_column': 'back',
+            'preview_only': 'false'
+        }
+
+        response = self.client.post(self.card_import_url, form_data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Should create 2 cards (hola and adiós), skip empty row
+        self.assertEqual(response.data["created_count"], 2)
+        self.assertGreater(response.data["error_count"], 0)  # Should have errors for empty row
+
+    def test_update_card_readonly_fields_ignored(self):
+        """Test that readonly fields cannot be updated."""
+        card = Card.objects.create(front="front", back="back")
+        original_pair_id = card.pair_id
+        original_card_id = card.card_id
+
+        url = f"{self.cards_url}{card.card_id}/update/"
+        payload = {
+            "front": "updated",
+            "card_id": 99999,  # Should be ignored
+            "pair_id": "new-uuid"  # Should be ignored
+        }
+
+        response = self.client.put(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        card.refresh_from_db()
+        self.assertEqual(card.front, "updated")
+        self.assertEqual(card.card_id, original_card_id)  # Should not change
+        self.assertEqual(str(card.pair_id), str(original_pair_id))  # Should not change
+
+    def test_delete_nonexistent_card(self):
+        """Test deleting a card that doesn't exist."""
+        url = f"{self.cards_url}99999/delete/"
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
