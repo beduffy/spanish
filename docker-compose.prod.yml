@@ -24,8 +24,10 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
-        SUPABASE_URL: ${SUPABASE_URL}
-        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        # These will be read from .env.prod when building
+        # Use default empty values if not set (for CI compatibility)
+        SUPABASE_URL: ${SUPABASE_URL:-}
+        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
     container_name: spanish_anki_frontend_prod
     env_file:
       - .env.prod

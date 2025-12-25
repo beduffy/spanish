@@ -41,7 +41,11 @@ $DC_COMMAND down --remove-orphans || echo "No existing services to bring down or
 print_message "Building and starting Docker services in detached mode..."
 # Build and start services in detached mode
 # Force rebuild of images to pick up any changes
+# Note: SUPABASE_URL and SUPABASE_ANON_KEY warnings are expected in CI (they're optional for backend)
 $DC_COMMAND up --build -d
+
+# Wait a moment for containers to start
+sleep 3
 
 # Give services a moment to initialize (e.g., database migrations, servers to start)
 print_message "Waiting for services to initialize (e.g., database migrations, servers to start)..."
@@ -76,12 +80,20 @@ done
 # Verify backend is actually running before proceeding
 if ! $DC_COMMAND ps backend | grep -q "Up"; then
   echo "ERROR: Backend service failed to start!"
-  echo "Backend logs:"
-  $DC_COMMAND logs backend || true
-  echo "Frontend logs:"
-  $DC_COMMAND logs frontend || true
+  echo "Checking backend container status..."
+  $DC_COMMAND ps -a | grep backend || true
+  echo ""
+  echo "Backend logs (last 50 lines):"
+  $DC_COMMAND logs --tail="50" backend || true
+  echo ""
+  echo "Frontend logs (last 20 lines):"
+  $DC_COMMAND logs --tail="20" frontend || true
+  echo ""
   echo "All services status:"
   $DC_COMMAND ps -a || true
+  echo ""
+  echo "Trying to start backend manually to see error..."
+  $DC_COMMAND up backend 2>&1 | head -30 || true
   exit 1
 fi
 
