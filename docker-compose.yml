@@ -8,7 +8,8 @@ services:
     volumes:
       - ./anki_web_app:/app # Mounts the host's anki_web_app directory to /app in the container for development (hot-reloading for Python code)
       - ./data:/app/data # Mounts the host's data directory to /app/data in the container for CSV and DB persistence
-      - ./.env:/app/../.env:ro # Mount root .env file for Django to read Supabase config (optional, will use defaults if not present)
+      # Mount .env file if it exists (optional for CI)
+      # - ./.env:/app/../.env:ro # Mount root .env file for Django to read Supabase config (optional, will use defaults if not present)
       # - db_data:/app/anki_web_app/data # Example for a named volume if you want Docker to manage it
     ports:
       - "8000:8000"
@@ -16,6 +17,8 @@ services:
       - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal
       # Set default SECRET_KEY for CI if .env doesn't exist
       - SECRET_KEY=${SECRET_KEY:-django-insecure-test-key-for-ci-only}
+      - DEBUG=${DEBUG:-True}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
       # - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings # If needed
     networks:
       - app_services_network
@@ -35,7 +38,8 @@ services:
     container_name: spanish_anki_frontend
     volumes:
       - ./anki_web_app/spanish_anki_frontend:/app # Mount the entire frontend directory for hot-reloading
-      - ./.env:/app/../../.env:ro # Mount root .env file so vue.config.js can read it (../../.env from /app resolves to project root)
+      # Mount .env file if it exists (optional for CI)
+      # - ./.env:/app/../../.env:ro # Mount root .env file so vue.config.js can read it (../../.env from /app resolves to project root)
       # We need to mount the whole directory, not just src, because node_modules and other files are needed by `npm run serve`
       # Also, ensure .dockerignore in anki_web_app/spanish_anki_frontend/ excludes node_modules if you don't want host's node_modules to overwrite container's
     working_dir: /app # Set working directory for npm commands
