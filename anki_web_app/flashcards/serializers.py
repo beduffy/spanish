@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Sentence, Review
+from .models import Sentence, Review, Card, CardReview
 
 
 class SentenceSerializer(serializers.ModelSerializer):
@@ -101,3 +101,131 @@ class SentenceDetailSerializer(SentenceSerializer): # Inherits from SentenceSeri
     class Meta(SentenceSerializer.Meta): # Inherit Meta to keep model and base fields
         # Ensure 'reviews' is added to the inherited list of fields
         fields = list(SentenceSerializer.Meta.fields) + ['reviews'] 
+
+
+class CardReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CardReview
+        fields = [
+            'review_id',
+            'review_timestamp',
+            'user_score',
+            'user_comment_addon',
+            'typed_input',
+            'interval_at_review',
+            'ease_factor_at_review'
+        ]
+
+
+class CardSerializer(serializers.ModelSerializer):
+    average_score = serializers.SerializerMethodField()
+    last_reviewed_date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Card
+        fields = [
+            'card_id',
+            'pair_id',
+            'linked_card',
+            'front',
+            'back',
+            'language',
+            'tags',
+            'notes',
+            'source',
+            'next_review_date',
+            'is_learning',
+            'interval_days',
+            'total_reviews',
+            'average_score',
+            'last_reviewed_date',
+            'ease_factor',
+            'creation_date',
+            'last_modified_date',
+            'total_score_sum',
+            'consecutive_correct_reviews',
+        ]
+        read_only_fields = ['card_id', 'pair_id', 'linked_card', 'next_review_date', 'is_learning', 
+                           'interval_days', 'total_reviews', 'ease_factor', 'creation_date', 
+                           'last_modified_date', 'total_score_sum', 'consecutive_correct_reviews']
+
+    def get_average_score(self, obj):
+        if obj.total_reviews > 0 and obj.total_score_sum is not None:
+            return round(obj.total_score_sum / obj.total_reviews, 2)
+        return None
+
+    def get_last_reviewed_date(self, obj):
+        last_review = obj.reviews.order_by('-review_timestamp').first()
+        if last_review:
+            return last_review.review_timestamp
+        return None
+
+
+class CardCreateSerializer(serializers.ModelSerializer):
+    create_reverse = serializers.BooleanField(default=True, help_text="Auto-create reverse card and link the pair")
+
+    class Meta:
+        model = Card
+        fields = [
+            'front',
+            'back',
+            'language',
+            'tags',
+            'notes',
+            'source',
+            'create_reverse',
+        ]
+
+    def validate(self, attrs):
+        front = (attrs.get('front') or '').strip()
+        back = (attrs.get('back') or '').strip()
+        if not front:
+            raise serializers.ValidationError({"front": "Front cannot be empty."})
+        if not back:
+            raise serializers.ValidationError({"back": "Back cannot be empty."})
+        return attrs
+
+    def create(self, validated_data):
+        create_reverse = validated_data.pop('create_reverse', True)
+
+        forward = Card.objects.create(**validated_data)
+
+        if not create_reverse:
+            return forward
+
+        reverse = Card.objects.create(
+            pair_id=forward.pair_id,
+            front=forward.back,
+            back=forward.front,
+            language=forward.language,
+            tags=forward.tags,
+            notes=forward.notes,
+            source=forward.source,
+        )
+
+        forward.linked_card = reverse
+        reverse.linked_card = forward
+        forward.save(update_fields=['linked_card'])
+        reverse.save(update_fields=['linked_card'])
+
+        return forward
+
+
+class CardDetailSerializer(CardSerializer):
+    reviews = CardReviewSerializer(many=True, read_only=True)
+
+    class Meta(CardSerializer.Meta):
+        fields = list(CardSerializer.Meta.fields) + ['reviews']
+
+
+class CardReviewInputSerializer(serializers.Serializer):
+    card_id = serializers.IntegerField()
+    user_score = serializers.FloatField(min_value=0.0, max_value=1.0)
+    user_comment_addon = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    typed_input = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def create(self, validated_data):
+        raise NotImplementedError()
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError()
