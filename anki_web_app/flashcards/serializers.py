@@ -149,11 +149,11 @@ class CardSerializer(serializers.ModelSerializer):
                            'interval_days', 'total_reviews', 'ease_factor', 'creation_date', 
                            'last_modified_date', 'total_score_sum', 'consecutive_correct_reviews']
 
-    def update(self, instance, validated_data):
-        # Remove readonly fields from validated_data if they somehow got in
+    def to_internal_value(self, data):
+        # Filter out readonly fields before validation
         readonly = set(self.Meta.read_only_fields)
-        validated_data = {k: v for k, v in validated_data.items() if k not in readonly}
-        return super().update(instance, validated_data)
+        filtered_data = {k: v for k, v in data.items() if k not in readonly}
+        return super().to_internal_value(filtered_data)
 
     def get_average_score(self, obj):
         if obj.total_reviews > 0 and obj.total_score_sum is not None:
