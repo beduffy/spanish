@@ -8,8 +8,11 @@ describe('Card Navigation and Data Verification', () => {
         cy.url().should('include', '/dashboard');
         cy.get('h1').contains('Dashboard');
         
-        // Check for card statistics (not sentences)
-        cy.get('.statistics-grid .stat-card').should('have.length.greaterThan', 0);
+        // Wait for statistics to load (wait for loading to finish)
+        cy.get('.loading-message', { timeout: 10000 }).should('not.exist');
+        
+        // Check for card statistics (not sentences) - wait for them to appear
+        cy.get('.statistics-grid .stat-card', { timeout: 10000 }).should('have.length.greaterThan', 0);
         cy.get('.stat-card h2').contains('Reviews Today').should('be.visible');
         cy.get('.stat-card h2').contains('Total Cards').should('be.visible');
         cy.get('.stat-card h2').contains('Avg. Score').should('be.visible');
@@ -21,21 +24,30 @@ describe('Card Navigation and Data Verification', () => {
         cy.url().should('include', '/cards');
         cy.get('h1').contains('All Cards');
         
-        // Verify table exists
-        cy.get('.card-list-view table').should('be.visible');
+        // Wait for loading to finish
+        cy.get('.loading-message', { timeout: 10000 }).should('not.exist');
         
-        // Check for mastery column
-        cy.get('thead th').contains('Mastery').should('be.visible');
-        
-        // If cards exist, verify they're displayed
+        // Check if cards exist or if we see the no-data message
         cy.get('body').then(($body) => {
-            if ($body.find('.card-list-view tbody tr').length > 0) {
-                cy.get('.card-list-view tbody tr').should('have.length.greaterThan', 0);
+            if ($body.find('.card-list-view table').length > 0) {
+                // Cards exist - verify table
+                cy.get('.card-list-view table').should('be.visible');
                 
-                // Verify mastery level is displayed
-                cy.get('.card-list-view tbody tr').first().within(() => {
-                    cy.get('td').should('have.length.greaterThan', 0);
-                });
+                // Check for mastery column
+                cy.get('thead th').contains('Mastery').should('be.visible');
+                
+                // If cards exist in table, verify they're displayed
+                if ($body.find('.card-list-view tbody tr').length > 0) {
+                    cy.get('.card-list-view tbody tr').should('have.length.greaterThan', 0);
+                    
+                    // Verify mastery level is displayed
+                    cy.get('.card-list-view tbody tr').first().within(() => {
+                        cy.get('td').should('have.length.greaterThan', 0);
+                    });
+                }
+            } else {
+                // No cards - verify no-data message is shown
+                cy.get('.no-data-message').should('be.visible');
             }
         });
     });

@@ -274,10 +274,8 @@ class CardCreateSerializer(serializers.ModelSerializer):
             pair_id=forward.pair_id,
             front=forward.back,
             back=forward.front,
-            language=forward.language,
             tags=forward.tags,
             notes=forward.notes,
-            source=forward.source,
             user=user,
             next_review_date=timezone.now().date(),  # Ensure reverse card is also due today
         )
