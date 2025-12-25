@@ -24,9 +24,20 @@ class SupabaseJWTAuthentication(authentication.BaseAuthentication):
         """
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         
-        # If user was already set by middleware (DEBUG mode auto-login), use it
-        if request.user and request.user.is_authenticated:
-            return (request.user, None)
+        # Check if user was already set by middleware (DEBUG mode auto-login)
+        # Use hasattr to avoid triggering DRF's authentication process
+        if hasattr(request, '_cached_user') and request._cached_user:
+            return (request._cached_user, None)
+        
+        # Also check if user attribute exists and is not AnonymousUser (without triggering auth)
+        try:
+            # Access user without triggering authentication
+            user = getattr(request, 'user', None)
+            if user and hasattr(user, 'is_authenticated') and user.is_authenticated and not user.is_anonymous:
+                return (user, None)
+        except:
+            # If accessing user causes issues, continue with normal auth flow
+            pass
         
         if auth_header.startswith('Bearer '):
             token = auth_header.split('Bearer ')[1]
