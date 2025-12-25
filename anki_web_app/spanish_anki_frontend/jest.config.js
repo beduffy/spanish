@@ -5,4 +5,5 @@ module.exports = {
   ],
   // If you encounter issues with other ES modules in node_modules, add them here too, e.g.:
   // '/node_modules/(?!axios|other-module|another-module)/',
+  setupFiles: ['<rootDir>/tests/setup.js'],
 };
