@@ -48,6 +48,31 @@
           <p style="white-space: pre-wrap;">{{ currentCard.notes }}</p>
         </div>
 
+        <div class="card-stats">
+          <div class="stat-item">
+            <strong>Status:</strong> 
+            <span :class="currentCard.is_learning ? 'status-learning' : 'status-review'">
+              {{ currentCard.is_learning ? 'Learning' : 'Review' }}
+            </span>
+          </div>
+          <div class="stat-item" v-if="currentCard.total_reviews > 0">
+            <strong>Reviews:</strong> {{ currentCard.total_reviews }}
+            <span v-if="currentCard.average_score !== null" class="avg-score">
+              (Avg: {{ (currentCard.average_score * 100).toFixed(0) }}%)
+            </span>
+          </div>
+          <div class="stat-item" v-if="currentCard.next_review_date">
+            <strong>Next review:</strong> {{ formatDate(currentCard.next_review_date) }}
+            <span v-if="getDaysUntilReview(currentCard.next_review_date) !== null" class="days-until">
+              ({{ getDaysUntilReview(currentCard.next_review_date) }})
+            </span>
+          </div>
+          <div class="stat-item ease-factor-info" title="Ease Factor: Controls how quickly the review interval grows. Higher = longer intervals between reviews. Increases with good scores, decreases with poor scores.">
+            <strong>Ease Factor:</strong> {{ currentCard.ease_factor ? currentCard.ease_factor.toFixed(2) : '2.50' }}
+            <span class="info-icon" title="Ease Factor controls how quickly review intervals grow. Higher values mean longer intervals between reviews.">ℹ️</span>
+          </div>
+        </div>
+
         <div class="review-inputs">
           <div>
             <label for="userScore">Your Score (0.0 - 1.0):</label>
@@ -162,6 +187,20 @@ export default {
       if (!dateString) return 'N/A';
       const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
       return new Date(dateString).toLocaleDateString(undefined, options);
+    },
+    getDaysUntilReview(dateString) {
+      if (!dateString) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const reviewDate = new Date(dateString);
+      reviewDate.setHours(0, 0, 0, 0);
+      const diffTime = reviewDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) return 'overdue';
+      if (diffDays === 0) return 'today';
+      if (diffDays === 1) return 'tomorrow';
+      return `in ${diffDays} days`;
     }
   },
   mounted() {
@@ -349,5 +388,76 @@ export default {
 
 .score-input {
   margin-top: 8px;
+}
+
+.card-stats {
+  background-color: #f0f8ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 15px;
+  font-size: 0.9em;
+}
+
+.stat-item {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-item:last-child {
+  margin-bottom: 0;
+}
+
+.stat-item strong {
+  color: #333;
+  min-width: 100px;
+}
+
+.status-learning {
+  background-color: #ffc107;
+  color: #000;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.status-review {
+  background-color: #28a745;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.avg-score {
+  color: #666;
+  font-size: 0.9em;
+  margin-left: 5px;
+}
+
+.days-until {
+  color: #17a2b8;
+  font-size: 0.9em;
+  margin-left: 5px;
+  font-weight: 500;
+}
+
+.ease-factor-info {
+  position: relative;
+}
+
+.info-icon {
+  cursor: help;
+  margin-left: 5px;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+.ease-factor-info:hover .info-icon {
+  opacity: 1;
 }
 </style>
