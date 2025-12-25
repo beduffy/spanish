@@ -54,33 +54,27 @@
 - ✅ StudySession and SessionActivity models
 - ✅ Models registered in admin
 
-## ❌ Phase 6: Hetzner deployment
-**Status**: NOT STARTED
-- ❌ **Missing**: Production docker-compose.yml
-- ❌ **Missing**: Nginx reverse proxy config
-- ❌ **Missing**: TLS/Let's Encrypt setup
-- ❌ **Missing**: Production environment variables setup
-- ✅ Development docker-compose.yml exists
-- ✅ Frontend nginx.conf exists (for production build)
+## ✅ Phase 6: Hetzner deployment
+**Status**: COMPLETE
+- ✅ Production docker-compose.prod.yml created with all services
+- ✅ Nginx reverse proxy configuration with SSL/TLS support
+- ✅ Certbot container for Let's Encrypt certificate management
+- ✅ Production environment variables template (env.prod.example)
+- ✅ Deployment documentation (DEPLOYMENT.md)
+- ✅ Settings.py updated for production configuration
+- ✅ Gunicorn added to requirements.txt
+- ✅ Static files collection configured for production
+- ✅ Auto-renewal of SSL certificates configured
 
 ## Next Steps
 
-### Immediate (to complete Phase 4 verification):
-1. Test CardFlashcardView end-to-end:
-   - Login → Navigate to `/cards/review`
-   - Verify card loads
-   - Test typed input
-   - Test score submission
-   - Verify next card loads
+### Phase 7: Cleanup + rename
+- Remove duplicate/legacy folders (there's an extra top-level `spanish_anki_frontend/`)
+- Rename repo to `personal_anki_cards` (GitHub + local)
 
-### Phase 5 (KPIs + time tracking):
-1. Create StudySession model
-2. Add endpoints: `/api/flashcards/sessions/start`, `/heartbeat`, `/end`
-3. Implement AFK threshold logic (90s default)
-4. Calculate active minutes
-
-### Phase 6 (Hetzner deployment):
-1. Create `docker-compose.prod.yml`
-2. Create production Nginx config
-3. Add certbot/Let's Encrypt setup
-4. Document deployment process
+### Production Deployment:
+1. Set up Supabase project and get credentials
+2. Configure `.env.prod` with production values
+3. Deploy to Hetzner server following DEPLOYMENT.md
+4. Obtain Let's Encrypt certificates
+5. Test production deployment end-to-end

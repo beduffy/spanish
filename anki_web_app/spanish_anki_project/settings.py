@@ -33,12 +33,12 @@ else:
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-+yy7lae2yeftsoemy+imd%x+&$b3!7b*91+_2h8fck*^cn@8*j"
+SECRET_KEY = config('SECRET_KEY', default="django-insecure-+yy7lae2yeftsoemy+imd%x+&$b3!7b*91+_2h8fck*^cn@8*j")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Application definition
@@ -134,6 +134,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"  # For production: collectstatic will put files here
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -141,10 +142,8 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",  # Your Vue.js frontend
-    "http://127.0.0.1:8080", # Also add this for consistency
-]
+CORS_ALLOWED_ORIGINS_STR = config('CORS_ALLOWED_ORIGINS', default='http://localhost:8080,http://127.0.0.1:8080')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_STR.split(',') if origin.strip()]
 
 # If you want to allow all origins during development (less secure, but sometimes useful for quick testing):
 # CORS_ALLOW_ALL_ORIGINS = True
@@ -180,6 +179,7 @@ AUTHENTICATION_BACKENDS = [
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'flashcards.drf_auth.SupabaseJWTAuthentication',  # Supabase JWT auth for API
         'rest_framework.authentication.SessionAuthentication',  # For admin/development
     ],
     'DEFAULT_PERMISSION_CLASSES': [

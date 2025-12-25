@@ -29,8 +29,11 @@ else
 fi
 
 # Collect static files (if you have static files to be served by Django or a web server)
-# echo "Collecting static files..."
-# python manage.py collectstatic --noinput
+# Only collect in production (when using gunicorn)
+if [ "$1" = "gunicorn" ]; then
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput
+fi
 
 # Check the first argument to the script
 if [ "$1" = "run_server" ]; then
