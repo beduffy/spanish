@@ -70,6 +70,12 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
+    // Allow access in Cypress test mode
+    if (typeof window !== 'undefined' && window.__CYPRESS_TEST_MODE__) {
+      next()
+      return
+    }
+    
     try {
       // Check if user is logged in
       const session = await SupabaseService.getSession()

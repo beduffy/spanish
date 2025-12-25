@@ -1,6 +1,6 @@
 describe('Card Navigation and Data Verification', () => {
     beforeEach(() => {
-        cy.visit('/');
+        cy.visitAsAuthenticated('/');
     });
 
     it('navigates to Dashboard and verifies card statistics', () => {
@@ -18,7 +18,7 @@ describe('Card Navigation and Data Verification', () => {
                 cy.get('.statistics-grid .stat-card').should('have.length.greaterThan', 0);
                 cy.get('.stat-card h2').contains('Reviews Today').should('be.visible');
                 cy.get('.stat-card h2').contains('Total Cards').should('be.visible');
-                cy.get('.stat-card h2').contains('Avg. Score').should('be.visible');
+                cy.get('.stat-card h2').contains('Average Score').should('be.visible');
             } else if ($body.find('.error-message').length > 0) {
                 // Error occurred - log it but don't fail (API might be down)
                 cy.log('Dashboard shows error message - API might be unavailable');
@@ -30,7 +30,7 @@ describe('Card Navigation and Data Verification', () => {
     });
 
     it('navigates to Cards List and verifies cards are displayed', () => {
-        cy.visit('/');
+        cy.visitAsAuthenticated('/');
         cy.get('nav a').contains('All Cards').click();
         cy.url().should('include', '/cards');
         cy.get('h1').contains('All Cards');
@@ -71,7 +71,7 @@ describe('Card Navigation and Data Verification', () => {
     });
 
     it('can create a new card', () => {
-        cy.visit('/cards');
+        cy.visitAsAuthenticated('/cards');
         cy.get('a.btn-primary').contains('Create Card').click();
         cy.url().should('include', '/cards/create');
         
@@ -98,7 +98,7 @@ describe('Card Navigation and Data Verification', () => {
         cy.intercept('GET', '/api/flashcards/cards/next-card/').as('getNextCard');
         cy.intercept('POST', '/api/flashcards/cards/submit-review/').as('submitReview');
         
-        cy.visit('/');
+        cy.visitAsAuthenticated('/');
         cy.wait('@getNextCard', { timeout: 10000 });
         
         cy.get('body').then(($body) => {

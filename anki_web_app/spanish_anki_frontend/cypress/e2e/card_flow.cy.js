@@ -1,7 +1,8 @@
 describe('Card Review Flow', () => {
     beforeEach(() => {
         // Mock authentication - backend auto-logs in as testuser in DEBUG mode
-        cy.visit('/');
+        // Frontend route guard needs mocked Supabase session
+        cy.visitAsAuthenticated('/');
     });
 
     it('successfully loads and displays a card', () => {
@@ -25,7 +26,7 @@ describe('Card Review Flow', () => {
         cy.intercept('GET', '/api/flashcards/cards/next-card/').as('getNextCard');
         cy.intercept('POST', '/api/flashcards/cards/submit-review/').as('submitReview');
         
-        cy.visit('/');
+        cy.visitAsAuthenticated('/');
         cy.wait('@getNextCard', { timeout: 10000 });
         
         // Check if we have a card to review
