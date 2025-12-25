@@ -9,3 +9,7 @@ coverage.xml
 
 # Local nginx configuration (contains local paths and settings)
 nginx_spanish_anki_local_test.conf
+
+# Cypress screenshots and videos
+anki_web_app/spanish_anki_frontend/cypress/screenshots/
+anki_web_app/spanish_anki_frontend/cypress/videos/
