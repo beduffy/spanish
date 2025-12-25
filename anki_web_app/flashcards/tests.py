@@ -1,5 +1,6 @@
 from django.test import TestCase
 import os
+import uuid
 from io import StringIO, BytesIO
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -1632,10 +1633,12 @@ class CardAPITests(APITestCase):
         original_card_id = card.card_id
 
         url = f"{self.cards_url}{card.card_id}/update/"
+        # PUT requires all fields, so include all non-readonly fields
         payload = {
             "front": "updated",
-            "card_id": 99999,  # Should be ignored
-            "pair_id": "new-uuid"  # Should be ignored
+            "back": "back",  # Required for PUT
+            "card_id": 99999,  # Should be ignored (readonly)
+            "pair_id": str(uuid.uuid4())  # Should be ignored (readonly)
         }
 
         response = self.client.put(url, payload, format='json')
