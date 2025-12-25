@@ -1,0 +1,2 @@
+make it so we can disable each card if we know it we master it
+have clarity and info on the algorithm and how many days and don't show cards that are not due or something?
