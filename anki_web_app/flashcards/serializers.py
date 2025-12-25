@@ -290,6 +290,13 @@ class CardCreateSerializer(serializers.ModelSerializer):
 
         return forward
 
+    def to_representation(self, instance):
+        """
+        Use CardSerializer for the response to ensure proper serialization
+        of all fields including linked_card (as ID only).
+        """
+        return CardSerializer(instance).data
+
 
 class CardDetailSerializer(CardSerializer):
     reviews = CardReviewSerializer(many=True, read_only=True)
