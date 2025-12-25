@@ -260,6 +260,10 @@ class CardListCreateAPIView(UserScopedMixin, ListCreateAPIView):
             return CardCreateSerializer
         return CardSerializer
 
+    def perform_create(self, serializer):
+        """Set the user on the card before creation."""
+        serializer.save(user=self.request.user)
+
 
 class CardDetailAPIView(UserScopedMixin, RetrieveAPIView):
     queryset = Card.objects.all()
@@ -285,8 +289,11 @@ class CardNextCardAPIView(APIView):
         if request.user and request.user.is_authenticated:
             base_queryset = base_queryset.filter(user=request.user)
 
+        # Include cards that are due OR have never been reviewed (total_reviews=0)
+        # This ensures newly created cards are immediately available
+        from django.db.models import Q
         review_cards_due = base_queryset.filter(
-            next_review_date__lte=today,
+            Q(next_review_date__lte=today) | Q(total_reviews=0),
             is_learning=False
         ).order_by('next_review_date', 'card_id')
 
@@ -294,7 +301,7 @@ class CardNextCardAPIView(APIView):
             next_card = review_cards_due.first()
         else:
             learning_or_new_cards_due = base_queryset.filter(
-                next_review_date__lte=today,
+                Q(next_review_date__lte=today) | Q(total_reviews=0),
                 is_learning=True
             ).order_by('next_review_date', 'card_id')
 

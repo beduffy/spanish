@@ -120,6 +120,7 @@ class CardReviewSerializer(serializers.ModelSerializer):
 class CardSerializer(serializers.ModelSerializer):
     average_score = serializers.SerializerMethodField()
     last_reviewed_date = serializers.SerializerMethodField()
+    mastery_level = serializers.SerializerMethodField()
 
     class Meta:
         model = Card
@@ -144,6 +145,7 @@ class CardSerializer(serializers.ModelSerializer):
             'last_modified_date',
             'total_score_sum',
             'consecutive_correct_reviews',
+            'mastery_level',
         ]
         read_only_fields = ['card_id', 'pair_id', 'linked_card', 'next_review_date', 'is_learning', 
                            'interval_days', 'total_reviews', 'ease_factor', 'creation_date', 
@@ -166,6 +168,69 @@ class CardSerializer(serializers.ModelSerializer):
             return last_review.review_timestamp
         return None
 
+    def get_mastery_level(self, obj):
+        """
+        Calculate mastery level based on reviews and performance.
+        Returns a dict with level name, score, and indicators.
+        """
+        from .models import GRADUATING_INTERVAL_DAYS
+        
+        if obj.total_reviews == 0:
+            return {
+                'level': 'New',
+                'score': None,
+                'color': 'gray'
+            }
+        
+        # Calculate average score manually since it's a SerializerMethodField
+        avg_score = None
+        if obj.total_reviews > 0 and obj.total_score_sum is not None:
+            avg_score = round(obj.total_score_sum / obj.total_reviews, 2)
+        
+        # Mastered: graduated, high consecutive correct, long interval
+        if not obj.is_learning and obj.consecutive_correct_reviews >= 3 and obj.interval_days >= GRADUATING_INTERVAL_DAYS:
+            return {
+                'level': 'Mastered',
+                'score': avg_score,
+                'color': 'green',
+                'indicator': f'{obj.consecutive_correct_reviews} consecutive, {obj.interval_days}d interval'
+            }
+        
+        # Excellent: high average score, multiple reviews
+        if avg_score and avg_score >= 0.9 and obj.total_reviews >= 5:
+            return {
+                'level': 'Excellent',
+                'score': avg_score,
+                'color': 'blue',
+                'indicator': f'{obj.total_reviews} reviews'
+            }
+        
+        # Good: decent average score
+        if avg_score and avg_score >= 0.8 and obj.total_reviews >= 3:
+            return {
+                'level': 'Good',
+                'score': avg_score,
+                'color': 'cyan',
+                'indicator': f'{obj.total_reviews} reviews'
+            }
+        
+        # Learning: in learning phase or low reviews
+        if obj.is_learning or obj.total_reviews < 3:
+            return {
+                'level': 'Learning',
+                'score': avg_score,
+                'color': 'yellow',
+                'indicator': f'{obj.total_reviews} reviews'
+            }
+        
+        # Default: needs improvement
+        return {
+            'level': 'Needs Practice',
+            'score': avg_score,
+            'color': 'orange',
+            'indicator': f'{obj.total_reviews} reviews'
+        }
+
 
 class CardCreateSerializer(serializers.ModelSerializer):
     create_reverse = serializers.BooleanField(default=True, help_text="Auto-create reverse card and link the pair")
@@ -175,10 +240,8 @@ class CardCreateSerializer(serializers.ModelSerializer):
         fields = [
             'front',
             'back',
-            'language',
             'tags',
             'notes',
-            'source',
             'create_reverse',
         ]
 
@@ -194,12 +257,14 @@ class CardCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         create_reverse = validated_data.pop('create_reverse', True)
         
-        # Assign user from request if authenticated
-        user = None
-        if self.context.get('request') and self.context['request'].user.is_authenticated:
-            user = self.context['request'].user
+        # User is already set by perform_create in the view
+        user = validated_data.get('user')
         
-        validated_data['user'] = user
+        # Ensure new cards are due today (available for review immediately)
+        from django.utils import timezone
+        if 'next_review_date' not in validated_data:
+            validated_data['next_review_date'] = timezone.now().date()
+        
         forward = Card.objects.create(**validated_data)
 
         if not create_reverse:
@@ -214,6 +279,7 @@ class CardCreateSerializer(serializers.ModelSerializer):
             notes=forward.notes,
             source=forward.source,
             user=user,
+            next_review_date=timezone.now().date(),  # Ensure reverse card is also due today
         )
 
         forward.linked_card = reverse

@@ -20,12 +20,45 @@ class SupabaseJWTAuthenticationMiddleware:
     def __call__(self, request):
         # Try to authenticate using Supabase JWT backend
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        
+        # Debug logging (print to stdout for now since logging config might not be set)
+        if request.path.startswith('/api/'):
+            print(f"[Middleware] Path: {request.path}")
+            print(f"[Middleware] Auth header present: {bool(auth_header)}")
+            if auth_header:
+                print(f"[Middleware] Auth header starts with Bearer: {auth_header.startswith('Bearer ')}")
+                if auth_header.startswith('Bearer '):
+                    token_preview = auth_header[:50] + '...' if len(auth_header) > 50 else auth_header
+                    print(f"[Middleware] Token preview: {token_preview}")
+        
         if auth_header.startswith('Bearer '):
             from .auth_backend import SupabaseJWTAuthenticationBackend
             backend = SupabaseJWTAuthenticationBackend()
             user = backend.authenticate(request)
             if user:
                 request.user = user
+                print(f"[Middleware] Authentication successful for user: {user.username}")
+            else:
+                print(f"[Middleware] Authentication FAILED for path: {request.path}")
+        else:
+            print(f"[Middleware] No Bearer token found for path: {request.path}")
+            # Development-only: Auto-login as test user if DEBUG=True and no token
+            from django.conf import settings
+            if settings.DEBUG and not auth_header:
+                test_user, created = User.objects.get_or_create(
+                    username='testuser',
+                    defaults={
+                        'email': 'test@example.com',
+                        'first_name': 'Test',
+                        'last_name': 'User',
+                    }
+                )
+                if created:
+                    test_user.set_unusable_password()  # Password not needed for JWT auth
+                    test_user.save()
+                    print(f"[Middleware] Created test user: testuser")
+                request.user = test_user
+                print(f"[Middleware] Auto-logged in as test user (DEBUG mode)")
         
         response = self.get_response(request)
         return response
