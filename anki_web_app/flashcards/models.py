@@ -1,6 +1,10 @@
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta # Ensure timedelta is imported
+from django.contrib.auth import get_user_model
+import uuid
+
+User = get_user_model()
 
 # Constants for SRS logic
 INITIAL_EASE_FACTOR = 2.5
@@ -16,6 +20,7 @@ class Sentence(models.Model):
     ]
 
     sentence_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='sentences', help_text="User who owns this sentence card")
     # csv_number will be unique in combination with translation_direction
     csv_number = models.IntegerField(help_text="Original number from CSV for reference")
     translation_direction = models.CharField(
@@ -154,3 +159,148 @@ class Review(models.Model):
         ordering = ['-review_timestamp']
         verbose_name = "Review"
         verbose_name_plural = "Reviews"
+
+
+class Card(models.Model):
+    """
+    General two-sided card (front/back) with SRS fields.
+
+    Note: For now this exists alongside the legacy Sentence model so we can migrate incrementally.
+    """
+
+    card_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='cards', help_text="User who owns this card")
+
+    pair_id = models.UUIDField(default=uuid.uuid4, db_index=True, help_text="Shared ID for a forward+reverse pair")
+    linked_card = models.OneToOneField(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='linked_card_reverse',
+        help_text="The reverse card for this card (if any)."
+    )
+
+    front = models.TextField(help_text="Prompt (front of card)")
+    back = models.TextField(help_text="Answer (back of card)")
+
+    language = models.CharField(max_length=32, blank=True, default="", help_text="Optional language label (e.g., 'es', 'de')")
+    tags = models.JSONField(default=list, blank=True, help_text="Optional list of tags")
+    notes = models.TextField(blank=True, default="", help_text="Optional notes")
+    source = models.TextField(blank=True, default="", help_text="Optional source")
+
+    creation_date = models.DateTimeField(default=timezone.now, help_text="Timestamp of creation")
+    last_modified_date = models.DateTimeField(auto_now=True, help_text="Timestamp of last update to card or SRS data")
+
+    ease_factor = models.FloatField(default=INITIAL_EASE_FACTOR, help_text="For SM2-like algorithm")
+    interval_days = models.IntegerField(default=0, help_text="Current interval in days; 0 for new/learning cards")
+    next_review_date = models.DateField(default=timezone.now, help_text="Date for next scheduled review")
+    is_learning = models.BooleanField(default=True, help_text="True if card is in learning phase, False if graduated/reviewing")
+    consecutive_correct_reviews = models.IntegerField(default=0, help_text="Number of consecutive reviews with score > 0.8")
+    total_reviews = models.IntegerField(default=0, help_text="Counter for how many times this card has been reviewed")
+    total_score_sum = models.FloatField(default=0.0, help_text="Sum of all scores for this card, to calculate average")
+
+    def __str__(self):
+        return f"Card {self.card_id}: {self.front[:50]}..."
+
+    def _get_quality_from_score(self, score):
+        if score >= 0.9:
+            return 5
+        if score >= 0.8:
+            return 4
+        if score >= 0.6:
+            return 3
+        if score >= 0.4:
+            return 2
+        if score >= 0.2:
+            return 1
+        return 0
+
+    def process_review(self, user_score, review_comment=None, typed_input=None):
+        # Store current state for the Review object
+        interval_before_review = self.interval_days
+        ease_factor_before_review = self.ease_factor
+
+        q = self._get_quality_from_score(user_score)
+
+        # Update consecutive_correct_reviews (for mastery definition: score > 0.8)
+        if user_score > 0.8:  # Corresponds to q >= 4
+            self.consecutive_correct_reviews += 1
+        else:
+            self.consecutive_correct_reviews = 0
+
+        if self.is_learning:
+            if q >= 3:  # Passed a learning step
+                current_step_index = -1
+                if self.interval_days == 0:  # Just starting or failed previous step
+                    current_step_index = -1  # Will move to LEARNING_STEPS_DAYS[0]
+                elif self.interval_days == LEARNING_STEPS_DAYS[0]:
+                    current_step_index = 0
+                elif self.interval_days == LEARNING_STEPS_DAYS[1]:
+                    current_step_index = 1
+
+                next_step_index = current_step_index + 1
+                if next_step_index < len(LEARNING_STEPS_DAYS):
+                    self.interval_days = LEARNING_STEPS_DAYS[next_step_index]
+                else:  # Graduated from learning steps
+                    self.is_learning = False
+                    self.interval_days = GRADUATING_INTERVAL_DAYS
+            else:  # Failed a learning step
+                self.interval_days = 0  # Reset to the first learning step (due now or next day)
+        else:  # Reviewing a graduated card
+            if q >= 3:  # Correct recall
+                if self.interval_days == 0:  # Safeguard
+                    self.interval_days = GRADUATING_INTERVAL_DAYS
+                else:
+                    self.interval_days = round(self.interval_days * self.ease_factor)
+            else:  # Incorrect recall (Lapse)
+                self.is_learning = True
+                self.interval_days = LAPSE_INTERVAL_DAYS  # Reset to first learning step
+                self.ease_factor = max(MIN_EASE_FACTOR, self.ease_factor - 0.20)  # Penalize EF
+
+        # Update Ease Factor if quality was good enough (q >= 3)
+        if q >= 3:
+            new_ef = self.ease_factor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+            self.ease_factor = max(MIN_EASE_FACTOR, new_ef)
+
+        self.next_review_date = timezone.now().date() + timedelta(days=self.interval_days)
+
+        # Update totals
+        self.total_reviews += 1
+        self.total_score_sum += user_score
+
+        self.save()
+
+        CardReview.objects.create(
+            card=self,
+            user_score=user_score,
+            user_comment_addon=review_comment,
+            typed_input=typed_input,
+            interval_at_review=interval_before_review,
+            ease_factor_at_review=ease_factor_before_review
+        )
+        return self
+
+    class Meta:
+        ordering = ['-next_review_date', 'card_id']
+        verbose_name = "Card"
+        verbose_name_plural = "Cards"
+
+
+class CardReview(models.Model):
+    review_id = models.AutoField(primary_key=True)
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='reviews')
+    review_timestamp = models.DateTimeField(default=timezone.now, help_text="Timestamp of the review")
+    user_score = models.FloatField(help_text="Score given by user, 0.0 to 1.0")
+    user_comment_addon = models.TextField(blank=True, null=True, help_text="Additional comment made by user during this specific review")
+    typed_input = models.TextField(blank=True, null=True, help_text="Optional typed input stored with the review (not graded yet)")
+    interval_at_review = models.IntegerField(help_text="The interval setting for the card before this review took place")
+    ease_factor_at_review = models.FloatField(help_text="The ease factor for the card before this review took place")
+
+    def __str__(self):
+        return f"Review for card {self.card.card_id} at {self.review_timestamp.strftime('%Y-%m-%d %H:%M')}"
+
+    class Meta:
+        ordering = ['-review_timestamp']
+        verbose_name = "Card Review"
+        verbose_name_plural = "Card Reviews"
