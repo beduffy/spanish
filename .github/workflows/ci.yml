@@ -53,6 +53,11 @@ jobs:
 
     - name: Run tests using docker-compose
       if: always() # Run this even if previous steps failed, to ensure cleanup
+      env:
+        # Set default values for CI (backend doesn't need Supabase to run tests)
+        SECRET_KEY: django-insecure-test-key-for-ci-only
+        DEBUG: "True"
+        ALLOWED_HOSTS: localhost,127.0.0.1
       run: |
         export DOCKER_HOST=unix:///var/run/docker.sock
         # The run_all_tests.sh script will exit with a non-zero code if tests fail
