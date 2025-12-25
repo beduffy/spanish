@@ -288,6 +288,9 @@ class CardCreateSerializer(serializers.ModelSerializer):
         forward.save(update_fields=['linked_card'])
         reverse.save(update_fields=['linked_card'])
 
+        # Refresh from database to ensure all relationships are properly loaded
+        forward.refresh_from_db()
+        
         return forward
 
     def to_representation(self, instance):
