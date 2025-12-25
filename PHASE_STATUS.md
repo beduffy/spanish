@@ -42,15 +42,17 @@
 - ✅ Uses CardNextCardAPIView and CardSubmitReviewAPIView
 - ✅ Typed input stored in CardReview.typed_input
 
-## ⏳ Phase 5: KPIs + time tracking
-**Status**: PARTIAL - Missing study session endpoints
+## ✅ Phase 5: KPIs + time tracking
+**Status**: COMPLETE
 - ✅ Basic statistics exist (CardStatisticsAPIView)
-- ❌ **Missing**: Study session endpoints
-  - Start session endpoint
-  - Heartbeat/activity ping endpoint
-  - End session endpoint
-- ❌ **Missing**: AFK threshold logic (90s default)
-- ❌ **Missing**: Active minutes calculation
+- ✅ Study session endpoints created:
+  - `/api/flashcards/sessions/start/` - Start session endpoint
+  - `/api/flashcards/sessions/heartbeat/` - Heartbeat/activity ping endpoint
+  - `/api/flashcards/sessions/end/` - End session endpoint
+- ✅ AFK threshold logic (90s default) implemented
+- ✅ Active minutes calculation (`calculate_active_minutes()`)
+- ✅ StudySession and SessionActivity models
+- ✅ Models registered in admin
 
 ## ❌ Phase 6: Hetzner deployment
 **Status**: NOT STARTED
