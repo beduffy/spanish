@@ -284,7 +284,7 @@ export default {
   padding: 20px;
   max-width: 700px;
   margin: 0 auto;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .session-header {

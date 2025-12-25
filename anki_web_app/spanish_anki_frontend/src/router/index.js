@@ -5,6 +5,7 @@ import DashboardView from '../views/DashboardView.vue'
 import CardListView from '../views/CardListView.vue'
 import CardEditorView from '../views/CardEditorView.vue'
 import ImportCardsView from '../views/ImportCardsView.vue'
+import CalendarView from '../views/CalendarView.vue'
 
 const routes = [
   {
@@ -37,6 +38,11 @@ const routes = [
     path: '/cards/import',
     name: 'ImportCards',
     component: ImportCardsView
+  },
+  {
+    path: '/calendar',
+    name: 'Calendar',
+    component: CalendarView
   },
 ]
 

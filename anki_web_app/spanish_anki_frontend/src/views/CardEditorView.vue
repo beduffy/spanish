@@ -151,7 +151,7 @@ export default {
 <style scoped>
 .card-editor-view {
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   max-width: 800px;
   margin: 0 auto;
 }

@@ -2,7 +2,8 @@
   <nav>
     <router-link to="/">Review Cards</router-link> | 
     <router-link to="/cards">All Cards</router-link> |
-    <router-link to="/dashboard">Dashboard</router-link>
+    <router-link to="/dashboard">Dashboard</router-link> |
+    <router-link to="/calendar">Calendar</router-link>
     <span v-if="user" class="user-info">
       | Logged in as {{ user.email }}
       <button @click="handleLogout" class="logout-btn">Logout</button>
@@ -56,7 +57,7 @@ export default {
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;

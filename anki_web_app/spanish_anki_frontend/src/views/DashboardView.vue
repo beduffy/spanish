@@ -44,6 +44,32 @@
     <div v-if="!isLoading && !statistics && !errorMessage" class="no-data-message">
         <p>No statistics data available yet. Start reviewing some cards!</p>
     </div>
+
+    <div v-if="!isLoading && studySessions && studySessions.length > 0" class="sessions-section">
+      <h2>Study Sessions</h2>
+      <div class="sessions-list">
+        <div v-for="session in studySessions" :key="session.session_id" class="session-card">
+          <div class="session-header-row">
+            <span class="session-date">{{ formatSessionDate(session.start_time) }}</span>
+            <span v-if="session.is_active" class="session-badge active">Active</span>
+          </div>
+          <div class="session-stats-row">
+            <div class="session-stat">
+              <span class="stat-label">Time:</span>
+              <span class="stat-value">{{ formatTime(session.active_minutes) }}</span>
+            </div>
+            <div class="session-stat">
+              <span class="stat-label">Cards:</span>
+              <span class="stat-value">{{ session.cards_reviewed }}</span>
+            </div>
+            <div class="session-stat" v-if="session.average_score !== null">
+              <span class="stat-label">Avg Score:</span>
+              <span class="stat-value">{{ (session.average_score * 100).toFixed(0) }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -55,7 +81,9 @@ export default {
   data() {
     return {
       statistics: null,
+      studySessions: [],
       isLoading: true,
+      isLoadingSessions: false,
       errorMessage: ''
     };
   },
@@ -86,10 +114,47 @@ export default {
     formatScore(score) {
         if (score === null || score === undefined) return 'N/A';
         return parseFloat(score).toFixed(2);
+    },
+    async fetchStudySessions() {
+      this.isLoadingSessions = true;
+      try {
+        const response = await ApiService.getStudySessions();
+        if (response.status === 200 && response.data) {
+          this.studySessions = response.data.sessions || [];
+        }
+      } catch (error) {
+        console.error("Error fetching study sessions:", error);
+        // Don't show error for sessions, just log it
+      } finally {
+        this.isLoadingSessions = false;
+      }
+    },
+    formatSessionDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      const options = { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      };
+      return date.toLocaleDateString(undefined, options);
+    },
+    formatTime(minutes) {
+      if (!minutes && minutes !== 0) return '0:00';
+      const hours = Math.floor(minutes / 60);
+      const mins = Math.floor(minutes % 60);
+      const secs = Math.floor((minutes % 1) * 60);
+      if (hours > 0) {
+        return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      }
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
   },
   mounted() {
     this.fetchStatistics();
+    this.fetchStudySessions();
   },
 };
 </script>
@@ -97,7 +162,7 @@ export default {
 <style scoped>
 .dashboard-view {
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .loading-message, .error-message, .no-data-message {
@@ -142,5 +207,83 @@ export default {
   color: #007bff;
   margin: 0;
   font-weight: bold;
+}
+
+.sessions-section {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.sessions-section h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 1.5em;
+}
+
+.sessions-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.session-card {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.session-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.session-date {
+  font-size: 0.95em;
+  color: #555;
+  font-weight: 500;
+}
+
+.session-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.session-badge.active {
+  background-color: #28a745;
+  color: white;
+}
+
+.session-stats-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.session-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-stat .stat-label {
+  font-size: 0.75em;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.session-stat .stat-value {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #007bff;
 }
 </style> 

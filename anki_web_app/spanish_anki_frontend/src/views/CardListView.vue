@@ -254,7 +254,7 @@ export default {
 <style scoped>
 .card-list-view {
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   max-width: 1400px;
   margin: 0 auto;
 }

@@ -189,7 +189,7 @@ export default {
 <style scoped>
 .import-cards-view {
   padding: 20px;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   max-width: 900px;
   margin: 0 auto;
 }
