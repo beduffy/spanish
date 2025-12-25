@@ -136,12 +136,21 @@ For a detailed breakdown of the testing plan for each component and phase, see t
 
 ### Prerequisites
 *   Docker
-*   Docker Compose (v1.x, e.g., 1.25.0, due to Python `docker` library compatibility)
+*   Docker Compose (**v2**, either form is fine):
+    *   **Plugin form:** `docker compose ...` (Ubuntu/Debian: `sudo apt-get install -y docker-compose-plugin`)
+    *   **Standalone binary form:** `docker-compose ...` (must be a modern Compose; avoid old Python `docker-compose` v1)
+    *   If you see `kwargs_from_env() got an unexpected keyword argument 'ssl_version'`, you are almost certainly running the old Python `docker-compose` v1 binary. Use a v2 Compose instead (plugin or modern standalone).
+*   (Recommended) Buildx plugin (fixes `Docker Compose requires buildx plugin to be installed`):
+    *   Ubuntu/Debian: `sudo apt-get install -y docker-buildx-plugin`
 
 ### Using Docker Compose (Recommended for Dev & Testing)
 
 1.  **Build and Start Services:**
     From the project root directory:
+    ```bash
+    docker compose up --build -d
+    ```
+    If you don't have the plugin form, use:
     ```bash
     docker-compose up --build -d
     ```
@@ -150,12 +159,13 @@ For a detailed breakdown of the testing plan for each component and phase, see t
     *   Backend API: `http://localhost:8000` (e.g., `http://localhost:8000/api/flashcards/statistics/`)
 3.  **Initial Data Import (run once after starting services):**
     ```bash
-    docker-compose exec backend python manage.py import_csv data/your_csv_file_name.csv
+    docker compose exec backend python manage.py import_csv data/your_csv_file_name.csv
     ```
+    (Or `docker-compose exec ...` if you're using the standalone `docker-compose` binary.)
     (Replace `your_csv_file_name.csv` with your actual CSV file located in `anki_web_app/data/`)
 4.  **Stopping Services:**
     ```bash
-    docker-compose down
+    docker compose down
     ```
 
 ### Manual Setup (Alternative - If not using Docker for local dev)
@@ -232,21 +242,21 @@ A script is provided in the project root to run all test suites sequentially wit
 ### Individual Test Suites (Manual Docker Execution or Local Dev)
 
 *   **Backend Django Tests (inside Docker):**
-    After `docker-compose up -d --build`:
+    After `docker compose up -d --build`:
     ```bash
-    docker-compose exec -T backend coverage run manage.py test flashcards
-    docker-compose exec -T backend coverage xml -o coverage.xml 
+    docker compose exec -T backend coverage run manage.py test flashcards
+    docker compose exec -T backend coverage xml -o coverage.xml 
     ```
 
 *   **Frontend Unit Tests (Jest - inside Docker):**
-    After `docker-compose up -d --build`:
+    After `docker compose up -d --build`:
     ```bash
-    docker-compose exec -T frontend npm run test:unit
+    docker compose exec -T frontend npm run test:unit
     ```
     Or locally (if Node.js is set up): Navigate to `anki_web_app/spanish_anki_frontend` and run `npm run test:unit`.
 
 *   **Frontend E2E Tests (Cypress - from host):**
-    Ensure backend and frontend services are running (e.g., via `docker-compose up -d`).
+    Ensure backend and frontend services are running (e.g., via `docker compose up -d`).
     Navigate to `anki_web_app/spanish_anki_frontend` and run:
     To run in headless mode:
     ```bash
@@ -264,7 +274,7 @@ A script is provided in the project root to run all test suites sequentially wit
     *   **Key Steps:**
         1.  Checks out the code.
         2.  Sets up Python and Node.js.
-        3.  Installs `docker-compose` (v1.25.0) and compatible `docker` library.
+        3.  Installs Docker Compose v2 plugin.
         4.  Installs frontend dependencies (for Cypress host execution) and Cypress system dependencies.
         5.  Runs all tests using `./run_all_tests.sh` (which uses Docker Compose).
         6.  Uploads backend test coverage results to Codecov.io.
