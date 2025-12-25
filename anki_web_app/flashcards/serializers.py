@@ -187,7 +187,13 @@ class CardCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         create_reverse = validated_data.pop('create_reverse', True)
-
+        
+        # Assign user from request if authenticated
+        user = None
+        if self.context.get('request') and self.context['request'].user.is_authenticated:
+            user = self.context['request'].user
+        
+        validated_data['user'] = user
         forward = Card.objects.create(**validated_data)
 
         if not create_reverse:
@@ -201,6 +207,7 @@ class CardCreateSerializer(serializers.ModelSerializer):
             tags=forward.tags,
             notes=forward.notes,
             source=forward.source,
+            user=user,
         )
 
         forward.linked_card = reverse

@@ -243,7 +243,7 @@ class SentenceDetailAPIView(UserScopedMixin, RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
 
-class CardListCreateAPIView(ListCreateAPIView):
+class CardListCreateAPIView(UserScopedMixin, ListCreateAPIView):
     """
     Minimal Cards API for v2 migration.
 
@@ -252,6 +252,7 @@ class CardListCreateAPIView(ListCreateAPIView):
     """
 
     queryset = Card.objects.all().order_by('-creation_date', 'card_id')
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -259,10 +260,11 @@ class CardListCreateAPIView(ListCreateAPIView):
         return CardSerializer
 
 
-class CardDetailAPIView(RetrieveAPIView):
+class CardDetailAPIView(UserScopedMixin, RetrieveAPIView):
     queryset = Card.objects.all()
     serializer_class = CardDetailSerializer
     lookup_field = 'pk' # Corresponds to card_id as it's the primary key
+    permission_classes = [IsAuthenticated]
 
 
 class CardNextCardAPIView(APIView):
@@ -271,12 +273,18 @@ class CardNextCardAPIView(APIView):
     - prioritizes due review cards (is_learning=False)
     - then due learning/new cards (is_learning=True)
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         today = timezone.now().date()
         next_card = None
+        
+        # Scope by user if authenticated
+        base_queryset = Card.objects.all()
+        if request.user and request.user.is_authenticated:
+            base_queryset = base_queryset.filter(user=request.user)
 
-        review_cards_due = Card.objects.filter(
+        review_cards_due = base_queryset.filter(
             next_review_date__lte=today,
             is_learning=False
         ).order_by('next_review_date', 'card_id')
@@ -284,7 +292,7 @@ class CardNextCardAPIView(APIView):
         if review_cards_due.exists():
             next_card = review_cards_due.first()
         else:
-            learning_or_new_cards_due = Card.objects.filter(
+            learning_or_new_cards_due = base_queryset.filter(
                 next_review_date__lte=today,
                 is_learning=True
             ).order_by('next_review_date', 'card_id')
