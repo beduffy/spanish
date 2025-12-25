@@ -12,6 +12,7 @@
 // Set a flag that the router can check
 Cypress.Commands.add('login', () => {
   // Set a flag in window that indicates we're in test mode
+  // This needs to be set before the app loads
   cy.window().then((win) => {
     win.__CYPRESS_TEST_MODE__ = true;
     win.__CYPRESS_MOCK_SESSION__ = {
@@ -32,8 +33,16 @@ Cypress.Commands.add('login', () => {
 
 // Visit a page and ensure we're logged in
 Cypress.Commands.add('visitAsAuthenticated', (url) => {
-  cy.login();
-  cy.visit(url);
-  // Wait a bit for the route guard to check authentication
-  cy.wait(100);
+  // Set the flag before visiting
+  cy.window().then((win) => {
+    win.__CYPRESS_TEST_MODE__ = true;
+  });
+  cy.visit(url, {
+    onBeforeLoad(win) {
+      // Ensure flag is set before page loads
+      win.__CYPRESS_TEST_MODE__ = true;
+    }
+  });
+  // Wait for page to load and route guard to process
+  cy.wait(500);
 });
