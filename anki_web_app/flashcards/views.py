@@ -9,7 +9,7 @@ import csv
 import io
 import uuid
 
-from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS, Card, CardReview
+from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS, Card, CardReview, StudySession, SessionActivity
 from .serializers import (
     SentenceSerializer,
     ReviewInputSerializer,
@@ -611,3 +611,80 @@ class CardImportAPIView(APIView):
                 {"error": f"Error processing file: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class StudySessionStartAPIView(APIView):
+    """
+    Start a new study session.
+    Returns the session_id for subsequent heartbeat/end calls.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        session = StudySession.objects.create(user=request.user)
+        return Response({
+            'session_id': session.session_id,
+            'start_time': session.start_time,
+        }, status=status.HTTP_201_CREATED)
+
+
+class StudySessionHeartbeatAPIView(APIView):
+    """
+    Record a heartbeat/activity ping for an active session.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        session_id = request.data.get('session_id')
+        if not session_id:
+            return Response({"error": "session_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            session = StudySession.objects.get(
+                session_id=session_id,
+                user=request.user,
+                is_active=True
+            )
+        except StudySession.DoesNotExist:
+            return Response({"error": "Active session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Record activity
+        session.record_activity()
+        SessionActivity.objects.create(session=session)
+
+        return Response({
+            'session_id': session.session_id,
+            'last_activity_time': session.last_activity_time,
+        }, status=status.HTTP_200_OK)
+
+
+class StudySessionEndAPIView(APIView):
+    """
+    End an active study session and return active minutes.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        session_id = request.data.get('session_id')
+        if not session_id:
+            return Response({"error": "session_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            session = StudySession.objects.get(
+                session_id=session_id,
+                user=request.user,
+                is_active=True
+            )
+        except StudySession.DoesNotExist:
+            return Response({"error": "Active session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # End the session
+        session.end_session()
+        active_minutes = session.calculate_active_minutes()
+
+        return Response({
+            'session_id': session.session_id,
+            'start_time': session.start_time,
+            'end_time': session.end_time,
+            'active_minutes': round(active_minutes, 2),
+        }, status=status.HTTP_200_OK)

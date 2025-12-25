@@ -13,6 +13,9 @@ from .views import (
     CardUpdateAPIView,
     CardDeleteAPIView,
     CardImportAPIView,
+    StudySessionStartAPIView,
+    StudySessionHeartbeatAPIView,
+    StudySessionEndAPIView,
 )
 
 app_name = 'flashcards'
@@ -31,5 +34,9 @@ urlpatterns = [
     path('cards/next-card/', CardNextCardAPIView.as_view(), name='card_next_card_api'),
     path('cards/submit-review/', CardSubmitReviewAPIView.as_view(), name='card_submit_review_api'),
     path('cards/statistics/', CardStatisticsAPIView.as_view(), name='card_statistics_api'),
+    # Study session endpoints (Phase 5)
+    path('sessions/start/', StudySessionStartAPIView.as_view(), name='study_session_start_api'),
+    path('sessions/heartbeat/', StudySessionHeartbeatAPIView.as_view(), name='study_session_heartbeat_api'),
+    path('sessions/end/', StudySessionEndAPIView.as_view(), name='study_session_end_api'),
     # Other flashcard app API endpoints will go here
 ] 

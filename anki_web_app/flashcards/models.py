@@ -304,3 +304,95 @@ class CardReview(models.Model):
         ordering = ['-review_timestamp']
         verbose_name = "Card Review"
         verbose_name_plural = "Card Reviews"
+
+
+class StudySession(models.Model):
+    """
+    Tracks study sessions with activity timestamps for AFK detection.
+    Active minutes are calculated by ignoring gaps > AFK_THRESHOLD_SECONDS.
+    """
+    AFK_THRESHOLD_SECONDS = 90  # Default: 90 seconds
+
+    session_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='study_sessions', help_text="User who owns this session")
+    start_time = models.DateTimeField(default=timezone.now, help_text="When the session started")
+    end_time = models.DateTimeField(null=True, blank=True, help_text="When the session ended (null if active)")
+    last_activity_time = models.DateTimeField(default=timezone.now, help_text="Last recorded activity timestamp")
+    is_active = models.BooleanField(default=True, help_text="True if session is still active")
+
+    def __str__(self):
+        status = "active" if self.is_active else "ended"
+        return f"Session {self.session_id} ({status}) - User: {self.user.username}"
+
+    def record_activity(self):
+        """Record a heartbeat/activity ping."""
+        if self.is_active:
+            self.last_activity_time = timezone.now()
+            self.save(update_fields=['last_activity_time'])
+
+    def end_session(self):
+        """End the session."""
+        if self.is_active:
+            self.end_time = timezone.now()
+            self.is_active = False
+            self.save(update_fields=['end_time', 'is_active'])
+
+    def calculate_active_minutes(self, afk_threshold_seconds=None):
+        """
+        Calculate active minutes by ignoring gaps > afk_threshold_seconds.
+        Returns the total active time in minutes (float).
+        """
+        if afk_threshold_seconds is None:
+            afk_threshold_seconds = self.AFK_THRESHOLD_SECONDS
+
+        # Get all activity events (heartbeats) for this session
+        activities = list(self.session_activities.order_by('timestamp'))
+        
+        if not activities:
+            # No activities recorded, use start -> end (or now if active)
+            end = self.end_time or timezone.now()
+            total_seconds = (end - self.start_time).total_seconds()
+            return max(0, total_seconds / 60.0)
+
+        # Start with session start time
+        total_active_seconds = 0
+        last_activity = self.start_time
+
+        for activity in activities:
+            gap_seconds = (activity.timestamp - last_activity).total_seconds()
+            if gap_seconds <= afk_threshold_seconds:
+                # Active period - add to total
+                total_active_seconds += gap_seconds
+            # else: gap > threshold, treat as AFK, don't add to active time
+            last_activity = activity.timestamp
+
+        # Add time from last activity to end (or now if active)
+        end = self.end_time or timezone.now()
+        final_gap_seconds = (end - last_activity).total_seconds()
+        if final_gap_seconds <= afk_threshold_seconds:
+            total_active_seconds += final_gap_seconds
+
+        return total_active_seconds / 60.0  # Convert to minutes
+
+    class Meta:
+        ordering = ['-start_time']
+        verbose_name = "Study Session"
+        verbose_name_plural = "Study Sessions"
+
+
+class SessionActivity(models.Model):
+    """
+    Individual activity/heartbeat events within a study session.
+    Used to calculate active minutes with AFK threshold.
+    """
+    activity_id = models.AutoField(primary_key=True)
+    session = models.ForeignKey(StudySession, on_delete=models.CASCADE, related_name='session_activities', help_text="The study session this activity belongs to")
+    timestamp = models.DateTimeField(default=timezone.now, help_text="When this activity occurred")
+
+    def __str__(self):
+        return f"Activity {self.activity_id} at {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = "Session Activity"
+        verbose_name_plural = "Session Activities"

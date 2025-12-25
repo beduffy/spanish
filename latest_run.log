@@ -1,0 +1,962 @@
+time="2025-05-16T02:39:22+02:00" level=info msg="Using docker host 'unix:///var/run/docker.sock', and daemon socket 'unix:///var/run/docker.sock'"
+[Django CI/build] ⭐ Run Set up job
+[Django CI/build] 🚀  Start image=catthehacker/ubuntu:act-22.04
+[Django CI/build]   🐳  docker pull image=catthehacker/ubuntu:act-22.04 platform= username= forcePull=true
+[Django CI/build]   🐳  docker create image=catthehacker/ubuntu:act-22.04 platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[] network="host"
+[Django CI/build]   🐳  docker run image=catthehacker/ubuntu:act-22.04 platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[] network="host"
+[Django CI/build]   🐳  docker exec cmd=[node --no-warnings -e console.log(process.execPath)] user= workdir=
+[Django CI/build]   ✅  Success - Set up job
+[Django CI/build]   ☁  git clone 'https://github.com/actions/setup-python' # ref=v3
+[Django CI/build]   ☁  git clone 'https://github.com/actions/upload-artifact' # ref=v4
+[Django CI/build]   ☁  git clone 'https://github.com/codecov/codecov-action' # ref=v4.0.1
+[Django CI/build] 🧪  Matrix: map[python-version:3.8]
+[Django CI/build] ⭐ Run Main actions/checkout@v3
+[Django CI/build]   🐳  docker cp src=/home/ben/all_projects/spanish/. dst=/home/ben/all_projects/spanish
+[Django CI/build]   ✅  Success - Main actions/checkout@v3 [170.470583ms]
+[Django CI/build] ⭐ Run Main Set up Python 3.8
+[Django CI/build]   🐳  docker cp src=/home/ben/.cache/act/actions-setup-python@v3/ dst=/var/run/act/actions/actions-setup-python@v3/
+[Django CI/build]   🐳  docker exec cmd=[/opt/acttoolcache/node/18.20.8/x64/bin/node /var/run/act/actions/actions-setup-python@v3/dist/setup/index.js] user= workdir=
+[Django CI/build]   | Successfully setup CPython (3.8.18)
+[Django CI/build]   ❓ add-matcher /run/act/actions/actions-setup-python@v3/.github/python.json
+[Django CI/build]   ✅  Success - Main Set up Python 3.8 [445.902236ms]
+[Django CI/build]   ⚙  ::set-env:: pythonLocation=/opt/hostedtoolcache/Python/3.8.18/x64
+[Django CI/build]   ⚙  ::set-env:: LD_LIBRARY_PATH=/opt/hostedtoolcache/Python/3.8.18/x64/lib
+[Django CI/build]   ⚙  ::set-output:: python-version=3.8.18
+[Django CI/build]   ⚙  ::add-path:: /opt/hostedtoolcache/Python/3.8.18/x64
+[Django CI/build]   ⚙  ::add-path:: /opt/hostedtoolcache/Python/3.8.18/x64/bin
+[Django CI/build] ⭐ Run Main Install docker-compose (V1) and compatible dependencies
+[Django CI/build]   🐳  docker exec cmd=[bash -e /var/run/act/workflow/2] user= workdir=
+[Django CI/build]   | Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (25.0.1)
+[Django CI/build]   | WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[Django CI/build]   | Requirement already satisfied: requests==2.31.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (2.31.0)
+[Django CI/build]   | Requirement already satisfied: charset-normalizer<4,>=2 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests==2.31.0) (3.4.2)
+[Django CI/build]   | Requirement already satisfied: idna<4,>=2.5 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests==2.31.0) (3.10)
+[Django CI/build]   | Requirement already satisfied: urllib3<3,>=1.21.1 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests==2.31.0) (1.26.20)
+[Django CI/build]   | Requirement already satisfied: certifi>=2017.4.17 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests==2.31.0) (2025.4.26)
+[Django CI/build]   | WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[Django CI/build]   | Requirement already satisfied: urllib3<2.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (1.26.20)
+[Django CI/build]   | WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[Django CI/build]   | Requirement already satisfied: requests-unixsocket in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (0.3.0)
+[Django CI/build]   | Requirement already satisfied: requests>=1.1 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests-unixsocket) (2.31.0)
+[Django CI/build]   | Requirement already satisfied: charset-normalizer<4,>=2 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests>=1.1->requests-unixsocket) (3.4.2)
+[Django CI/build]   | Requirement already satisfied: idna<4,>=2.5 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests>=1.1->requests-unixsocket) (3.10)
+[Django CI/build]   | Requirement already satisfied: urllib3<3,>=1.21.1 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests>=1.1->requests-unixsocket) (1.26.20)
+[Django CI/build]   | Requirement already satisfied: certifi>=2017.4.17 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests>=1.1->requests-unixsocket) (2025.4.26)
+[Django CI/build]   | WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[Django CI/build]   | Requirement already satisfied: docker-compose==1.25.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (1.25.0)
+[Django CI/build]   | Requirement already satisfied: cached-property<2,>=1.2.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (1.5.2)
+[Django CI/build]   | Requirement already satisfied: docopt<1,>=0.6.1 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (0.6.2)
+[Django CI/build]   | Requirement already satisfied: PyYAML<5,>=3.10 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (3.13)
+[Django CI/build]   | Requirement already satisfied: requests<3,>=2.20.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (2.31.0)
+[Django CI/build]   | Requirement already satisfied: texttable<2,>=0.9.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (1.7.0)
+[Django CI/build]   | Requirement already satisfied: websocket-client<1,>=0.32.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (0.59.0)
+[Django CI/build]   | Requirement already satisfied: docker<5,>=3.7.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker[ssh]<5,>=3.7.0->docker-compose==1.25.0) (4.4.4)
+[Django CI/build]   | Requirement already satisfied: dockerpty<1,>=0.4.1 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (0.4.1)
+[Django CI/build]   | Requirement already satisfied: six<2,>=1.3.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (1.17.0)
+[Django CI/build]   | Requirement already satisfied: jsonschema<4,>=2.5.1 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker-compose==1.25.0) (3.2.0)
+[Django CI/build]   | Requirement already satisfied: paramiko>=2.4.2 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from docker[ssh]<5,>=3.7.0->docker-compose==1.25.0) (3.5.1)
+[Django CI/build]   | Requirement already satisfied: attrs>=17.4.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from jsonschema<4,>=2.5.1->docker-compose==1.25.0) (25.3.0)
+[Django CI/build]   | Requirement already satisfied: pyrsistent>=0.14.0 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from jsonschema<4,>=2.5.1->docker-compose==1.25.0) (0.20.0)
+[Django CI/build]   | Requirement already satisfied: setuptools in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from jsonschema<4,>=2.5.1->docker-compose==1.25.0) (56.0.0)
+[Django CI/build]   | Requirement already satisfied: charset-normalizer<4,>=2 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests<3,>=2.20.0->docker-compose==1.25.0) (3.4.2)
+[Django CI/build]   | Requirement already satisfied: idna<4,>=2.5 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests<3,>=2.20.0->docker-compose==1.25.0) (3.10)
+[Django CI/build]   | Requirement already satisfied: urllib3<3,>=1.21.1 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests<3,>=2.20.0->docker-compose==1.25.0) (1.26.20)
+[Django CI/build]   | Requirement already satisfied: certifi>=2017.4.17 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from requests<3,>=2.20.0->docker-compose==1.25.0) (2025.4.26)
+[Django CI/build]   | Requirement already satisfied: bcrypt>=3.2 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from paramiko>=2.4.2->docker[ssh]<5,>=3.7.0->docker-compose==1.25.0) (4.3.0)
+[Django CI/build]   | Requirement already satisfied: cryptography>=3.3 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from paramiko>=2.4.2->docker[ssh]<5,>=3.7.0->docker-compose==1.25.0) (44.0.3)
+[Django CI/build]   | Requirement already satisfied: pynacl>=1.5 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from paramiko>=2.4.2->docker[ssh]<5,>=3.7.0->docker-compose==1.25.0) (1.5.0)
+[Django CI/build]   | Requirement already satisfied: cffi>=1.12 in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from cryptography>=3.3->paramiko>=2.4.2->docker[ssh]<5,>=3.7.0->docker-compose==1.25.0) (1.17.1)
+[Django CI/build]   | Requirement already satisfied: pycparser in /opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages (from cffi>=1.12->cryptography>=3.3->paramiko>=2.4.2->docker[ssh]<5,>=3.7.0->docker-compose==1.25.0) (2.22)
+[Django CI/build]   | WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+[Django CI/build]   ✅  Success - Main Install docker-compose (V1) and compatible dependencies [3.079945125s]
+[Django CI/build] ⭐ Run Main Install Frontend Dependencies (Node.js) & Cypress System Deps
+[Django CI/build]   🐳  docker exec cmd=[bash -e /var/run/act/workflow/3] user= workdir=
+[Django CI/build]   | Installing frontend dependencies for Cypress host execution...
+[Django CI/build]   | npm warn deprecated w3c-hr-time@1.0.2: Use your platform's native performance.now() and performance.timeOrigin.
+[Django CI/build]   | npm warn deprecated webpack-chain@6.5.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+[Django CI/build]   | npm warn deprecated stable@0.1.8: Modern JS already guarantees Array#sort() is a stable sort, so this library is deprecated. See the compatibility table on MDN: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#browser_compatibility
+[Django CI/build]   | npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+[Django CI/build]   | npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+[Django CI/build]   | npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[Django CI/build]   | npm warn deprecated domexception@2.0.1: Use your platform's native DOMException instead
+[Django CI/build]   | npm warn deprecated consolidate@0.15.1: Please upgrade to consolidate v1.0.0+ as it has been modernized with several long-awaited fixes implemented. Maintenance is supported by Forward Email at https://forwardemail.net ; follow/watch https://github.com/ladjs/consolidate for updates and release changelog
+[Django CI/build]   | npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+[Django CI/build]   | npm warn deprecated eslint@7.32.0: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+[Django CI/build]   | npm warn deprecated @humanwhocodes/object-schema@1.2.1: Use @eslint/object-schema instead
+[Django CI/build]   | npm warn deprecated @humanwhocodes/config-array@0.5.0: Use @eslint/config-array instead
+[Django CI/build]   | npm warn deprecated @babel/plugin-proposal-class-properties@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead.
+[Django CI/build]   | 
+[Django CI/build]   | added 1346 packages, and audited 1347 packages in 41s
+[Django CI/build]   | 
+[Django CI/build]   | 156 packages are looking for funding
+[Django CI/build]   |   run `npm fund` for details
+[Django CI/build]   | 
+[Django CI/build]   | 8 vulnerabilities (4 moderate, 4 high)
+[Django CI/build]   | 
+[Django CI/build]   | To address issues that do not require attention, run:
+[Django CI/build]   |   npm audit fix
+[Django CI/build]   | 
+[Django CI/build]   | To address all issues (including breaking changes), run:
+[Django CI/build]   |   npm audit fix --force
+[Django CI/build]   | 
+[Django CI/build]   | Run `npm audit` for details.
+[Django CI/build]   | Frontend dependencies installed.
+[Django CI/build]   | Installing Cypress system dependencies...
+[Django CI/build]   | Get:1 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+[Django CI/build]   | Get:2 https://packages.microsoft.com/ubuntu/22.04/prod jammy InRelease [3632 B]
+[Django CI/build]   | Get:3 https://ppa.launchpadcontent.net/git-core/ppa/ubuntu jammy InRelease [24.6 kB]
+[Django CI/build]   | Get:4 http://archive.ubuntu.com/ubuntu jammy InRelease [270 kB]
+[Django CI/build]   | Get:5 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [47.7 kB]
+[Django CI/build]   | Get:6 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [4363 kB]
+[Django CI/build]   | Get:7 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main all Packages [1252 B]
+[Django CI/build]   | Get:8 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main amd64 Packages [219 kB]
+[Django CI/build]   | Get:9 https://ppa.launchpadcontent.net/git-core/ppa/ubuntu jammy/main amd64 Packages [4109 B]
+[Django CI/build]   | Get:11 http://archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+[Django CI/build]   | Get:12 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [2934 kB]
+[Django CI/build]   | Get:13 http://archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+[Django CI/build]   | Get:14 http://archive.ubuntu.com/ubuntu jammy/multiverse amd64 Packages [266 kB]
+[Django CI/build]   | Get:15 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1245 kB]
+[Django CI/build]   | Get:16 http://archive.ubuntu.com/ubuntu jammy/universe amd64 Packages [17.5 MB]
+[Django CI/build]   | Get:10 https://packagecloud.io/github/git-lfs/ubuntu jammy InRelease [29.2 kB]
+[Django CI/build]   | Get:17 https://packagecloud.io/github/git-lfs/ubuntu jammy/main amd64 Packages [2213 B]
+[Django CI/build]   | Get:18 http://archive.ubuntu.com/ubuntu jammy/main amd64 Packages [1792 kB]
+[Django CI/build]   | Get:19 http://archive.ubuntu.com/ubuntu jammy/restricted amd64 Packages [164 kB]
+[Django CI/build]   | Get:20 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1546 kB]
+[Django CI/build]   | Get:21 http://archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages [4517 kB]
+[Django CI/build]   | Get:22 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [3245 kB]
+[Django CI/build]   | Get:23 http://archive.ubuntu.com/ubuntu jammy-updates/multiverse amd64 Packages [55.7 kB]
+[Django CI/build]   | Get:24 http://archive.ubuntu.com/ubuntu jammy-backports/universe amd64 Packages [35.2 kB]
+[Django CI/build]   | Get:25 http://archive.ubuntu.com/ubuntu jammy-backports/main amd64 Packages [83.2 kB]
+[Django CI/build]   | Fetched 38.7 MB in 6s (6823 kB/s)
+[Django CI/build]   | Reading package lists...
+[Django CI/build]   | Reading package lists...
+[Django CI/build]   | Building dependency tree...
+[Django CI/build]   | Reading state information...
+[Django CI/build]   | The following additional packages will be installed:
+[Django CI/build]   |   adwaita-icon-theme alsa-topology-conf alsa-ucm-conf at-spi2-core
+[Django CI/build]   |   dbus-user-session dconf-gsettings-backend dconf-service
+[Django CI/build]   |   gsettings-desktop-schemas gtk-update-icon-cache humanity-icon-theme
+[Django CI/build]   |   libasound2-data libatk-bridge2.0-0 libatk1.0-0 libatk1.0-data libatspi2.0-0
+[Django CI/build]   |   libavahi-client3 libavahi-common-data libavahi-common3 libcolord2 libcups2
+[Django CI/build]   |   libdconf1 libdrm-amdgpu1 libdrm-common libdrm-intel1 libdrm-nouveau2
+[Django CI/build]   |   libdrm-radeon1 libdrm2 libepoxy0 libfontenc1 libgbm1 libgl1 libgl1-amber-dri
+[Django CI/build]   |   libgl1-mesa-dri libglapi-mesa libglvnd0 libglx-mesa0 libglx0 libgtk-3-bin
+[Django CI/build]   |   libgtk-3-common libllvm15 libnspr4 libpciaccess0 libsensors-config
+[Django CI/build]   |   libsensors5 libwayland-client0 libwayland-cursor0 libwayland-egl1
+[Django CI/build]   |   libwayland-server0 libx11-xcb1 libxaw7 libxcb-dri2-0 libxcb-dri3-0
+[Django CI/build]   |   libxcb-glx0 libxcb-present0 libxcb-randr0 libxcb-sync1 libxcb-xfixes0
+[Django CI/build]   |   libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxfont2 libxi6
+[Django CI/build]   |   libxinerama1 libxkbcommon0 libxkbfile1 libxmu6 libxmuu1 libxpm4 libxrandr2
+[Django CI/build]   |   libxshmfence1 libxtst6 libxxf86vm1 session-migration ubuntu-mono
+[Django CI/build]   |   x11-xkb-utils xauth xfonts-base xfonts-encodings xfonts-utils xkb-data
+[Django CI/build]   |   xserver-common
+[Django CI/build]   | Suggested packages:
+[Django CI/build]   |   libasound2-plugins alsa-utils colord cups-common gvfs pciutils lm-sensors
+[Django CI/build]   | The following NEW packages will be installed:
+[Django CI/build]   |   adwaita-icon-theme alsa-topology-conf alsa-ucm-conf at-spi2-core
+[Django CI/build]   |   dbus-user-session dconf-gsettings-backend dconf-service
+[Django CI/build]   |   gsettings-desktop-schemas gtk-update-icon-cache humanity-icon-theme
+[Django CI/build]   |   libasound2 libasound2-data libatk-bridge2.0-0 libatk1.0-0 libatk1.0-data
+[Django CI/build]   |   libatspi2.0-0 libavahi-client3 libavahi-common-data libavahi-common3
+[Django CI/build]   |   libcolord2 libcups2 libdconf1 libdrm-amdgpu1 libdrm-common libdrm-intel1
+[Django CI/build]   |   libdrm-nouveau2 libdrm-radeon1 libdrm2 libepoxy0 libfontenc1 libgbm-dev
+[Django CI/build]   |   libgbm1 libgl1 libgl1-amber-dri libgl1-mesa-dri libglapi-mesa libglvnd0
+[Django CI/build]   |   libglx-mesa0 libglx0 libgtk-3-0 libgtk-3-bin libgtk-3-common libllvm15
+[Django CI/build]   |   libnspr4 libnss3 libpciaccess0 libsensors-config libsensors5
+[Django CI/build]   |   libwayland-client0 libwayland-cursor0 libwayland-egl1 libwayland-server0
+[Django CI/build]   |   libx11-xcb1 libxaw7 libxcb-dri2-0 libxcb-dri3-0 libxcb-glx0 libxcb-present0
+[Django CI/build]   |   libxcb-randr0 libxcb-sync1 libxcb-xfixes0 libxcomposite1 libxcursor1
+[Django CI/build]   |   libxdamage1 libxfixes3 libxfont2 libxi6 libxinerama1 libxkbcommon0
+[Django CI/build]   |   libxkbfile1 libxmu6 libxmuu1 libxpm4 libxrandr2 libxshmfence1 libxtst6
+[Django CI/build]   |   libxxf86vm1 session-migration ubuntu-mono x11-xkb-utils xauth xfonts-base
+[Django CI/build]   |   xfonts-encodings xfonts-utils xkb-data xserver-common xvfb
+[Django CI/build]   | 0 upgraded, 87 newly installed, 0 to remove and 4 not upgraded.
+[Django CI/build]   | Need to get 59.4 MB of archives.
+[Django CI/build]   | After this operation, 244 MB of additional disk space will be used.
+[Django CI/build]   | Get:1 http://archive.ubuntu.com/ubuntu jammy/main amd64 xkb-data all 2.33-1 [394 kB]
+[Django CI/build]   | Get:2 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libdrm-common all 2.4.113-2~ubuntu0.22.04.1 [5450 B]
+[Django CI/build]   | Get:3 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libdrm2 amd64 2.4.113-2~ubuntu0.22.04.1 [38.1 kB]
+[Django CI/build]   | Get:4 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxmuu1 amd64 2:1.1.3-3 [10.2 kB]
+[Django CI/build]   | Get:5 http://archive.ubuntu.com/ubuntu jammy/main amd64 xauth amd64 1:1.1-1build2 [27.5 kB]
+[Django CI/build]   | Get:6 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 gtk-update-icon-cache amd64 3.24.33-1ubuntu2.2 [31.4 kB]
+[Django CI/build]   | Get:7 http://archive.ubuntu.com/ubuntu jammy/main amd64 humanity-icon-theme all 0.6.16 [1282 kB]
+[Django CI/build]   | Get:8 http://archive.ubuntu.com/ubuntu jammy/main amd64 ubuntu-mono all 20.10-0ubuntu2 [153 kB]
+[Django CI/build]   | Get:9 http://archive.ubuntu.com/ubuntu jammy/main amd64 adwaita-icon-theme all 41.0-1ubuntu1 [3444 kB]
+[Django CI/build]   | Get:10 http://archive.ubuntu.com/ubuntu jammy/main amd64 alsa-topology-conf all 1.2.5.1-2 [15.5 kB]
+[Django CI/build]   | Get:11 http://archive.ubuntu.com/ubuntu jammy/main amd64 libasound2-data all 1.2.6.1-1ubuntu1 [19.1 kB]
+[Django CI/build]   | Get:12 http://archive.ubuntu.com/ubuntu jammy/main amd64 libasound2 amd64 1.2.6.1-1ubuntu1 [390 kB]
+[Django CI/build]   | Get:13 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 alsa-ucm-conf all 1.2.6.3-1ubuntu1.12 [43.5 kB]
+[Django CI/build]   | Get:14 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxi6 amd64 2:1.8-1build1 [32.6 kB]
+[Django CI/build]   | Get:15 http://archive.ubuntu.com/ubuntu jammy/main amd64 libatspi2.0-0 amd64 2.44.0-3 [80.9 kB]
+[Django CI/build]   | Get:16 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxtst6 amd64 2:1.2.3-1build4 [13.4 kB]
+[Django CI/build]   | Get:17 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 dbus-user-session amd64 1.12.20-2ubuntu4.1 [9442 B]
+[Django CI/build]   | Get:18 http://archive.ubuntu.com/ubuntu jammy/main amd64 libdconf1 amd64 0.40.0-3 [40.5 kB]
+[Django CI/build]   | Get:19 http://archive.ubuntu.com/ubuntu jammy/main amd64 dconf-service amd64 0.40.0-3 [28.5 kB]
+[Django CI/build]   | Get:20 http://archive.ubuntu.com/ubuntu jammy/main amd64 dconf-gsettings-backend amd64 0.40.0-3 [22.8 kB]
+[Django CI/build]   | Get:21 http://archive.ubuntu.com/ubuntu jammy/main amd64 session-migration amd64 0.3.6 [9774 B]
+[Django CI/build]   | Get:22 http://archive.ubuntu.com/ubuntu jammy/main amd64 gsettings-desktop-schemas all 42.0-1ubuntu1 [31.1 kB]
+[Django CI/build]   | Get:23 http://archive.ubuntu.com/ubuntu jammy/main amd64 at-spi2-core amd64 2.44.0-3 [54.4 kB]
+[Django CI/build]   | Get:24 http://archive.ubuntu.com/ubuntu jammy/main amd64 libatk1.0-data all 2.36.0-3build1 [2824 B]
+[Django CI/build]   | Get:25 http://archive.ubuntu.com/ubuntu jammy/main amd64 libatk1.0-0 amd64 2.36.0-3build1 [51.9 kB]
+[Django CI/build]   | Get:26 http://archive.ubuntu.com/ubuntu jammy/main amd64 libatk-bridge2.0-0 amd64 2.38.0-3 [66.6 kB]
+[Django CI/build]   | Get:27 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libavahi-common-data amd64 0.8-5ubuntu5.2 [23.8 kB]
+[Django CI/build]   | Get:28 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libavahi-common3 amd64 0.8-5ubuntu5.2 [23.9 kB]
+[Django CI/build]   | Get:29 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libavahi-client3 amd64 0.8-5ubuntu5.2 [28.0 kB]
+[Django CI/build]   | Get:30 http://archive.ubuntu.com/ubuntu jammy/main amd64 libcolord2 amd64 1.4.6-1 [155 kB]
+[Django CI/build]   | Get:31 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libcups2 amd64 2.4.1op1-1ubuntu4.11 [263 kB]
+[Django CI/build]   | Get:32 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libdrm-amdgpu1 amd64 2.4.113-2~ubuntu0.22.04.1 [19.9 kB]
+[Django CI/build]   | Get:33 http://archive.ubuntu.com/ubuntu jammy/main amd64 libpciaccess0 amd64 0.16-3 [19.1 kB]
+[Django CI/build]   | Get:34 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libdrm-intel1 amd64 2.4.113-2~ubuntu0.22.04.1 [66.7 kB]
+[Django CI/build]   | Get:35 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libdrm-nouveau2 amd64 2.4.113-2~ubuntu0.22.04.1 [17.5 kB]
+[Django CI/build]   | Get:36 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libdrm-radeon1 amd64 2.4.113-2~ubuntu0.22.04.1 [21.6 kB]
+[Django CI/build]   | Get:37 http://archive.ubuntu.com/ubuntu jammy/main amd64 libepoxy0 amd64 1.5.10-1 [237 kB]
+[Django CI/build]   | Get:38 http://archive.ubuntu.com/ubuntu jammy/main amd64 libfontenc1 amd64 1:1.1.4-1build3 [14.7 kB]
+[Django CI/build]   | Get:39 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libwayland-server0 amd64 1.20.0-1ubuntu0.1 [34.3 kB]
+[Django CI/build]   | Get:40 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-randr0 amd64 1.14-3ubuntu3 [18.3 kB]
+[Django CI/build]   | Get:41 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgbm1 amd64 23.2.1-1ubuntu3.1~22.04.3 [33.5 kB]
+[Django CI/build]   | Get:42 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgbm-dev amd64 23.2.1-1ubuntu3.1~22.04.3 [9542 B]
+[Django CI/build]   | Get:43 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libglapi-mesa amd64 23.2.1-1ubuntu3.1~22.04.3 [35.4 kB]
+[Django CI/build]   | Get:44 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgl1-amber-dri amd64 21.3.9-0ubuntu1~22.04.1 [4218 kB]
+[Django CI/build]   | Get:45 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libllvm15 amd64 1:15.0.7-0ubuntu0.22.04.3 [25.4 MB]
+[Django CI/build]   | Get:46 http://archive.ubuntu.com/ubuntu jammy/main amd64 libsensors-config all 1:3.6.0-7ubuntu1 [5274 B]
+[Django CI/build]   | Get:47 http://archive.ubuntu.com/ubuntu jammy/main amd64 libsensors5 amd64 1:3.6.0-7ubuntu1 [26.3 kB]
+[Django CI/build]   | Get:48 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-dri3-0 amd64 1.14-3ubuntu3 [6968 B]
+[Django CI/build]   | Get:49 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgl1-mesa-dri amd64 23.2.1-1ubuntu3.1~22.04.3 [8860 kB]
+[Django CI/build]   | Get:50 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libx11-xcb1 amd64 2:1.7.5-1ubuntu0.3 [7802 B]
+[Django CI/build]   | Get:51 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-dri2-0 amd64 1.14-3ubuntu3 [7206 B]
+[Django CI/build]   | Get:52 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-glx0 amd64 1.14-3ubuntu3 [25.9 kB]
+[Django CI/build]   | Get:53 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-present0 amd64 1.14-3ubuntu3 [5734 B]
+[Django CI/build]   | Get:54 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-sync1 amd64 1.14-3ubuntu3 [9416 B]
+[Django CI/build]   | Get:55 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-xfixes0 amd64 1.14-3ubuntu3 [9996 B]
+[Django CI/build]   | Get:56 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxfixes3 amd64 1:6.0.0-1 [11.7 kB]
+[Django CI/build]   | Get:57 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxshmfence1 amd64 1.3-1build4 [5394 B]
+[Django CI/build]   | Get:58 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxxf86vm1 amd64 1:1.1.4-1build3 [10.4 kB]
+[Django CI/build]   | Get:59 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libglx-mesa0 amd64 23.2.1-1ubuntu3.1~22.04.3 [158 kB]
+[Django CI/build]   | Get:60 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libwayland-client0 amd64 1.20.0-1ubuntu0.1 [25.9 kB]
+[Django CI/build]   | Get:61 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libwayland-cursor0 amd64 1.20.0-1ubuntu0.1 [10.7 kB]
+[Django CI/build]   | Get:62 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libwayland-egl1 amd64 1.20.0-1ubuntu0.1 [5582 B]
+[Django CI/build]   | Get:63 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcomposite1 amd64 1:0.4.5-1build2 [7192 B]
+[Django CI/build]   | Get:64 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcursor1 amd64 1:1.2.0-2build4 [20.9 kB]
+[Django CI/build]   | Get:65 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxdamage1 amd64 1:1.1.5-2build2 [7154 B]
+[Django CI/build]   | Get:66 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxinerama1 amd64 2:1.1.4-3 [7382 B]
+[Django CI/build]   | Get:67 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxkbcommon0 amd64 1.4.0-1 [125 kB]
+[Django CI/build]   | Get:68 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxrandr2 amd64 2:1.5.2-1build1 [20.4 kB]
+[Django CI/build]   | Get:69 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgtk-3-common all 3.24.33-1ubuntu2.2 [239 kB]
+[Django CI/build]   | Get:70 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgtk-3-0 amd64 3.24.33-1ubuntu2.2 [3053 kB]
+[Django CI/build]   | Get:71 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgtk-3-bin amd64 3.24.33-1ubuntu2.2 [69.6 kB]
+[Django CI/build]   | Get:72 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libnspr4 amd64 2:4.35-0ubuntu0.22.04.1 [119 kB]
+[Django CI/build]   | Get:73 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libnss3 amd64 2:3.98-0ubuntu0.22.04.2 [1347 kB]
+[Django CI/build]   | Get:74 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxmu6 amd64 2:1.1.3-3 [49.6 kB]
+[Django CI/build]   | Get:75 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libxpm4 amd64 1:3.5.12-1ubuntu0.22.04.2 [36.7 kB]
+[Django CI/build]   | Get:76 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxaw7 amd64 2:1.0.14-1 [191 kB]
+[Django CI/build]   | Get:77 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxfont2 amd64 1:2.0.5-1build1 [94.5 kB]
+[Django CI/build]   | Get:78 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxkbfile1 amd64 1:1.1.0-1build3 [71.8 kB]
+[Django CI/build]   | Get:79 http://archive.ubuntu.com/ubuntu jammy/main amd64 x11-xkb-utils amd64 7.7+5build4 [172 kB]
+[Django CI/build]   | Get:80 http://archive.ubuntu.com/ubuntu jammy/main amd64 xfonts-encodings all 1:1.0.5-0ubuntu2 [578 kB]
+[Django CI/build]   | Get:81 http://archive.ubuntu.com/ubuntu jammy/main amd64 xfonts-utils amd64 1:7.7+6build2 [94.6 kB]
+[Django CI/build]   | Get:82 http://archive.ubuntu.com/ubuntu jammy/main amd64 xfonts-base all 1:1.0.5 [5896 kB]
+[Django CI/build]   | Get:83 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 xserver-common all 2:21.1.4-2ubuntu1.7~22.04.14 [29.2 kB]
+[Django CI/build]   | Get:84 http://archive.ubuntu.com/ubuntu jammy/main amd64 libglvnd0 amd64 1.4.0-1 [73.6 kB]
+[Django CI/build]   | Get:85 http://archive.ubuntu.com/ubuntu jammy/main amd64 libglx0 amd64 1.4.0-1 [41.0 kB]
+[Django CI/build]   | Get:86 http://archive.ubuntu.com/ubuntu jammy/main amd64 libgl1 amd64 1.4.0-1 [110 kB]
+[Django CI/build]   | Get:87 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 xvfb amd64 2:21.1.4-2ubuntu1.7~22.04.14 [866 kB]
+[Django CI/build]   | debconf: delaying package configuration, since apt-utils is not installed
+[Django CI/build]   | Fetched 59.4 MB in 9s (6651 kB/s)
+[Django CI/build]   | Selecting previously unselected package xkb-data.
+[Django CI/build]   | (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 26725 files and directories currently installed.)
+[Django CI/build]   | Preparing to unpack .../00-xkb-data_2.33-1_all.deb ...
+[Django CI/build]   | Unpacking xkb-data (2.33-1) ...
+[Django CI/build]   | Selecting previously unselected package libdrm-common.
+[Django CI/build]   | Preparing to unpack .../01-libdrm-common_2.4.113-2~ubuntu0.22.04.1_all.deb ...
+[Django CI/build]   | Unpacking libdrm-common (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libdrm2:amd64.
+[Django CI/build]   | Preparing to unpack .../02-libdrm2_2.4.113-2~ubuntu0.22.04.1_amd64.deb ...
+[Django CI/build]   | Unpacking libdrm2:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libxmuu1:amd64.
+[Django CI/build]   | Preparing to unpack .../03-libxmuu1_2%3a1.1.3-3_amd64.deb ...
+[Django CI/build]   | Unpacking libxmuu1:amd64 (2:1.1.3-3) ...
+[Django CI/build]   | Selecting previously unselected package xauth.
+[Django CI/build]   | Preparing to unpack .../04-xauth_1%3a1.1-1build2_amd64.deb ...
+[Django CI/build]   | Unpacking xauth (1:1.1-1build2) ...
+[Django CI/build]   | Selecting previously unselected package gtk-update-icon-cache.
+[Django CI/build]   | Preparing to unpack .../05-gtk-update-icon-cache_3.24.33-1ubuntu2.2_amd64.deb ...
+[Django CI/build]   | Unpacking gtk-update-icon-cache (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Selecting previously unselected package humanity-icon-theme.
+[Django CI/build]   | Preparing to unpack .../06-humanity-icon-theme_0.6.16_all.deb ...
+[Django CI/build]   | Unpacking humanity-icon-theme (0.6.16) ...
+[Django CI/build]   | Selecting previously unselected package ubuntu-mono.
+[Django CI/build]   | Preparing to unpack .../07-ubuntu-mono_20.10-0ubuntu2_all.deb ...
+[Django CI/build]   | Unpacking ubuntu-mono (20.10-0ubuntu2) ...
+[Django CI/build]   | Selecting previously unselected package adwaita-icon-theme.
+[Django CI/build]   | Preparing to unpack .../08-adwaita-icon-theme_41.0-1ubuntu1_all.deb ...
+[Django CI/build]   | Unpacking adwaita-icon-theme (41.0-1ubuntu1) ...
+[Django CI/build]   | Selecting previously unselected package alsa-topology-conf.
+[Django CI/build]   | Preparing to unpack .../09-alsa-topology-conf_1.2.5.1-2_all.deb ...
+[Django CI/build]   | Unpacking alsa-topology-conf (1.2.5.1-2) ...
+[Django CI/build]   | Selecting previously unselected package libasound2-data.
+[Django CI/build]   | Preparing to unpack .../10-libasound2-data_1.2.6.1-1ubuntu1_all.deb ...
+[Django CI/build]   | Unpacking libasound2-data (1.2.6.1-1ubuntu1) ...
+[Django CI/build]   | Selecting previously unselected package libasound2:amd64.
+[Django CI/build]   | Preparing to unpack .../11-libasound2_1.2.6.1-1ubuntu1_amd64.deb ...
+[Django CI/build]   | Unpacking libasound2:amd64 (1.2.6.1-1ubuntu1) ...
+[Django CI/build]   | Selecting previously unselected package alsa-ucm-conf.
+[Django CI/build]   | Preparing to unpack .../12-alsa-ucm-conf_1.2.6.3-1ubuntu1.12_all.deb ...
+[Django CI/build]   | Unpacking alsa-ucm-conf (1.2.6.3-1ubuntu1.12) ...
+[Django CI/build]   | Selecting previously unselected package libxi6:amd64.
+[Django CI/build]   | Preparing to unpack .../13-libxi6_2%3a1.8-1build1_amd64.deb ...
+[Django CI/build]   | Unpacking libxi6:amd64 (2:1.8-1build1) ...
+[Django CI/build]   | Selecting previously unselected package libatspi2.0-0:amd64.
+[Django CI/build]   | Preparing to unpack .../14-libatspi2.0-0_2.44.0-3_amd64.deb ...
+[Django CI/build]   | Unpacking libatspi2.0-0:amd64 (2.44.0-3) ...
+[Django CI/build]   | Selecting previously unselected package libxtst6:amd64.
+[Django CI/build]   | Preparing to unpack .../15-libxtst6_2%3a1.2.3-1build4_amd64.deb ...
+[Django CI/build]   | Unpacking libxtst6:amd64 (2:1.2.3-1build4) ...
+[Django CI/build]   | Selecting previously unselected package dbus-user-session.
+[Django CI/build]   | Preparing to unpack .../16-dbus-user-session_1.12.20-2ubuntu4.1_amd64.deb ...
+[Django CI/build]   | Unpacking dbus-user-session (1.12.20-2ubuntu4.1) ...
+[Django CI/build]   | Selecting previously unselected package libdconf1:amd64.
+[Django CI/build]   | Preparing to unpack .../17-libdconf1_0.40.0-3_amd64.deb ...
+[Django CI/build]   | Unpacking libdconf1:amd64 (0.40.0-3) ...
+[Django CI/build]   | Selecting previously unselected package dconf-service.
+[Django CI/build]   | Preparing to unpack .../18-dconf-service_0.40.0-3_amd64.deb ...
+[Django CI/build]   | Unpacking dconf-service (0.40.0-3) ...
+[Django CI/build]   | Selecting previously unselected package dconf-gsettings-backend:amd64.
+[Django CI/build]   | Preparing to unpack .../19-dconf-gsettings-backend_0.40.0-3_amd64.deb ...
+[Django CI/build]   | Unpacking dconf-gsettings-backend:amd64 (0.40.0-3) ...
+[Django CI/build]   | Selecting previously unselected package session-migration.
+[Django CI/build]   | Preparing to unpack .../20-session-migration_0.3.6_amd64.deb ...
+[Django CI/build]   | Unpacking session-migration (0.3.6) ...
+[Django CI/build]   | Selecting previously unselected package gsettings-desktop-schemas.
+[Django CI/build]   | Preparing to unpack .../21-gsettings-desktop-schemas_42.0-1ubuntu1_all.deb ...
+[Django CI/build]   | Unpacking gsettings-desktop-schemas (42.0-1ubuntu1) ...
+[Django CI/build]   | Selecting previously unselected package at-spi2-core.
+[Django CI/build]   | Preparing to unpack .../22-at-spi2-core_2.44.0-3_amd64.deb ...
+[Django CI/build]   | Unpacking at-spi2-core (2.44.0-3) ...
+[Django CI/build]   | Selecting previously unselected package libatk1.0-data.
+[Django CI/build]   | Preparing to unpack .../23-libatk1.0-data_2.36.0-3build1_all.deb ...
+[Django CI/build]   | Unpacking libatk1.0-data (2.36.0-3build1) ...
+[Django CI/build]   | Selecting previously unselected package libatk1.0-0:amd64.
+[Django CI/build]   | Preparing to unpack .../24-libatk1.0-0_2.36.0-3build1_amd64.deb ...
+[Django CI/build]   | Unpacking libatk1.0-0:amd64 (2.36.0-3build1) ...
+[Django CI/build]   | Selecting previously unselected package libatk-bridge2.0-0:amd64.
+[Django CI/build]   | Preparing to unpack .../25-libatk-bridge2.0-0_2.38.0-3_amd64.deb ...
+[Django CI/build]   | Unpacking libatk-bridge2.0-0:amd64 (2.38.0-3) ...
+[Django CI/build]   | Selecting previously unselected package libavahi-common-data:amd64.
+[Django CI/build]   | Preparing to unpack .../26-libavahi-common-data_0.8-5ubuntu5.2_amd64.deb ...
+[Django CI/build]   | Unpacking libavahi-common-data:amd64 (0.8-5ubuntu5.2) ...
+[Django CI/build]   | Selecting previously unselected package libavahi-common3:amd64.
+[Django CI/build]   | Preparing to unpack .../27-libavahi-common3_0.8-5ubuntu5.2_amd64.deb ...
+[Django CI/build]   | Unpacking libavahi-common3:amd64 (0.8-5ubuntu5.2) ...
+[Django CI/build]   | Selecting previously unselected package libavahi-client3:amd64.
+[Django CI/build]   | Preparing to unpack .../28-libavahi-client3_0.8-5ubuntu5.2_amd64.deb ...
+[Django CI/build]   | Unpacking libavahi-client3:amd64 (0.8-5ubuntu5.2) ...
+[Django CI/build]   | Selecting previously unselected package libcolord2:amd64.
+[Django CI/build]   | Preparing to unpack .../29-libcolord2_1.4.6-1_amd64.deb ...
+[Django CI/build]   | Unpacking libcolord2:amd64 (1.4.6-1) ...
+[Django CI/build]   | Selecting previously unselected package libcups2:amd64.
+[Django CI/build]   | Preparing to unpack .../30-libcups2_2.4.1op1-1ubuntu4.11_amd64.deb ...
+[Django CI/build]   | Unpacking libcups2:amd64 (2.4.1op1-1ubuntu4.11) ...
+[Django CI/build]   | Selecting previously unselected package libdrm-amdgpu1:amd64.
+[Django CI/build]   | Preparing to unpack .../31-libdrm-amdgpu1_2.4.113-2~ubuntu0.22.04.1_amd64.deb ...
+[Django CI/build]   | Unpacking libdrm-amdgpu1:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libpciaccess0:amd64.
+[Django CI/build]   | Preparing to unpack .../32-libpciaccess0_0.16-3_amd64.deb ...
+[Django CI/build]   | Unpacking libpciaccess0:amd64 (0.16-3) ...
+[Django CI/build]   | Selecting previously unselected package libdrm-intel1:amd64.
+[Django CI/build]   | Preparing to unpack .../33-libdrm-intel1_2.4.113-2~ubuntu0.22.04.1_amd64.deb ...
+[Django CI/build]   | Unpacking libdrm-intel1:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libdrm-nouveau2:amd64.
+[Django CI/build]   | Preparing to unpack .../34-libdrm-nouveau2_2.4.113-2~ubuntu0.22.04.1_amd64.deb ...
+[Django CI/build]   | Unpacking libdrm-nouveau2:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libdrm-radeon1:amd64.
+[Django CI/build]   | Preparing to unpack .../35-libdrm-radeon1_2.4.113-2~ubuntu0.22.04.1_amd64.deb ...
+[Django CI/build]   | Unpacking libdrm-radeon1:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libepoxy0:amd64.
+[Django CI/build]   | Preparing to unpack .../36-libepoxy0_1.5.10-1_amd64.deb ...
+[Django CI/build]   | Unpacking libepoxy0:amd64 (1.5.10-1) ...
+[Django CI/build]   | Selecting previously unselected package libfontenc1:amd64.
+[Django CI/build]   | Preparing to unpack .../37-libfontenc1_1%3a1.1.4-1build3_amd64.deb ...
+[Django CI/build]   | Unpacking libfontenc1:amd64 (1:1.1.4-1build3) ...
+[Django CI/build]   | Selecting previously unselected package libwayland-server0:amd64.
+[Django CI/build]   | Preparing to unpack .../38-libwayland-server0_1.20.0-1ubuntu0.1_amd64.deb ...
+[Django CI/build]   | Unpacking libwayland-server0:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Selecting previously unselected package libxcb-randr0:amd64.
+[Django CI/build]   | Preparing to unpack .../39-libxcb-randr0_1.14-3ubuntu3_amd64.deb ...
+[Django CI/build]   | Unpacking libxcb-randr0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Selecting previously unselected package libgbm1:amd64.
+[Django CI/build]   | Preparing to unpack .../40-libgbm1_23.2.1-1ubuntu3.1~22.04.3_amd64.deb ...
+[Django CI/build]   | Unpacking libgbm1:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Selecting previously unselected package libgbm-dev:amd64.
+[Django CI/build]   | Preparing to unpack .../41-libgbm-dev_23.2.1-1ubuntu3.1~22.04.3_amd64.deb ...
+[Django CI/build]   | Unpacking libgbm-dev:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Selecting previously unselected package libglapi-mesa:amd64.
+[Django CI/build]   | Preparing to unpack .../42-libglapi-mesa_23.2.1-1ubuntu3.1~22.04.3_amd64.deb ...
+[Django CI/build]   | Unpacking libglapi-mesa:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Selecting previously unselected package libgl1-amber-dri:amd64.
+[Django CI/build]   | Preparing to unpack .../43-libgl1-amber-dri_21.3.9-0ubuntu1~22.04.1_amd64.deb ...
+[Django CI/build]   | Unpacking libgl1-amber-dri:amd64 (21.3.9-0ubuntu1~22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libllvm15:amd64.
+[Django CI/build]   | Preparing to unpack .../44-libllvm15_1%3a15.0.7-0ubuntu0.22.04.3_amd64.deb ...
+[Django CI/build]   | Unpacking libllvm15:amd64 (1:15.0.7-0ubuntu0.22.04.3) ...
+[Django CI/build]   | Selecting previously unselected package libsensors-config.
+[Django CI/build]   | Preparing to unpack .../45-libsensors-config_1%3a3.6.0-7ubuntu1_all.deb ...
+[Django CI/build]   | Unpacking libsensors-config (1:3.6.0-7ubuntu1) ...
+[Django CI/build]   | Selecting previously unselected package libsensors5:amd64.
+[Django CI/build]   | Preparing to unpack .../46-libsensors5_1%3a3.6.0-7ubuntu1_amd64.deb ...
+[Django CI/build]   | Unpacking libsensors5:amd64 (1:3.6.0-7ubuntu1) ...
+[Django CI/build]   | Selecting previously unselected package libxcb-dri3-0:amd64.
+[Django CI/build]   | Preparing to unpack .../47-libxcb-dri3-0_1.14-3ubuntu3_amd64.deb ...
+[Django CI/build]   | Unpacking libxcb-dri3-0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Selecting previously unselected package libgl1-mesa-dri:amd64.
+[Django CI/build]   | Preparing to unpack .../48-libgl1-mesa-dri_23.2.1-1ubuntu3.1~22.04.3_amd64.deb ...
+[Django CI/build]   | Unpacking libgl1-mesa-dri:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Selecting previously unselected package libx11-xcb1:amd64.
+[Django CI/build]   | Preparing to unpack .../49-libx11-xcb1_2%3a1.7.5-1ubuntu0.3_amd64.deb ...
+[Django CI/build]   | Unpacking libx11-xcb1:amd64 (2:1.7.5-1ubuntu0.3) ...
+[Django CI/build]   | Selecting previously unselected package libxcb-dri2-0:amd64.
+[Django CI/build]   | Preparing to unpack .../50-libxcb-dri2-0_1.14-3ubuntu3_amd64.deb ...
+[Django CI/build]   | Unpacking libxcb-dri2-0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Selecting previously unselected package libxcb-glx0:amd64.
+[Django CI/build]   | Preparing to unpack .../51-libxcb-glx0_1.14-3ubuntu3_amd64.deb ...
+[Django CI/build]   | Unpacking libxcb-glx0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Selecting previously unselected package libxcb-present0:amd64.
+[Django CI/build]   | Preparing to unpack .../52-libxcb-present0_1.14-3ubuntu3_amd64.deb ...
+[Django CI/build]   | Unpacking libxcb-present0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Selecting previously unselected package libxcb-sync1:amd64.
+[Django CI/build]   | Preparing to unpack .../53-libxcb-sync1_1.14-3ubuntu3_amd64.deb ...
+[Django CI/build]   | Unpacking libxcb-sync1:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Selecting previously unselected package libxcb-xfixes0:amd64.
+[Django CI/build]   | Preparing to unpack .../54-libxcb-xfixes0_1.14-3ubuntu3_amd64.deb ...
+[Django CI/build]   | Unpacking libxcb-xfixes0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Selecting previously unselected package libxfixes3:amd64.
+[Django CI/build]   | Preparing to unpack .../55-libxfixes3_1%3a6.0.0-1_amd64.deb ...
+[Django CI/build]   | Unpacking libxfixes3:amd64 (1:6.0.0-1) ...
+[Django CI/build]   | Selecting previously unselected package libxshmfence1:amd64.
+[Django CI/build]   | Preparing to unpack .../56-libxshmfence1_1.3-1build4_amd64.deb ...
+[Django CI/build]   | Unpacking libxshmfence1:amd64 (1.3-1build4) ...
+[Django CI/build]   | Selecting previously unselected package libxxf86vm1:amd64.
+[Django CI/build]   | Preparing to unpack .../57-libxxf86vm1_1%3a1.1.4-1build3_amd64.deb ...
+[Django CI/build]   | Unpacking libxxf86vm1:amd64 (1:1.1.4-1build3) ...
+[Django CI/build]   | Selecting previously unselected package libglx-mesa0:amd64.
+[Django CI/build]   | Preparing to unpack .../58-libglx-mesa0_23.2.1-1ubuntu3.1~22.04.3_amd64.deb ...
+[Django CI/build]   | Unpacking libglx-mesa0:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Selecting previously unselected package libwayland-client0:amd64.
+[Django CI/build]   | Preparing to unpack .../59-libwayland-client0_1.20.0-1ubuntu0.1_amd64.deb ...
+[Django CI/build]   | Unpacking libwayland-client0:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Selecting previously unselected package libwayland-cursor0:amd64.
+[Django CI/build]   | Preparing to unpack .../60-libwayland-cursor0_1.20.0-1ubuntu0.1_amd64.deb ...
+[Django CI/build]   | Unpacking libwayland-cursor0:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Selecting previously unselected package libwayland-egl1:amd64.
+[Django CI/build]   | Preparing to unpack .../61-libwayland-egl1_1.20.0-1ubuntu0.1_amd64.deb ...
+[Django CI/build]   | Unpacking libwayland-egl1:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Selecting previously unselected package libxcomposite1:amd64.
+[Django CI/build]   | Preparing to unpack .../62-libxcomposite1_1%3a0.4.5-1build2_amd64.deb ...
+[Django CI/build]   | Unpacking libxcomposite1:amd64 (1:0.4.5-1build2) ...
+[Django CI/build]   | Selecting previously unselected package libxcursor1:amd64.
+[Django CI/build]   | Preparing to unpack .../63-libxcursor1_1%3a1.2.0-2build4_amd64.deb ...
+[Django CI/build]   | Unpacking libxcursor1:amd64 (1:1.2.0-2build4) ...
+[Django CI/build]   | Selecting previously unselected package libxdamage1:amd64.
+[Django CI/build]   | Preparing to unpack .../64-libxdamage1_1%3a1.1.5-2build2_amd64.deb ...
+[Django CI/build]   | Unpacking libxdamage1:amd64 (1:1.1.5-2build2) ...
+[Django CI/build]   | Selecting previously unselected package libxinerama1:amd64.
+[Django CI/build]   | Preparing to unpack .../65-libxinerama1_2%3a1.1.4-3_amd64.deb ...
+[Django CI/build]   | Unpacking libxinerama1:amd64 (2:1.1.4-3) ...
+[Django CI/build]   | Selecting previously unselected package libxkbcommon0:amd64.
+[Django CI/build]   | Preparing to unpack .../66-libxkbcommon0_1.4.0-1_amd64.deb ...
+[Django CI/build]   | Unpacking libxkbcommon0:amd64 (1.4.0-1) ...
+[Django CI/build]   | Selecting previously unselected package libxrandr2:amd64.
+[Django CI/build]   | Preparing to unpack .../67-libxrandr2_2%3a1.5.2-1build1_amd64.deb ...
+[Django CI/build]   | Unpacking libxrandr2:amd64 (2:1.5.2-1build1) ...
+[Django CI/build]   | Selecting previously unselected package libgtk-3-common.
+[Django CI/build]   | Preparing to unpack .../68-libgtk-3-common_3.24.33-1ubuntu2.2_all.deb ...
+[Django CI/build]   | Unpacking libgtk-3-common (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Selecting previously unselected package libgtk-3-0:amd64.
+[Django CI/build]   | Preparing to unpack .../69-libgtk-3-0_3.24.33-1ubuntu2.2_amd64.deb ...
+[Django CI/build]   | Unpacking libgtk-3-0:amd64 (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Selecting previously unselected package libgtk-3-bin.
+[Django CI/build]   | Preparing to unpack .../70-libgtk-3-bin_3.24.33-1ubuntu2.2_amd64.deb ...
+[Django CI/build]   | Unpacking libgtk-3-bin (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Selecting previously unselected package libnspr4:amd64.
+[Django CI/build]   | Preparing to unpack .../71-libnspr4_2%3a4.35-0ubuntu0.22.04.1_amd64.deb ...
+[Django CI/build]   | Unpacking libnspr4:amd64 (2:4.35-0ubuntu0.22.04.1) ...
+[Django CI/build]   | Selecting previously unselected package libnss3:amd64.
+[Django CI/build]   | Preparing to unpack .../72-libnss3_2%3a3.98-0ubuntu0.22.04.2_amd64.deb ...
+[Django CI/build]   | Unpacking libnss3:amd64 (2:3.98-0ubuntu0.22.04.2) ...
+[Django CI/build]   | Selecting previously unselected package libxmu6:amd64.
+[Django CI/build]   | Preparing to unpack .../73-libxmu6_2%3a1.1.3-3_amd64.deb ...
+[Django CI/build]   | Unpacking libxmu6:amd64 (2:1.1.3-3) ...
+[Django CI/build]   | Selecting previously unselected package libxpm4:amd64.
+[Django CI/build]   | Preparing to unpack .../74-libxpm4_1%3a3.5.12-1ubuntu0.22.04.2_amd64.deb ...
+[Django CI/build]   | Unpacking libxpm4:amd64 (1:3.5.12-1ubuntu0.22.04.2) ...
+[Django CI/build]   | Selecting previously unselected package libxaw7:amd64.
+[Django CI/build]   | Preparing to unpack .../75-libxaw7_2%3a1.0.14-1_amd64.deb ...
+[Django CI/build]   | Unpacking libxaw7:amd64 (2:1.0.14-1) ...
+[Django CI/build]   | Selecting previously unselected package libxfont2:amd64.
+[Django CI/build]   | Preparing to unpack .../76-libxfont2_1%3a2.0.5-1build1_amd64.deb ...
+[Django CI/build]   | Unpacking libxfont2:amd64 (1:2.0.5-1build1) ...
+[Django CI/build]   | Selecting previously unselected package libxkbfile1:amd64.
+[Django CI/build]   | Preparing to unpack .../77-libxkbfile1_1%3a1.1.0-1build3_amd64.deb ...
+[Django CI/build]   | Unpacking libxkbfile1:amd64 (1:1.1.0-1build3) ...
+[Django CI/build]   | Selecting previously unselected package x11-xkb-utils.
+[Django CI/build]   | Preparing to unpack .../78-x11-xkb-utils_7.7+5build4_amd64.deb ...
+[Django CI/build]   | Unpacking x11-xkb-utils (7.7+5build4) ...
+[Django CI/build]   | Selecting previously unselected package xfonts-encodings.
+[Django CI/build]   | Preparing to unpack .../79-xfonts-encodings_1%3a1.0.5-0ubuntu2_all.deb ...
+[Django CI/build]   | Unpacking xfonts-encodings (1:1.0.5-0ubuntu2) ...
+[Django CI/build]   | Selecting previously unselected package xfonts-utils.
+[Django CI/build]   | Preparing to unpack .../80-xfonts-utils_1%3a7.7+6build2_amd64.deb ...
+[Django CI/build]   | Unpacking xfonts-utils (1:7.7+6build2) ...
+[Django CI/build]   | Selecting previously unselected package xfonts-base.
+[Django CI/build]   | Preparing to unpack .../81-xfonts-base_1%3a1.0.5_all.deb ...
+[Django CI/build]   | Unpacking xfonts-base (1:1.0.5) ...
+[Django CI/build]   | Selecting previously unselected package xserver-common.
+[Django CI/build]   | Preparing to unpack .../82-xserver-common_2%3a21.1.4-2ubuntu1.7~22.04.14_all.deb ...
+[Django CI/build]   | Unpacking xserver-common (2:21.1.4-2ubuntu1.7~22.04.14) ...
+[Django CI/build]   | Selecting previously unselected package libglvnd0:amd64.
+[Django CI/build]   | Preparing to unpack .../83-libglvnd0_1.4.0-1_amd64.deb ...
+[Django CI/build]   | Unpacking libglvnd0:amd64 (1.4.0-1) ...
+[Django CI/build]   | Selecting previously unselected package libglx0:amd64.
+[Django CI/build]   | Preparing to unpack .../84-libglx0_1.4.0-1_amd64.deb ...
+[Django CI/build]   | Unpacking libglx0:amd64 (1.4.0-1) ...
+[Django CI/build]   | Selecting previously unselected package libgl1:amd64.
+[Django CI/build]   | Preparing to unpack .../85-libgl1_1.4.0-1_amd64.deb ...
+[Django CI/build]   | Unpacking libgl1:amd64 (1.4.0-1) ...
+[Django CI/build]   | Selecting previously unselected package xvfb.
+[Django CI/build]   | Preparing to unpack .../86-xvfb_2%3a21.1.4-2ubuntu1.7~22.04.14_amd64.deb ...
+[Django CI/build]   | Unpacking xvfb (2:21.1.4-2ubuntu1.7~22.04.14) ...
+[Django CI/build]   | Setting up libxcb-dri3-0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Setting up libwayland-server0:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Setting up gtk-update-icon-cache (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Setting up libx11-xcb1:amd64 (2:1.7.5-1ubuntu0.3) ...
+[Django CI/build]   | Setting up libpciaccess0:amd64 (0.16-3) ...
+[Django CI/build]   | Setting up session-migration (0.3.6) ...
+[Django CI/build]   | Created symlink /etc/systemd/user/graphical-session-pre.target.wants/session-migration.service → /usr/lib/systemd/user/session-migration.service.
+[Django CI/build]   | Setting up libxmu6:amd64 (2:1.1.3-3) ...
+[Django CI/build]   | Setting up libxdamage1:amd64 (1:1.1.5-2build2) ...
+[Django CI/build]   | Setting up libxcb-xfixes0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Setting up libxpm4:amd64 (1:3.5.12-1ubuntu0.22.04.2) ...
+[Django CI/build]   | Setting up libxi6:amd64 (2:1.8-1build1) ...
+[Django CI/build]   | Setting up libglvnd0:amd64 (1.4.0-1) ...
+[Django CI/build]   | Setting up libxtst6:amd64 (2:1.2.3-1build4) ...
+[Django CI/build]   | Setting up libxcb-glx0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Setting up libsensors-config (1:3.6.0-7ubuntu1) ...
+[Django CI/build]   | Setting up xkb-data (2.33-1) ...
+[Django CI/build]   | Setting up libxaw7:amd64 (2:1.0.14-1) ...
+[Django CI/build]   | Setting up libatspi2.0-0:amd64 (2.44.0-3) ...
+[Django CI/build]   | Setting up libcolord2:amd64 (1.4.6-1) ...
+[Django CI/build]   | Setting up libxxf86vm1:amd64 (1:1.1.4-1build3) ...
+[Django CI/build]   | Setting up libxcb-present0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Setting up libdconf1:amd64 (0.40.0-3) ...
+[Django CI/build]   | Setting up libasound2-data (1.2.6.1-1ubuntu1) ...
+[Django CI/build]   | Setting up dbus-user-session (1.12.20-2ubuntu4.1) ...
+[Django CI/build]   | Setting up libfontenc1:amd64 (1:1.1.4-1build3) ...
+[Django CI/build]   | Setting up libepoxy0:amd64 (1.5.10-1) ...
+[Django CI/build]   | Setting up libnspr4:amd64 (2:4.35-0ubuntu0.22.04.1) ...
+[Django CI/build]   | Setting up libxfixes3:amd64 (1:6.0.0-1) ...
+[Django CI/build]   | Setting up libxcb-sync1:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Setting up libavahi-common-data:amd64 (0.8-5ubuntu5.2) ...
+[Django CI/build]   | Setting up xfonts-encodings (1:1.0.5-0ubuntu2) ...
+[Django CI/build]   | Setting up libxinerama1:amd64 (2:1.1.4-3) ...
+[Django CI/build]   | Setting up libxrandr2:amd64 (2:1.5.2-1build1) ...
+[Django CI/build]   | Setting up libsensors5:amd64 (1:3.6.0-7ubuntu1) ...
+[Django CI/build]   | Setting up libglapi-mesa:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Setting up libxcb-dri2-0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Setting up libatk1.0-data (2.36.0-3build1) ...
+[Django CI/build]   | Setting up alsa-topology-conf (1.2.5.1-2) ...
+[Django CI/build]   | Setting up libxshmfence1:amd64 (1.3-1build4) ...
+[Django CI/build]   | Setting up libxcb-randr0:amd64 (1.14-3ubuntu3) ...
+[Django CI/build]   | Setting up libllvm15:amd64 (1:15.0.7-0ubuntu0.22.04.3) ...
+[Django CI/build]   | Setting up libasound2:amd64 (1.2.6.1-1ubuntu1) ...
+[Django CI/build]   | Setting up libatk1.0-0:amd64 (2.36.0-3build1) ...
+[Django CI/build]   | Setting up libwayland-egl1:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Setting up libxkbfile1:amd64 (1:1.1.0-1build3) ...
+[Django CI/build]   | Setting up libdrm-common (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Setting up libxcomposite1:amd64 (1:0.4.5-1build2) ...
+[Django CI/build]   | Setting up libxfont2:amd64 (1:2.0.5-1build1) ...
+[Django CI/build]   | Setting up libxmuu1:amd64 (2:1.1.3-3) ...
+[Django CI/build]   | Setting up libxkbcommon0:amd64 (1.4.0-1) ...
+[Django CI/build]   | Setting up libwayland-client0:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Setting up alsa-ucm-conf (1.2.6.3-1ubuntu1.12) ...
+[Django CI/build]   | Setting up x11-xkb-utils (7.7+5build4) ...
+[Django CI/build]   | Setting up libxcursor1:amd64 (1:1.2.0-2build4) ...
+[Django CI/build]   | Setting up libavahi-common3:amd64 (0.8-5ubuntu5.2) ...
+[Django CI/build]   | Setting up dconf-service (0.40.0-3) ...
+[Django CI/build]   | Setting up libnss3:amd64 (2:3.98-0ubuntu0.22.04.2) ...
+[Django CI/build]   | Setting up xfonts-utils (1:7.7+6build2) ...
+[Django CI/build]   | Setting up libatk-bridge2.0-0:amd64 (2.38.0-3) ...
+[Django CI/build]   | Setting up xfonts-base (1:1.0.5) ...
+[Django CI/build]   | Setting up libdrm2:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Setting up xauth (1:1.1-1build2) ...
+[Django CI/build]   | Setting up libwayland-cursor0:amd64 (1.20.0-1ubuntu0.1) ...
+[Django CI/build]   | Setting up xserver-common (2:21.1.4-2ubuntu1.7~22.04.14) ...
+[Django CI/build]   | Setting up libavahi-client3:amd64 (0.8-5ubuntu5.2) ...
+[Django CI/build]   | Setting up libdrm-amdgpu1:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Setting up libdrm-nouveau2:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Setting up dconf-gsettings-backend:amd64 (0.40.0-3) ...
+[Django CI/build]   | Setting up libgbm1:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Setting up libdrm-radeon1:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Setting up libdrm-intel1:amd64 (2.4.113-2~ubuntu0.22.04.1) ...
+[Django CI/build]   | Setting up libgl1-mesa-dri:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Setting up libgbm-dev:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Setting up libcups2:amd64 (2.4.1op1-1ubuntu4.11) ...
+[Django CI/build]   | Setting up libgtk-3-common (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Setting up gsettings-desktop-schemas (42.0-1ubuntu1) ...
+[Django CI/build]   | Setting up libgl1-amber-dri:amd64 (21.3.9-0ubuntu1~22.04.1) ...
+[Django CI/build]   | Setting up libglx-mesa0:amd64 (23.2.1-1ubuntu3.1~22.04.3) ...
+[Django CI/build]   | Setting up libglx0:amd64 (1.4.0-1) ...
+[Django CI/build]   | Setting up libgl1:amd64 (1.4.0-1) ...
+[Django CI/build]   | Setting up xvfb (2:21.1.4-2ubuntu1.7~22.04.14) ...
+[Django CI/build]   | Setting up adwaita-icon-theme (41.0-1ubuntu1) ...
+[Django CI/build]   | update-alternatives: using /usr/share/icons/Adwaita/cursor.theme to provide /usr/share/icons/default/index.theme (x-cursor-theme) in auto mode
+[Django CI/build]   | Setting up humanity-icon-theme (0.6.16) ...
+[Django CI/build]   | Setting up ubuntu-mono (20.10-0ubuntu2) ...
+[Django CI/build]   | Processing triggers for fontconfig (2.13.1-4.2ubuntu5) ...
+[Django CI/build]   | Processing triggers for libglib2.0-0:amd64 (2.72.4-0ubuntu2.4) ...
+[Django CI/build]   | Setting up libgtk-3-0:amd64 (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Processing triggers for libc-bin (2.35-0ubuntu3.9) ...
+[Django CI/build]   | Setting up libgtk-3-bin (3.24.33-1ubuntu2.2) ...
+[Django CI/build]   | Setting up at-spi2-core (2.44.0-3) ...
+[Django CI/build]   ✅  Success - Main Install Frontend Dependencies (Node.js) & Cypress System Deps [1m10.626034326s]
+[Django CI/build] ⭐ Run Main Run tests using docker-compose
+[Django CI/build]   🐳  docker exec cmd=[bash -e /var/run/act/workflow/4] user= workdir=
+[Django CI/build]   | Starting all tests using Docker environment...
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  Bringing down any existing Docker services... 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Removing network spanish_anki_app_net
+[Django CI/build]   | Network spanish_anki_app_net not found.
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  Building and starting Docker services in detached mode... 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Creating network "spanish_anki_app_net" with driver "bridge"
+[Django CI/build]   | Building backend
+[Django CI/build]   | Step 1/14 : FROM python:3.11-slim
+[Django CI/build]   |  ---> bea8499a31bb
+[Django CI/build]   | Step 2/14 : ENV PYTHONDONTWRITEBYTECODE 1
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> d6930b60cf87
+[Django CI/build]   | Step 3/14 : ENV PYTHONUNBUFFERED 1
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> a782a41dcd3b
+[Django CI/build]   | Step 4/14 : WORKDIR /app
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> e8b36128e6b7
+[Django CI/build]   | Step 5/14 : RUN apt-get update && apt-get install -y --no-install-recommends     gcc     libpq-dev     dos2unix     && apt-get clean     && rm -rf /var/lib/apt/lists/*
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> d1451be2170a
+[Django CI/build]   | Step 6/14 : COPY requirements.txt /app/
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> 443124ee22d2
+[Django CI/build]   | Step 7/14 : RUN pip install --no-cache-dir -r requirements.txt
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> 930d5ab2d022
+[Django CI/build]   | Step 8/14 : COPY . /app/
+[Django CI/build]   |  ---> 722d5b1b3efe
+[Django CI/build]   | Step 9/14 : EXPOSE 8000
+[Django CI/build]   |  ---> Running in 21b2ccb2f9ca
+[Django CI/build]   |  ---> Removed intermediate container 21b2ccb2f9ca
+[Django CI/build]   |  ---> 5d8c53b395cb
+[Django CI/build]   | Step 10/14 : COPY ./entrypoint.sh /app/entrypoint.sh
+[Django CI/build]   |  ---> 6e286d1082f8
+[Django CI/build]   | Step 11/14 : RUN dos2unix /app/entrypoint.sh
+[Django CI/build]   |  ---> Running in 0651041173ff
+[Django CI/build]   | [91mdos2unix: converting file /app/entrypoint.sh to Unix format...
+[Django CI/build]   | [0m ---> Removed intermediate container 0651041173ff
+[Django CI/build]   |  ---> 574268c99e42
+[Django CI/build]   | Step 12/14 : RUN chmod 755 /app/entrypoint.sh
+[Django CI/build]   |  ---> Running in 7ca044693aec
+[Django CI/build]   |  ---> Removed intermediate container 7ca044693aec
+[Django CI/build]   |  ---> 2b81e8959f14
+[Django CI/build]   | Step 13/14 : ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
+[Django CI/build]   |  ---> Running in 107e1e5e51ed
+[Django CI/build]   |  ---> Removed intermediate container 107e1e5e51ed
+[Django CI/build]   |  ---> 15052165244e
+[Django CI/build]   | Step 14/14 : CMD ["run_server"]
+[Django CI/build]   |  ---> Running in 307af710dc92
+[Django CI/build]   |  ---> Removed intermediate container 307af710dc92
+[Django CI/build]   |  ---> 40cb24154c3b
+[Django CI/build]   | 
+[Django CI/build]   | Successfully built 40cb24154c3b
+[Django CI/build]   | Successfully tagged spanish_backend:latest
+[Django CI/build]   | Building frontend
+[Django CI/build]   | Step 1/6 : FROM node:18-alpine as build-stage
+[Django CI/build]   |  ---> ee77c6cd7c18
+[Django CI/build]   | Step 2/6 : WORKDIR /app
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> 5543c37875be
+[Django CI/build]   | Step 3/6 : COPY package*.json ./
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> e04f8ebda733
+[Django CI/build]   | Step 4/6 : RUN npm install
+[Django CI/build]   |  ---> Using cache
+[Django CI/build]   |  ---> f31a8d6c05aa
+[Django CI/build]   | Step 5/6 : COPY . .
+[Django CI/build]   |  ---> e4fd82e4d744
+[Django CI/build]   | Step 6/6 : RUN npm run build
+[Django CI/build]   |  ---> Running in 6d09e3009255
+[Django CI/build]   | 
+[Django CI/build]   | > spanish_anki_frontend@0.1.0 build
+[Django CI/build]   | > vue-cli-service build
+[Django CI/build]   | 
+[Django CI/build]   | All browser targets in the browserslist configuration have supported ES module.
+[Django CI/build]   | Therefore we don't build two separate bundles for differential loading.
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [91m-  Building for production...
+[Django CI/build]   | [0m DONE  Compiled successfully in 6193ms12:41:19 AM
+[Django CI/build]   | 
+[Django CI/build]   |   File                                 Size               Gzipped
+[Django CI/build]   | 
+[Django CI/build]   |   dist/js/chunk-vendors.a9aca07a.js    159.71 KiB         59.32 KiB
+[Django CI/build]   |   dist/js/app.90cee718.js              23.39 KiB          6.16 KiB
+[Django CI/build]   |   dist/css/app.a9cd124a.css            7.22 KiB           1.69 KiB
+[Django CI/build]   | 
+[Django CI/build]   |   Images and other types of assets omitted.
+[Django CI/build]   |   Build at: 2025-05-16T00:41:19.807Z - Hash: 8b5f6c95aecb34df - Time: 6193ms
+[Django CI/build]   | 
+[Django CI/build]   |  DONE  Build complete. The dist directory is ready to be deployed.
+[Django CI/build]   |  INFO  Check out deployment instructions at https://cli.vuejs.org/guide/deployment.html
+[Django CI/build]   |        
+[Django CI/build]   |  ---> Removed intermediate container 6d09e3009255
+[Django CI/build]   |  ---> 5dc0711f7803
+[Django CI/build]   | 
+[Django CI/build]   | Successfully built 5dc0711f7803
+[Django CI/build]   | Successfully tagged spanish_frontend:latest
+[Django CI/build]   | Creating spanish_anki_backend ... 
+[Django CI/build]   | [1A[2KCreating spanish_anki_backend ... [32mdone[0m[1BCreating spanish_anki_frontend ... 
+[Django CI/build]   | [1A[2KCreating spanish_anki_frontend ... [32mdone[0m[1B------------------------------------
+[Django CI/build]   |  Waiting for services to initialize (e.g., database migrations, servers to start)... 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Showing logs for the backend service shortly after startup:
+[Django CI/build]   | Attaching to spanish_anki_backend
+[Django CI/build]   | [36mspanish_anki_backend |[0m Applying database migrations...
+[Django CI/build]   | Showing logs for the frontend service shortly after startup:
+[Django CI/build]   | Attaching to spanish_anki_frontend
+[Django CI/build]   | [36mspanish_anki_frontend |[0m 
+[Django CI/build]   | [36mspanish_anki_frontend |[0m > spanish_anki_frontend@0.1.0 serve
+[Django CI/build]   | [36mspanish_anki_frontend |[0m > vue-cli-service serve
+[Django CI/build]   | [36mspanish_anki_frontend |[0m 
+[Django CI/build]   | [36mspanish_anki_frontend |[0m  INFO  Starting development server...
+[Django CI/build]   | Sleeping for 15 seconds to allow services to fully initialize...
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  Phase 1: Backend Django tests 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Running backend Django tests with coverage inside the 'backend' container...
+[Django CI/build]   | Found 43 test(s).
+[Django CI/build]   | Creating test database for alias 'default'...
+[Django CI/build]   | System check identified no issues (0 silenced).
+[Django CI/build]   | Starting import from "/app/data/test_import.csv"
+[Django CI/build]   | Successfully imported 1 new S2E sentences and 1 new E2S sentences.
+[Django CI/build]   | ..Starting import from "/app/data/test_import.csv"
+[Django CI/build]   | Successfully imported 0 new S2E sentences and 0 new E2S sentences.
+[Django CI/build]   | .Starting import from "/app/data/test_import.csv"
+[Django CI/build]   | .Starting import from "/app/data/test_import.csv"
+[Django CI/build]   | Successfully imported 3 new S2E sentences and 3 new E2S sentences.
+[Django CI/build]   | .......................................
+[Django CI/build]   | ----------------------------------------------------------------------
+[Django CI/build]   | Ran 43 tests in 0.360s
+[Django CI/build]   | 
+[Django CI/build]   | OK
+[Django CI/build]   | Destroying test database for alias 'default'...
+[Django CI/build]   | Wrote XML report to /app/coverage.xml
+[Django CI/build]   | Backend Django tests completed and coverage report generated (coverage.xml in anki_web_app/).
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  Phase 1.5: Seeding database for E2E tests 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Running seed_e2e_data management command inside the 'backend' container...
+[Django CI/build]   | Seeding database for E2E tests...
+[Django CI/build]   | Cleared existing Sentences and Reviews.
+[Django CI/build]   | Created 6 sentences for E2E testing.
+[Django CI/build]   | E2E test data seeding complete.
+[Django CI/build]   | E2E data seeding completed.
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  Phase 2: Frontend Unit tests (Jest) 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Running frontend unit tests (Jest) inside the 'frontend' container...
+[Django CI/build]   | 
+[Django CI/build]   | > spanish_anki_frontend@0.1.0 test:unit
+[Django CI/build]   | > vue-cli-service test:unit
+[Django CI/build]   | 
+[Django CI/build]   | PASS tests/unit/example.spec.js (6.03 s)
+[Django CI/build]   | PASS tests/unit/DashboardView.spec.js (7.319 s)
+[Django CI/build]   | PASS tests/unit/SentenceListView.spec.js (7.315 s)
+[Django CI/build]   | PASS tests/unit/FlashcardView.spec.js (7.304 s)
+[Django CI/build]   | PASS tests/unit/SentenceDetailView.spec.js (7.371 s)
+[Django CI/build]   | 
+[Django CI/build]   | Test Suites: 5 passed, 5 total
+[Django CI/build]   | Tests:       37 passed, 37 total
+[Django CI/build]   | Snapshots:   0 total
+[Django CI/build]   | Time:        11.386 s
+[Django CI/build]   | Ran all test suites.
+[Django CI/build]   | Frontend unit tests completed.
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  Phase 3: Frontend E2E tests (Cypress) 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Running frontend E2E tests (Cypress) from host against Dockerized frontend...
+[Django CI/build]   | Changing to ./anki_web_app/spanish_anki_frontend to run Cypress tests...
+[Django CI/build]   | It looks like this is your first time using Cypress: 14.3.3
+[Django CI/build]   | 
+[Django CI/build]   | [STARTED] Task without title.
+[Django CI/build]   | [SUCCESS] Task without title.
+[Django CI/build]   | 
+[Django CI/build]   | Opening Cypress...
+[Django CI/build]   | 
+[Django CI/build]   | DevTools listening on ws://127.0.0.1:40795/devtools/browser/ec56ad6e-d237-4960-913b-7fd1b4cb18ba
+[Django CI/build]   | 
+[Django CI/build]   | [90m====================================================================================================[39m
+[Django CI/build]   | 
+[Django CI/build]   | tput: No value for $TERM and no -T specified
+[Django CI/build]   | [0m  ([4m[1mRun Starting[22m[24m)[0m
+[Django CI/build]   | 
+[Django CI/build]   | [90m  ┌[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┐[39m
+[Django CI/build]   | [90m  │[39m [90mCypress:[39m        14.3.3                                                                         [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mBrowser:[39m        Electron 130 [90m(headless)[39m                                                        [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mNode Version:[39m   [0mv18.20.8 [90m(/opt/acttoolcache/node/18.20.8/x64/bin/node)[39m[0m                         [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mSpecs:[39m          [0m2 found (flashcard_flow.cy.js, navigation_and_data.cy.js)[0m                      [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mSearched:[39m       [0mcypress/e2e/*.cy.js[0m                                                            [90m│[39m
+[Django CI/build]   | [90m  └[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┘[39m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m
+[Django CI/build]   |                                                                                                     
+[Django CI/build]   |   Running:  [90mflashcard_flow.cy.js[39m                                                            [90m(1 of 2)[39m
+[Django CI/build]   | 
+[Django CI/build]   | [0m[0m
+[Django CI/build]   | [0m  Flashcard Review Flow[0m
+[Django CI/build]   |   [32m  ✓[0m[90m successfully completes a review cycle[0m[90m (1548ms)[0m
+[Django CI/build]   |   [32m  ✓[0m[90m shows "all cards done" message if no cards are due[0m[90m (312ms)[0m
+[Django CI/build]   |   [32m  ✓[0m[90m displays an error message if submitting a review fails[0m[90m (544ms)[0m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [92m [0m[32m 3 passing[0m[90m (2s)[0m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [32m  ([4m[1mResults[22m[24m)[39m
+[Django CI/build]   | 
+[Django CI/build]   | [90m  ┌[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┐[39m
+[Django CI/build]   | [90m  │[39m [90mTests:[39m        [32m3[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mPassing:[39m      [32m3[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mFailing:[39m      [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mPending:[39m      [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mSkipped:[39m      [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mScreenshots:[39m  [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mVideo:[39m        [32mfalse[39m                                                                            [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mDuration:[39m     [32m2 seconds[39m                                                                        [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mSpec Ran:[39m     [32m[32mflashcard_flow.cy.js[32m[39m                                                             [90m│[39m
+[Django CI/build]   | [90m  └[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┘[39m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m
+[Django CI/build]   |                                                                                                     
+[Django CI/build]   |   Running:  [90mnavigation_and_data.cy.js[39m                                                       [90m(2 of 2)[39m
+[Django CI/build]   | 
+[Django CI/build]   | [0m[0m
+[Django CI/build]   | [0m  Navigation and Data Verification[0m
+[Django CI/build]   |   [32m  ✓[0m[90m navigates to Dashboard and verifies some basic stats exist[0m[90m (504ms)[0m
+[Django CI/build]   |   [32m  ✓[0m[90m navigates to Sentence List, verifies pagination, and navigates to Sentence Detail[0m[90m (349ms)[0m
+[Django CI/build]   |   [32m  ✓[0m[90m reflects review activity in Dashboard and Sentence Detail[0m[90m (2758ms)[0m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [92m [0m[32m 3 passing[0m[90m (4s)[0m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [32m  ([4m[1mResults[22m[24m)[39m
+[Django CI/build]   | 
+[Django CI/build]   | [90m  ┌[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┐[39m
+[Django CI/build]   | [90m  │[39m [90mTests:[39m        [32m3[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mPassing:[39m      [32m3[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mFailing:[39m      [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mPending:[39m      [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mSkipped:[39m      [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mScreenshots:[39m  [32m0[39m                                                                                [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mVideo:[39m        [32mfalse[39m                                                                            [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mDuration:[39m     [32m3 seconds[39m                                                                        [90m│[39m
+[Django CI/build]   | [90m  │[39m [90mSpec Ran:[39m     [32m[32mnavigation_and_data.cy.js[32m[39m                                                        [90m│[39m
+[Django CI/build]   | [90m  └[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┘[39m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | tput: No value for $TERM and no -T specified
+[Django CI/build]   | [90m====================================================================================================[39m
+[Django CI/build]   | 
+[Django CI/build]   | [0m  ([4m[1mRun Finished[22m[24m)[0m
+[Django CI/build]   | 
+[Django CI/build]   | 
+[Django CI/build]   | [90m   [39m    [90mSpec[39m                                              [90mTests[39m  [90mPassing[39m  [90mFailing[39m  [90mPending[39m  [90mSkipped[39m [90m [39m
+[Django CI/build]   | [90m  ┌[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┐[39m
+[Django CI/build]   | [90m  │[39m [32m✔[39m  [0mflashcard_flow.cy.js[0m                     [90m00:02[39m        [0m3[0m        [32m3[39m        [90m-[39m        [90m-[39m        [90m-[39m [90m│[39m
+[Django CI/build]   | [90m  ├[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┤[39m
+[Django CI/build]   | [90m  │[39m [32m✔[39m  [0mnavigation_and_data.cy.js[0m                [90m00:03[39m        [0m3[0m        [32m3[39m        [90m-[39m        [90m-[39m        [90m-[39m [90m│[39m
+[Django CI/build]   | [90m  └[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m─[39m[90m┘[39m
+[Django CI/build]   | [90m   [39m [32m✔[39m  [32mAll specs passed![39m                        [90m00:06[39m        [0m6[0m        [32m6[39m        [90m-[39m        [90m-[39m        [90m-[39m [90m [39m
+[Django CI/build]   | 
+[Django CI/build]   | Cypress E2E tests completed.
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  Bringing down Docker services... 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   | Stopping spanish_anki_frontend ... 
+[Django CI/build]   | Stopping spanish_anki_backend  ... 
+[Django CI/build]   | [2A[2KStopping spanish_anki_frontend ... [32mdone[0m[2B[1A[2KStopping spanish_anki_backend  ... [32mdone[0m[1BRemoving spanish_anki_frontend ... 
+[Django CI/build]   | Removing spanish_anki_backend  ... 
+[Django CI/build]   | [1A[2KRemoving spanish_anki_backend  ... [32mdone[0m[1B[2A[2KRemoving spanish_anki_frontend ... [32mdone[0m[2BRemoving network spanish_anki_app_net
+[Django CI/build]   | Docker services stopped.
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   |  All tests completed successfully! 
+[Django CI/build]   | ------------------------------------
+[Django CI/build]   ✅  Success - Main Run tests using docker-compose [1m27.993921156s]
+[Django CI/build] ⭐ Run Main Upload coverage to Codecov
+[Django CI/build]   🐳  docker cp src=/home/ben/.cache/act/codecov-codecov-action@v4.0.1/ dst=/var/run/act/actions/codecov-codecov-action@v4.0.1/
+[Django CI/build]   🐳  docker exec cmd=[/opt/acttoolcache/node/18.20.8/x64/bin/node /var/run/act/actions/codecov-codecov-action@v4.0.1/dist/index.js] user= workdir=
+[Django CI/build]   | ==> linux OS detected
+[Django CI/build]   | https://cli.codecov.io/latest/linux/codecov.SHA256SUM
+[Django CI/build]   | ==> Running version latest
+[Django CI/build]   | gpg: directory '/root/.gnupg' created
+[Django CI/build]   | gpg: keybox '/root/.gnupg/pubring.kbx' created
+[Django CI/build]   | gpg: /root/.gnupg/trustdb.gpg: trustdb created
+[Django CI/build]   | gpg: key 806BB28AED779869: public key "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" imported
+[Django CI/build]   | gpg: Total number processed: 1
+[Django CI/build]   | gpg:               imported: 1
+[Django CI/build]   | 
+[Django CI/build]   | Could not pull latest version information: SyntaxError: Unexpected token < in JSON at position 0
+[Django CI/build]   | ==> Running command '/run/act/actions/codecov-codecov-action@v4.0.1/dist/codecov create-commit'
+[Django CI/build]   | [command]/run/act/actions/codecov-codecov-action@v4.0.1/dist/codecov create-commit --slug beduffy/spanish
+[Django CI/build]   | gpg: Signature made Wed Apr  9 03:02:55 2025 UTC
+[Django CI/build]   | gpg:                using RSA key 27034E7FDB850E0BBC2C62FF806BB28AED779869
+[Django CI/build]   | gpg: Good signature from "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" [unknown]
+[Django CI/build]   | gpg: WARNING: This key is not certified with a trusted signature!
+[Django CI/build]   | gpg:          There is no indication that the signature belongs to the owner.
+[Django CI/build]   | Primary key fingerprint: 2703 4E7F DB85 0E0B BC2C  62FF 806B B28A ED77 9869
+[Django CI/build]   | 
+[Django CI/build]   | ==> Uploader SHASUM verified (0f7aadde579ebde1443ad2f977beada703f562997fdda603f213faf2a8559868  codecov)
+[Django CI/build]   | info - 2025-05-16 00:42:16,562 -- ci service found: github-actions
+[Django CI/build]   | warning - 2025-05-16 00:42:16,572 -- No config file could be found. Ignoring config.
+[Django CI/build]   | warning - 2025-05-16 00:42:16,599 -- Branch `master` is protected but no token was provided
+[Django CI/build]   | warning - 2025-05-16 00:42:16,599 -- For information on Codecov upload tokens, see https://docs.codecov.com/docs/codecov-tokens
+[Django CI/build]   | info - 2025-05-16 00:42:17,076 -- Process Commit creating complete
+[Django CI/build]   | Sentry is attempting to send 2 pending events
+[Django CI/build]   | Waiting up to 2 seconds
+[Django CI/build]   | Press Ctrl-C to quit
+[Django CI/build]   | ==> Running command '/run/act/actions/codecov-codecov-action@v4.0.1/dist/codecov create-report'
+[Django CI/build]   | [command]/run/act/actions/codecov-codecov-action@v4.0.1/dist/codecov create-report --slug beduffy/spanish
+[Django CI/build]   | info - 2025-05-16 00:42:17,985 -- ci service found: github-actions
+[Django CI/build]   | warning - 2025-05-16 00:42:17,997 -- No config file could be found. Ignoring config.
+[Django CI/build]   | info - 2025-05-16 00:42:18,515 -- Process Report creating complete
+[Django CI/build]   | info - 2025-05-16 00:42:18,517 -- Finished creating report successfully --- {"response": "{\"status\":\"queued\"}\n"}
+[Django CI/build]   | ==> Running command '/run/act/actions/codecov-codecov-action@v4.0.1/dist/codecov do-upload'
+[Django CI/build]   | [command]/run/act/actions/codecov-codecov-action@v4.0.1/dist/codecov do-upload -f ./anki_web_app/coverage.xml -r beduffy/spanish
+[Django CI/build]   | info - 2025-05-16 00:42:19,303 -- ci service found: github-actions
+[Django CI/build]   | warning - 2025-05-16 00:42:19,315 -- No config file could be found. Ignoring config.
+[Django CI/build]   | warning - 2025-05-16 00:42:19,344 -- xcrun is not installed or can't be found.
+[Django CI/build]   | warning - 2025-05-16 00:42:19,693 -- No gcov data found.
+[Django CI/build]   | warning - 2025-05-16 00:42:20,024 -- No coverage data found to transform
+[Django CI/build]   | warning - 2025-05-16 00:42:20,386 -- Some files were not found --- {"not_found_files": ["anki_web_app/coverage.xml"]}
+[Django CI/build]   | info - 2025-05-16 00:42:20,388 -- Found 0 coverage files to report
+[Django CI/build]   | Error: No coverage reports found. Please make sure you're generating reports successfully.
+[Django CI/build]   🚧  ::warning::Codecov: %0A                      Failed to properly upload report: The process '/run/act/actions/codecov-codecov-action@v4.0.1/dist/codecov' failed with exit code 1
+[Django CI/build]   ✅  Success - Main Upload coverage to Codecov [9.556449201s]
+[Django CI/build] ⭐ Run Post Set up Python 3.8
+[Django CI/build]   🐳  docker exec cmd=[/opt/acttoolcache/node/18.20.8/x64/bin/node /var/run/act/actions/actions-setup-python@v3/dist/cache-save/index.js] user= workdir=
+[Django CI/build]   ✅  Success - Post Set up Python 3.8 [155.631287ms]
+[Django CI/build] ⭐ Run Complete job
+[Django CI/build] Cleaning up container for job build
+[Django CI/build]   ✅  Success - Complete job
+[Django CI/build] 🏁  Job succeeded
