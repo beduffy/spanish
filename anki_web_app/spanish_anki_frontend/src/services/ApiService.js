@@ -18,6 +18,9 @@ apiClient.interceptors.request.use(
             const token = await SupabaseService.getAccessToken();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
+                console.debug('Added Authorization header to request:', config.url);
+            } else {
+                console.warn('No access token available for request:', config.url);
             }
         } catch (error) {
             console.warn('Failed to get access token:', error);
@@ -29,15 +32,17 @@ apiClient.interceptors.request.use(
     }
 );
 
-// Add response interceptor to handle 401 (unauthorized) errors
+// Add response interceptor to handle 401 (unauthorized) and 403 (forbidden) errors
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response?.status === 401) {
-            // User is not authenticated, redirect to login
+        if (error.response?.status === 401 || error.response?.status === 403) {
+            // User is not authenticated or lacks permission
             // Only redirect if not already on login page
             if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
+                // Don't auto-redirect, let the component handle it gracefully
+                // This allows components to show a message instead of forcing redirect
+                console.warn('Authentication required for:', error.config?.url);
             }
         }
         return Promise.reject(error);

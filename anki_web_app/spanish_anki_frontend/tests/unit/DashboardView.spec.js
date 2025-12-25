@@ -15,10 +15,10 @@ describe('DashboardView.vue', () => {
         reviews_this_week: 50,
         total_reviews_all_time: 500,
         overall_average_score: 0.85,
-        total_sentences: 2000,
-        sentences_learned: 200,
+        total_cards: 2000,
+        cards_learned: 200,
         percentage_learned: 10, // Assuming backend sends this as a whole number
-        sentences_mastered: 50,
+        cards_mastered: 50,
     };
 
     beforeEach(() => {
@@ -33,15 +33,15 @@ describe('DashboardView.vue', () => {
         // ApiService = { getStatistics: jest.fn(), otherMethod: jest.fn(), ... }
         // So, when DashboardView imports ApiService, it gets this mocked object.
 
-        // Let's ensure the getStatistics function on the (now mocked) ApiService object is a fresh jest.fn for each test run,
+        // Let's ensure the getCardStatistics function on the (now mocked) ApiService object is a fresh jest.fn for each test run,
         // and we can control its return value per test.
         // Note: If ApiService was a class, mocking would be different.
         // If the auto-mock is sufficient, we might not need this line, but it adds explicitness.
-        ApiService.getStatistics = jest.fn();
+        ApiService.getCardStatistics = jest.fn();
     });
 
     it('renders the dashboard title', async () => {
-        ApiService.getStatistics.mockResolvedValue({
+        ApiService.getCardStatistics.mockResolvedValue({
             status: 200,
             data: { reviews_today: 0 } // Minimal mock data
         });
@@ -52,17 +52,17 @@ describe('DashboardView.vue', () => {
         expect(wrapper.find('h1').text()).toBe('Dashboard');
     });
 
-    it('calls ApiService.getStatistics on mount', async () => { // Made async to allow for promise resolution if needed by mount
-        ApiService.getStatistics.mockResolvedValue({ status: 200, data: {} });
+    it('calls ApiService.getCardStatistics on mount', async () => { // Made async to allow for promise resolution if needed by mount
+        ApiService.getCardStatistics.mockResolvedValue({ status: 200, data: {} });
         wrapper = mount(DashboardView);
         // Allow mounted hook to complete if it has async parts before the expect()
         await new Promise(resolve => process.nextTick(resolve));
         await wrapper.vm.$nextTick();
-        expect(ApiService.getStatistics).toHaveBeenCalledTimes(1);
+        expect(ApiService.getCardStatistics).toHaveBeenCalledTimes(1);
     });
 
     it('renders loading message initially and fetches statistics', async () => {
-        ApiService.getStatistics.mockResolvedValue({ status: 200, data: mockStatistics });
+        ApiService.getCardStatistics.mockResolvedValue({ status: 200, data: mockStatistics });
         wrapper = mount(DashboardView);
 
         expect(wrapper.find('.loading-message').exists()).toBe(true);
@@ -72,13 +72,13 @@ describe('DashboardView.vue', () => {
         await new Promise(resolve => process.nextTick(resolve));
         await wrapper.vm.$nextTick();
 
-        expect(ApiService.getStatistics).toHaveBeenCalledTimes(1);
+        expect(ApiService.getCardStatistics).toHaveBeenCalledTimes(1);
         expect(wrapper.find('.loading-message').exists()).toBe(false);
         expect(wrapper.find('.statistics-grid').exists()).toBe(true);
     });
 
     it('displays statistics correctly after successful fetch', async () => {
-        ApiService.getStatistics.mockResolvedValue({ status: 200, data: mockStatistics });
+        ApiService.getCardStatistics.mockResolvedValue({ status: 200, data: mockStatistics });
         wrapper = mount(DashboardView);
 
         await new Promise(resolve => process.nextTick(resolve));
@@ -96,12 +96,18 @@ describe('DashboardView.vue', () => {
         expect(statCards.at(4).find('h2').text()).toBe('Avg. Score');
         expect(statCards.at(4).find('p').text()).toBe('0.85'); // From formatScore
 
-        expect(statCards.at(6).find('h2').text()).toBe('Sentences Learned');
-        expect(statCards.at(6).find('p').text()).toBe(`${mockStatistics.sentences_learned} (${mockStatistics.percentage_learned}%)`);
+        expect(statCards.at(5).find('h2').text()).toBe('Total Cards');
+        expect(statCards.at(5).find('p').text()).toBe(mockStatistics.total_cards.toString());
+
+        expect(statCards.at(6).find('h2').text()).toBe('Cards Learned');
+        expect(statCards.at(6).find('p').text()).toBe(`${mockStatistics.cards_learned} (${mockStatistics.percentage_learned}%)`);
+
+        expect(statCards.at(7).find('h2').text()).toBe('Cards Mastered');
+        expect(statCards.at(7).find('p').text()).toBe(mockStatistics.cards_mastered.toString());
     });
 
     it('displays error message if fetching statistics fails', async () => {
-        ApiService.getStatistics.mockRejectedValue(new Error('Network Error'));
+        ApiService.getCardStatistics.mockRejectedValue(new Error('Network Error'));
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
         wrapper = mount(DashboardView);
 
@@ -116,7 +122,7 @@ describe('DashboardView.vue', () => {
     });
 
     it('displays specific error message if API returns non-200 or no data', async () => {
-        ApiService.getStatistics.mockResolvedValue({ status: 201, data: null }); // Example of unexpected response
+        ApiService.getCardStatistics.mockResolvedValue({ status: 201, data: null }); // Example of unexpected response
         wrapper = mount(DashboardView);
 
         await new Promise(resolve => process.nextTick(resolve));
@@ -127,7 +133,7 @@ describe('DashboardView.vue', () => {
     });
 
     it('displays no data message if statistics are null and no error', async () => {
-        ApiService.getStatistics.mockResolvedValue({ status: 200, data: null });
+        ApiService.getCardStatistics.mockResolvedValue({ status: 200, data: null });
         wrapper = mount(DashboardView);
 
         await new Promise(resolve => process.nextTick(resolve));
@@ -142,7 +148,7 @@ describe('DashboardView.vue', () => {
     describe('formatScore method', () => {
         // Mount a temporary wrapper to access component methods
         beforeEach(() => {
-            ApiService.getStatistics.mockResolvedValue({ status: 200, data: mockStatistics }); // Prevent mount error
+            ApiService.getCardStatistics.mockResolvedValue({ status: 200, data: mockStatistics }); // Prevent mount error
             wrapper = mount(DashboardView);
         });
 
