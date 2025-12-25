@@ -21,26 +21,14 @@
           <textarea id="back" v-model="cardData.back" rows="3" required></textarea>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="language">Language</label>
-            <input type="text" id="language" v-model="cardData.language" placeholder="e.g., es, de" />
-          </div>
-
-          <div class="form-group">
-            <label for="tags">Tags (comma-separated)</label>
-            <input type="text" id="tags" v-model="tagsInput" placeholder="tag1, tag2, tag3" />
-          </div>
+        <div class="form-group">
+          <label for="tags">Tags (comma-separated)</label>
+          <input type="text" id="tags" v-model="tagsInput" placeholder="tag1, tag2, tag3" />
         </div>
 
         <div class="form-group">
           <label for="notes">Notes</label>
           <textarea id="notes" v-model="cardData.notes" rows="4"></textarea>
-        </div>
-
-        <div class="form-group">
-          <label for="source">Source</label>
-          <input type="text" id="source" v-model="cardData.source" placeholder="Where this card came from" />
         </div>
 
         <div v-if="!isEditMode" class="form-group checkbox-group">
@@ -77,10 +65,8 @@ export default {
       cardData: {
         front: '',
         back: '',
-        language: '',
         tags: [],
-        notes: '',
-        source: ''
+        notes: ''
       },
       tagsInput: '',
       createReverse: true,
@@ -106,10 +92,8 @@ export default {
           this.cardData = {
             front: response.data.front || '',
             back: response.data.back || '',
-            language: response.data.language || '',
             tags: response.data.tags || [],
-            notes: response.data.notes || '',
-            source: response.data.source || ''
+            notes: response.data.notes || ''
           };
           this.tagsInput = this.cardData.tags.join(', ');
           this.isEditMode = true;
@@ -136,22 +120,18 @@ export default {
       const payload = {
         front: this.cardData.front.trim(),
         back: this.cardData.back.trim(),
-        language: this.cardData.language.trim(),
         tags: tags,
-        notes: this.cardData.notes.trim(),
-        source: this.cardData.source.trim()
+        notes: this.cardData.notes.trim()
       };
 
       try {
         if (this.isEditMode) {
           await ApiService.updateCard(this.id, payload);
-          alert('Card updated successfully!');
         } else {
           await ApiService.createCard({
             ...payload,
             create_reverse: this.createReverse
           });
-          alert('Card created successfully!');
         }
         this.$router.push('/cards');
       } catch (error) {

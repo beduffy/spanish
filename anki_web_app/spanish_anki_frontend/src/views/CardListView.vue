@@ -23,8 +23,8 @@
             <th>ID</th>
             <th>Front</th>
             <th>Back</th>
-            <th>Language</th>
             <th>Tags</th>
+            <th>Mastery</th>
             <th>Status</th>
             <th>Next Review</th>
             <th>Reviews</th>
@@ -36,10 +36,18 @@
             <td>{{ card.card_id }}</td>
             <td class="text-preview">{{ card.front }}</td>
             <td class="text-preview">{{ card.back }}</td>
-            <td>{{ card.language || '-' }}</td>
             <td>
               <span v-for="tag in card.tags" :key="tag" class="tag-badge">{{ tag }}</span>
               <span v-if="!card.tags || card.tags.length === 0">-</span>
+            </td>
+            <td>
+              <span v-if="card.mastery_level" :class="`badge-mastery badge-mastery-${card.mastery_level.color}`" :title="card.mastery_level.indicator || ''">
+                {{ card.mastery_level.level }}
+                <span v-if="card.mastery_level.score !== null" class="mastery-score">
+                  ({{ card.mastery_level.score.toFixed(2) }})
+                </span>
+              </span>
+              <span v-else>-</span>
             </td>
             <td>
               <span :class="card.is_learning ? 'badge-learning' : 'badge-review'">
@@ -269,6 +277,50 @@ tr:hover {
   border-radius: 10px;
   font-size: 0.8em;
   font-weight: bold;
+}
+
+.badge-mastery {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.badge-mastery-green {
+  background-color: #28a745;
+  color: white;
+}
+
+.badge-mastery-blue {
+  background-color: #007bff;
+  color: white;
+}
+
+.badge-mastery-cyan {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.badge-mastery-yellow {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.badge-mastery-orange {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.badge-mastery-gray {
+  background-color: #6c757d;
+  color: white;
+}
+
+.mastery-score {
+  font-size: 0.85em;
+  opacity: 0.9;
+  margin-left: 4px;
 }
 
 .pagination-controls {

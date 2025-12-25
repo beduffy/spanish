@@ -29,16 +29,16 @@
         <p>{{ formatScore(statistics.overall_average_score) }}</p>
       </div>
       <div class="stat-card">
-        <h2>Total Sentences</h2>
-        <p>{{ statistics.total_sentences }}</p>
+        <h2>Total Cards</h2>
+        <p>{{ statistics.total_cards }}</p>
       </div>
       <div class="stat-card">
-        <h2>Sentences Learned</h2>
-        <p>{{ statistics.sentences_learned }} ({{ statistics.percentage_learned }}%)</p>
+        <h2>Cards Learned</h2>
+        <p>{{ statistics.cards_learned }} ({{ statistics.percentage_learned }}%)</p>
       </div>
       <div class="stat-card">
-        <h2>Sentences Mastered</h2>
-        <p>{{ statistics.sentences_mastered }}</p>
+        <h2>Cards Mastered</h2>
+        <p>{{ statistics.cards_mastered }}</p>
       </div>
     </div>
     <div v-if="!isLoading && !statistics && !errorMessage" class="no-data-message">
@@ -64,7 +64,8 @@ export default {
       this.isLoading = true;
       this.errorMessage = '';
       try {
-        const response = await ApiService.getStatistics();
+        // Use Card statistics endpoint instead of Sentence endpoint
+        const response = await ApiService.getCardStatistics();
         if (response.status === 200) {
           if (response.data) {
             this.statistics = response.data;

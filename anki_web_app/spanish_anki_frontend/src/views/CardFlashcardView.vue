@@ -1,6 +1,6 @@
 <template>
   <div class="flashcard-view">
-    <h1>Card Review (v2)</h1>
+    <h1>Card Review</h1>
 
     <div v-if="isLoading" class="loading-message">
       <p>Loading next card...</p>
