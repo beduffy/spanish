@@ -8,9 +8,30 @@ echo "Starting backend and frontend services using Docker environment..."
 # If your docker-compose.yml is elsewhere, adjust PROJECT_ROOT or cd accordingly.
 PROJECT_ROOT=$(pwd)
 
-# Use docker-compose (v1, hyphenated) command
-# If you use Docker Compose V2 (docker compose), change this to "docker compose"
-DC_COMMAND="docker-compose"
+# Prefer Docker Compose V2 plugin (`docker compose`) if available.
+# Otherwise, use `docker-compose` if it runs successfully.
+#
+# Note: Python `docker-compose` v1 can break due to `docker` Python SDK incompatibilities
+# (e.g., `kwargs_from_env() got an unexpected keyword argument 'ssl_version'`).
+if docker compose version >/dev/null 2>&1; then
+  DC_COMMAND="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+  if docker-compose version >/dev/null 2>&1; then
+    DC_COMMAND="docker-compose"
+  else
+    echo "ERROR: `docker-compose` exists but failed to run."
+    echo ""
+    echo "Fix options:"
+    echo "  - Install Docker Compose v2 plugin (recommended): sudo apt-get install -y docker-compose-plugin"
+    echo "  - Or remove the broken Python docker-compose v1 from your PATH and install a newer Compose"
+    exit 1
+  fi
+else
+  echo "ERROR: Docker Compose not found."
+  echo "Install Docker Compose v2 (recommended):"
+  echo "  - Ubuntu/Debian plugin: sudo apt-get install -y docker-compose-plugin"
+  exit 1
+fi
 
 # Cleanup previous runs, if any (optional, but good practice)
 echo ""
