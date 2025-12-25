@@ -198,15 +198,15 @@ export default {
       
       // If already expanded, collapse
       if (this.expandedCards[cardId]) {
-        this.$set(this.expandedCards, cardId, false);
+        this.expandedCards[cardId] = false;
         return;
       }
       
       // Expand and fetch reviews if not already loaded
-      this.$set(this.expandedCards, cardId, true);
+      this.expandedCards[cardId] = true;
       
       if (!this.cardReviews[cardId] && !this.loadingReviews[cardId]) {
-        this.$set(this.loadingReviews, cardId, true);
+        this.loadingReviews[cardId] = true;
         try {
           const response = await ApiService.getCardDetails(cardId);
           if (response.status === 200 && response.data && response.data.reviews) {
@@ -214,15 +214,15 @@ export default {
             const reviews = [...response.data.reviews].sort((a, b) => {
               return new Date(b.review_timestamp) - new Date(a.review_timestamp);
             });
-            this.$set(this.cardReviews, cardId, reviews);
+            this.cardReviews[cardId] = reviews;
           } else {
-            this.$set(this.cardReviews, cardId, []);
+            this.cardReviews[cardId] = [];
           }
         } catch (error) {
           console.error(`Error fetching reviews for card ${cardId}:`, error);
-          this.$set(this.cardReviews, cardId, []);
+          this.cardReviews[cardId] = [];
         } finally {
-          this.$set(this.loadingReviews, cardId, false);
+          this.loadingReviews[cardId] = false;
         }
       }
     },
