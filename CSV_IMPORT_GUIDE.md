@@ -1,5 +1,29 @@
 # CSV Import Guide
 
+## Quick Answer
+
+**Minimum required CSV format:**
+```csv
+front,back
+hola,hello
+adiós,goodbye
+```
+
+That's it! Just two columns: `front` and `back`. Everything else is optional.
+
+**You don't need TSV** - CSV (comma-separated) works fine. TSV is only useful if your data contains commas.
+
+**The web interface has a preview feature** - Upload your CSV, click "Preview File", and it will show you:
+- What columns are available in your file
+- A preview of the first 5 rows  
+- Total number of rows
+
+Then you just select which column is "front" and which is "back" from a dropdown. **You don't need to name your columns exactly "front" and "back"** - you can use any column names (like "Spanish", "English", "Question", "Answer", etc.) and just tell the system which one to use.
+
+**When to use bulk import vs one-by-one:**
+- **One-by-one**: Better when you're learning, adding cards as you encounter new words
+- **Bulk import**: Better for importing existing word lists, vocabulary from textbooks, or exporting from other apps
+
 ## Overview
 
 The CSV import feature allows you to bulk import cards from a CSV file. You can import cards with just the required fields (front/back) or include optional fields like tags, notes, and source.

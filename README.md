@@ -158,11 +158,22 @@ For a detailed breakdown of the testing plan for each component and phase, see t
 2.  **Accessing the App:**
     *   Frontend: `http://localhost:8080`
     *   Backend API: `http://localhost:8000` (e.g., `http://localhost:8000/api/flashcards/statistics/`)
-3.  **Initial Data Import (run once after starting services):**
+3.  **Import Cards:**
+
+    **Option A: Import via Web UI (Recommended for Card model)**
+    - Navigate to "Import Cards" in the web interface
+    - Upload a CSV file (see `CSV_IMPORT_GUIDE.md` for format details)
+    - Click "Preview File" to see available columns
+    - Select which columns contain "front" and "back"
+    - Click "Import Cards"
+
+    **Option B: Import via Management Command (Legacy - for Sentence model only)**
     ```bash
     docker-compose exec backend python manage.py import_csv data/your_csv_file_name.csv
     ```
-    (Replace `your_csv_file_name.csv` with your actual CSV file located in `anki_web_app/data/`)
+    (This is for the legacy Sentence model. For Card model, use the web UI import.)
+
+    See `CSV_IMPORT_GUIDE.md` for detailed CSV format requirements and examples.
 4.  **Viewing Logs:**
     ```bash
     # All services
