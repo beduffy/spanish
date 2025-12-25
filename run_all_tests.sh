@@ -13,13 +13,35 @@ echo "Starting all tests using Docker environment..."
 # Ensure DOCKER_HOST is set if not already (useful for some CI environments or local setups)
 export DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
 
+# Prefer Docker Compose V2 plugin (`docker compose`) if available.
+# Otherwise, use `docker-compose` if it runs successfully.
+if docker compose version >/dev/null 2>&1; then
+    DC_COMMAND="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+    if docker-compose version >/dev/null 2>&1; then
+        DC_COMMAND="docker-compose"
+    else
+        echo "ERROR: `docker-compose` exists but failed to run."
+        echo ""
+        echo "Fix options:"
+        echo "  - Install Docker Compose v2 plugin (recommended): sudo apt-get install -y docker-compose-plugin"
+        echo "  - Or remove the broken Python docker-compose v1 from your PATH and install a newer Compose"
+        exit 1
+    fi
+else
+    echo "ERROR: Docker Compose not found."
+    echo "Install Docker Compose v2 (recommended):"
+    echo "  - Ubuntu/Debian plugin: sudo apt-get install -y docker-compose-plugin"
+    exit 1
+fi
+
 print_message "Bringing down any existing Docker services..."
-docker-compose down --remove-orphans || echo "No existing services to bring down or an error occurred during down. Continuing..."
+$DC_COMMAND down --remove-orphans || echo "No existing services to bring down or an error occurred during down. Continuing..."
 
 print_message "Building and starting Docker services in detached mode..."
 # Build and start services in detached mode
 # Force rebuild of images to pick up any changes
-docker-compose up --build -d
+$DC_COMMAND up --build -d
 
 # Give services a moment to initialize (e.g., database migrations, servers to start)
 print_message "Waiting for services to initialize (e.g., database migrations, servers to start)..."
@@ -30,9 +52,9 @@ ELAPSED_TIME=0
 
 # Output some initial logs to help diagnose startup issues
 echo "Showing logs for the backend service shortly after startup:"
-docker-compose logs --tail="20" backend || echo "Could not get backend logs yet."
+$DC_COMMAND logs --tail="20" backend || echo "Could not get backend logs yet."
 echo "Showing logs for the frontend service shortly after startup:"
-docker-compose logs --tail="20" frontend || echo "Could not get frontend logs yet."
+$DC_COMMAND logs --tail="20" frontend || echo "Could not get frontend logs yet."
 
 
 # A more robust wait: check for a specific log message or port availability if possible.
@@ -51,16 +73,16 @@ sleep $SLEEP_SECONDS
 print_message "Phase 1: Backend Django tests"
 echo "Running backend Django tests with coverage inside the 'backend' container..."
 # The command to run tests and generate coverage.xml. Output will be in /app/coverage.xml inside the container.
-docker-compose exec -T backend coverage run manage.py test flashcards --noinput
+$DC_COMMAND exec -T backend coverage run manage.py test flashcards --noinput
 # Generate XML report from coverage data
-docker-compose exec -T backend coverage xml -o /app/coverage.xml
+$DC_COMMAND exec -T backend coverage xml -o /app/coverage.xml
 echo "Backend Django tests completed and coverage report generated (coverage.xml in anki_web_app/)."
 
 
 # --- Phase 1.5: Seed data for E2E tests ---
 print_message "Phase 1.5: Seeding database for E2E tests"
 echo "Running seed_e2e_data management command inside the 'backend' container..."
-docker-compose exec -T backend python manage.py seed_e2e_data
+$DC_COMMAND exec -T backend python manage.py seed_e2e_data
 echo "E2E data seeding completed."
 
 
@@ -68,7 +90,7 @@ echo "E2E data seeding completed."
 print_message "Phase 2: Frontend Unit tests (Jest)"
 echo "Running frontend unit tests (Jest) inside the 'frontend' container..."
 # The frontend service in docker-compose.yml should be using the 'build-stage' which has Node installed.
-docker-compose exec -T frontend npm run test:unit
+$DC_COMMAND exec -T frontend npm run test:unit
 echo "Frontend unit tests completed."
 
 
@@ -113,7 +135,7 @@ fi
 
 print_message "Bringing down Docker services..."
 # Stop and remove containers, networks, volumes, and images created by `up`.
-docker-compose down --remove-orphans
+$DC_COMMAND down --remove-orphans
 
 echo "Docker services stopped."
 print_message "All tests completed successfully!"
