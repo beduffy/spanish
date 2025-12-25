@@ -59,7 +59,6 @@
 
 <script>
 import SupabaseService from '@/services/SupabaseService';
-import { useRouter } from 'vue-router';
 
 export default {
   name: 'LoginView',

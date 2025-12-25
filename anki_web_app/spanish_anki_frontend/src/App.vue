@@ -48,7 +48,7 @@ export default {
   async mounted() {
     await this.checkUser()
     // Listen for auth state changes
-    SupabaseService.onAuthStateChange((event, session) => {
+    SupabaseService.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') {
         this.checkUser()
       } else if (event === 'SIGNED_OUT') {
