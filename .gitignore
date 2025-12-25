@@ -3,3 +3,9 @@ node_modules/
 **/node_modules/
 coverage.xml
 .coverage
+.env
+.env.local
+.env.*.local
+
+# Local nginx configuration (contains local paths and settings)
+nginx_spanish_anki_local_test.conf

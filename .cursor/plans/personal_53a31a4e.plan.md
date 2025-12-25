@@ -232,6 +232,8 @@ Recommendation: treat v2 as **Anki-like review engine + your custom UX/KPIs**, n
   - Use **sentences** to make recall robust + prevent “dictionary knowledge”.
 - **Scoring**: keep 0/0.5/1 as shortcuts if 0–1 feels too fuzzy; you can still store it as float.
 
+## everything testable!!!
+
 ## What I need from you when we start executing
 
 - Supabase project created (or we create one together): URL + anon key + service role key (kept server-side).
