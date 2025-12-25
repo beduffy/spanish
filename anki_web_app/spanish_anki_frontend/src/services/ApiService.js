@@ -1,4 +1,5 @@
 import axios from 'axios';
+import SupabaseService from './SupabaseService';
 
 const API_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000/api/flashcards';
 
@@ -9,6 +10,39 @@ const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+// Add request interceptor to include Authorization header with Supabase token
+apiClient.interceptors.request.use(
+    async (config) => {
+        try {
+            const token = await SupabaseService.getAccessToken();
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        } catch (error) {
+            console.warn('Failed to get access token:', error);
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Add response interceptor to handle 401 (unauthorized) errors
+apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        if (error.response?.status === 401) {
+            // User is not authenticated, redirect to login
+            // Only redirect if not already on login page
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 export default {
     getNextCard() {
@@ -33,12 +67,67 @@ export default {
         return apiClient.get('/statistics/');
     },
 
+    getNextCardV2() {
+        return apiClient.get('/cards/next-card/');
+    },
+
+    submitCardReview(cardId, score, userCommentAddon, typedInput) {
+        return apiClient.post('/cards/submit-review/', {
+            card_id: cardId,
+            user_score: score,
+            user_comment_addon: userCommentAddon,
+            typed_input: typedInput,
+        });
+    },
+
+    getCardStatistics() {
+        return apiClient.get('/cards/statistics/');
+    },
+
     getAllSentences(page = 1) {
         return apiClient.get(`/sentences/?page=${page}`);
     },
 
     getSentenceDetails(sentenceId) {
         return apiClient.get(`/sentences/${sentenceId}/`);
+    },
+
+    getAllCards(page = 1) {
+        return apiClient.get(`/cards/?page=${page}`);
+    },
+
+    getCardDetails(cardId) {
+        return apiClient.get(`/cards/${cardId}/`);
+    },
+
+    createCard(cardData) {
+        return apiClient.post('/cards/', cardData);
+    },
+
+    updateCard(cardId, cardData) {
+        return apiClient.put(`/cards/${cardId}/update/`, cardData);
+    },
+
+    deleteCard(cardId) {
+        return apiClient.delete(`/cards/${cardId}/delete/`);
+    },
+
+    importCards(file, frontColumn, backColumn, language = '', createReverse = true, delimiter = null, previewOnly = false) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('front_column', frontColumn);
+        formData.append('back_column', backColumn);
+        formData.append('language', language);
+        formData.append('create_reverse', createReverse);
+        formData.append('preview_only', previewOnly);
+        if (delimiter) {
+            formData.append('delimiter', delimiter);
+        }
+        return apiClient.post('/cards/import/', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
     },
 
     // Example of how to handle potential Django CSRF if not using Django Rest Framework's session auth
