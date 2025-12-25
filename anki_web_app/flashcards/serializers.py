@@ -121,6 +121,7 @@ class CardSerializer(serializers.ModelSerializer):
     average_score = serializers.SerializerMethodField()
     last_reviewed_date = serializers.SerializerMethodField()
     mastery_level = serializers.SerializerMethodField()
+    linked_card = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
 
     class Meta:
         model = Card
@@ -147,7 +148,7 @@ class CardSerializer(serializers.ModelSerializer):
             'consecutive_correct_reviews',
             'mastery_level',
         ]
-        read_only_fields = ['card_id', 'pair_id', 'linked_card', 'next_review_date', 'is_learning', 
+        read_only_fields = ['card_id', 'pair_id', 'next_review_date', 'is_learning', 
                            'interval_days', 'total_reviews', 'ease_factor', 'creation_date', 
                            'last_modified_date', 'total_score_sum', 'consecutive_correct_reviews']
 
