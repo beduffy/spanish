@@ -19,6 +19,14 @@ FROM node:18-alpine as production-build
 
 WORKDIR /app
 
+# Accept build arguments for Supabase configuration
+ARG SUPABASE_URL
+ARG SUPABASE_ANON_KEY
+
+# Set as environment variables for the build process
+ENV VUE_APP_SUPABASE_URL=${SUPABASE_URL}
+ENV VUE_APP_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+
 COPY package*.json ./
 
 RUN npm install --production=false

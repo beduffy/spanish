@@ -24,6 +24,9 @@ from .serializers import (
 from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class UserScopedMixin:
@@ -753,4 +756,27 @@ class StudySessionListAPIView(APIView):
         return Response({
             'sessions': sessions_data,
             'total_sessions': len(sessions_data),
+        }, status=status.HTTP_200_OK)
+
+
+class CurrentUserAPIView(APIView):
+    """
+    API endpoint to get the current authenticated user information.
+    Useful for verifying authentication is working correctly.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        Return information about the currently authenticated user.
+        """
+        user = request.user
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_authenticated': user.is_authenticated,
+            'is_anonymous': user.is_anonymous,
         }, status=status.HTTP_200_OK)

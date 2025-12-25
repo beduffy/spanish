@@ -1,7 +1,21 @@
 import axios from 'axios';
 import SupabaseService from './SupabaseService';
 
-const API_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8000/api/flashcards';
+// API URL: Use environment variable or detect based on current host
+const getApiUrl = () => {
+  // If explicitly set, use it
+  if (process.env.VUE_APP_API_BASE_URL) {
+    return process.env.VUE_APP_API_BASE_URL;
+  }
+  // In production (deployed), use relative URL which will be proxied by nginx
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return '/api/flashcards';
+  }
+  // Development: use localhost
+  return 'http://localhost:8000/api/flashcards';
+};
+
+const API_URL = getApiUrl();
 
 // Helper function to handle API requests
 const apiClient = axios.create({
@@ -119,6 +133,10 @@ export default {
 
     getCardDetails(cardId) {
         return apiClient.get(`/cards/${cardId}/`);
+    },
+
+    getCurrentUser() {
+        return apiClient.get('/current-user/');
     },
 
     createCard(cardData) {

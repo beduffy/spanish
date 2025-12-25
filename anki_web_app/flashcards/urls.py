@@ -17,6 +17,7 @@ from .views import (
     StudySessionHeartbeatAPIView,
     StudySessionEndAPIView,
     StudySessionListAPIView,
+    CurrentUserAPIView,
 )
 
 app_name = 'flashcards'
@@ -40,5 +41,6 @@ urlpatterns = [
     path('sessions/start/', StudySessionStartAPIView.as_view(), name='study_session_start_api'),
     path('sessions/heartbeat/', StudySessionHeartbeatAPIView.as_view(), name='study_session_heartbeat_api'),
     path('sessions/end/', StudySessionEndAPIView.as_view(), name='study_session_end_api'),
+    path('current-user/', CurrentUserAPIView.as_view(), name='current_user_api'),
     # Other flashcard app API endpoints will go here
 ] 
