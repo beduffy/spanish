@@ -2,13 +2,13 @@
   <div v-if="user" class="greeting">
     Hello {{ user.email }}
   </div>
-  <nav>
+  <nav v-if="user">
     <router-link to="/">Review Cards</router-link> | 
     <router-link to="/cards">All Cards</router-link> |
     <router-link to="/dashboard">Dashboard</router-link> |
     <router-link to="/reader">Reader</router-link> |
-    <router-link to="/calendar">Calendar</router-link>
-    <span v-if="user" class="user-info">
+    <router-link to="/calendar">Calendar</router-link> |
+    <span class="user-info">
       <button @click="toggleTheme" class="theme-toggle-btn" :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
         {{ isDarkMode ? '☀️' : '🌙' }}
       </button>
