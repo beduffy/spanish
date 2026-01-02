@@ -89,8 +89,10 @@ jobs:
         retention-days: 7 # Optional: how long to keep the artifacts
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4.0.1
+      continue-on-error: true  # Don't fail CI if Codecov upload fails (known GPG issues)
+      uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: ${{ github.repository }}
-        files: ./anki_web_app/coverage.xml # Explicitly point to the coverage file 
+        files: ./anki_web_app/coverage.xml # Explicitly point to the coverage file
+        fail_ci_if_error: false  # Don't fail CI on Codecov errors 
