@@ -390,7 +390,10 @@ Based on the implementation plan, the next phases are:
 - ✅ Translation integration (DeepL)
 - ✅ Token click and flashcard creation
 - ✅ Context storage in flashcards
-- ⏳ TTS audio generation (basic implementation exists, needs completion)
+- ✅ TTS audio generation (Google Cloud TTS + ElevenLabs fallback)
+- ✅ Audio player with listening time tracking
+- ✅ UI polish and animations
+- ✅ Comprehensive test coverage (33 new tests)
 - ⏳ YouTube transcript extraction
 - ⏳ Advanced phrase selection
 
@@ -416,3 +419,270 @@ docker-compose restart backend
 ```bash
 docker-compose exec backend python manage.py shell -c "from flashcards.models import Lesson, Token, Phrase; print('Lesson table exists:', Lesson._meta.db_table)"
 ```
+
+---
+
+## Week 3 Implementation: TTS Integration & Audio Player (January 2, 2026)
+
+### Completed Features
+
+#### 1. Enhanced TTS Integration
+- **Google Cloud TTS**: Primary TTS service with proper language code mapping
+- **ElevenLabs Fallback**: Automatic fallback to ElevenLabs if Google TTS is unavailable
+- **Language Code Mapping**: Proper mapping from language codes (de, es, fr, etc.) to TTS format (de-DE, es-ES, etc.)
+- **Error Handling**: Improved error messages and fallback logic
+
+**Files Modified:**
+- `anki_web_app/flashcards/tts_service.py` - Added ElevenLabs support and improved error handling
+- `anki_web_app/flashcards/views.py` - Fixed language code mapping in `GenerateTTSAPIView`
+- `anki_web_app/requirements.txt` - Added `google-cloud-texttospeech==2.16.3`
+
+#### 2. Listening Time Tracking
+- **Database Fields**: Added `total_listening_time_seconds` and `last_listened_at` to Lesson model
+- **API Endpoint**: New `/api/flashcards/reader/lessons/<id>/listening-time/` endpoint
+- **Frontend Tracking**: Automatic tracking of play/pause events with 5-second update intervals
+- **Migration**: Created `0008_add_listening_time_tracking.py`
+
+**Files Modified:**
+- `anki_web_app/flashcards/models.py` - Added listening time fields
+- `anki_web_app/flashcards/views.py` - Added `UpdateListeningTimeAPIView`
+- `anki_web_app/flashcards/serializers.py` - Added listening time fields and formatted display
+- `anki_web_app/flashcards/urls.py` - Added listening time endpoint
+- `anki_web_app/spanish_anki_frontend/src/services/ApiService.js` - Added `updateListeningTime` method
+
+#### 3. Enhanced Audio Player UI
+- **Controls**: Play/pause button with visual state indication
+- **Progress Bar**: Seekable slider for audio navigation
+- **Time Display**: Current time / total duration (MM:SS format)
+- **Listening Stats**: Displays total listening time in lesson header
+- **Auto-update**: Listening time updates automatically during playback
+
+**Files Modified:**
+- `anki_web_app/spanish_anki_frontend/src/views/ReaderView.vue` - Complete audio player overhaul
+
+#### 4. UI Polish & Animations
+- **Token Animations**: Click animations and hover effects
+- **Popover Styling**: Fade-in animations and improved shadows
+- **Loading States**: Spinners for lesson loading and translation loading
+- **Mobile Responsiveness**: Responsive layout for audio controls, lesson grid, and popover
+- **Visual Feedback**: Enhanced token highlighting with animations
+
+**Files Modified:**
+- `anki_web_app/spanish_anki_frontend/src/views/ReaderView.vue` - Added animations and responsive styles
+
+#### 5. Google Cloud TTS Setup
+- **Credentials Configuration**: Mounted credentials file in Docker
+- **Environment Variables**: Configured `GOOGLE_TTS_CREDENTIALS_PATH`
+- **Default Selection**: TTS generation checkbox defaults to checked
+- **Redirect Behavior**: After lesson import, redirects to reader list (not lesson detail)
+
+**Files Modified:**
+- `docker-compose.yml` - Added credentials mount and environment variables
+- `anki_web_app/spanish_anki_frontend/src/views/LessonImportView.vue` - Default TTS enabled, redirect to reader list
+
+**Documentation Created:**
+- `docs/GOOGLE_TTS_SETUP.md` - Detailed setup guide
+- `docs/GOOGLE_TTS_QUICKSTART.md` - Quick reference
+
+### Deployment Checklist
+
+#### Pre-Deployment
+
+1. **Google Cloud TTS Credentials**:
+   - Ensure credentials file is available on the server: `~/.google-cloud/google-tts-credentials.json`
+   - File should have read permissions: `chmod 644 ~/.google-cloud/google-tts-credentials.json`
+   - Verify credentials have "Cloud Text-to-Speech API User" role
+
+2. **Environment Variables** (in production `.env` or deployment config):
+   ```bash
+   GOOGLE_TTS_CREDENTIALS_PATH=/app/google-tts-credentials.json
+   ELEVENLABS_API_KEY=your_key_here  # Optional fallback
+   ```
+
+3. **Docker Compose Production** (`docker-compose.prod.yml`):
+   ```yaml
+   services:
+     backend:
+       volumes:
+         - ~/.google-cloud/google-tts-credentials.json:/app/google-tts-credentials.json:ro
+       environment:
+         - GOOGLE_TTS_CREDENTIALS_PATH=/app/google-tts-credentials.json
+   ```
+
+4. **Database Migrations**:
+   ```bash
+   docker-compose exec backend python manage.py migrate
+   ```
+
+5. **Media Storage**:
+   - Ensure `MEDIA_ROOT` is writable: `chmod 755 /path/to/media`
+   - TTS audio files will be stored in `media/tts/` directory
+   - Configure web server (Nginx) to serve media files:
+     ```nginx
+     location /media/ {
+         alias /path/to/media/;
+     }
+     ```
+
+#### Deployment Steps
+
+1. **Pull Latest Code**:
+   ```bash
+   git pull origin main
+   ```
+
+2. **Rebuild Backend Container** (to install google-cloud-texttospeech):
+   ```bash
+   docker-compose -f docker-compose.prod.yml build backend
+   docker-compose -f docker-compose.prod.yml up -d backend
+   ```
+
+3. **Run Migrations**:
+   ```bash
+   docker-compose -f docker-compose.prod.yml exec backend python manage.py migrate
+   ```
+
+4. **Verify TTS Setup**:
+   ```bash
+   # Check credentials file is accessible
+   docker-compose -f docker-compose.prod.yml exec backend ls -la /app/google-tts-credentials.json
+   
+   # Test TTS initialization
+   docker-compose -f docker-compose.prod.yml exec backend python -c "from google.cloud import texttospeech; import os; client = texttospeech.TextToSpeechClient.from_service_account_file(os.getenv('GOOGLE_TTS_CREDENTIALS_PATH')); print('✓ TTS initialized')"
+   ```
+
+5. **Check Logs**:
+   ```bash
+   docker-compose -f docker-compose.prod.yml logs backend | grep -i tts
+   ```
+
+#### Production Considerations
+
+1. **Media File Serving**:
+   - TTS audio files are stored in Django's `MEDIA_ROOT`
+   - Ensure Nginx/Apache is configured to serve `/media/` URLs
+   - Consider using cloud storage (S3, GCS) for production scalability
+
+2. **TTS Costs**:
+   - Google Cloud TTS free tier: 4M chars/month (Standard), 1M chars/month (WaveNet)
+   - Monitor usage in Google Cloud Console
+   - Set up billing alerts if approaching limits
+
+3. **ElevenLabs Alternative**:
+   - If Google TTS quota exceeded, system automatically falls back to ElevenLabs
+   - Configure `ELEVENLABS_API_KEY` environment variable
+   - ElevenLabs pricing: $11/mo for ~200 minutes
+
+4. **Audio File Cleanup**:
+   - Audio files are cached by text hash (MD5)
+   - Same text generates same audio file (reused)
+   - Consider periodic cleanup of unused audio files
+
+5. **Error Handling**:
+   - TTS failures are logged but don't block lesson creation
+   - Users see warning message if TTS generation fails
+   - Check backend logs for detailed error messages
+
+### Testing Checklist
+
+- [ ] Import lesson with TTS enabled
+- [ ] Verify audio file is generated and stored
+- [ ] Test audio playback in reader view
+- [ ] Verify listening time tracking updates
+- [ ] Test progress bar and seek functionality
+- [ ] Verify mobile responsiveness
+- [ ] Test TTS generation failure fallback
+- [ ] Verify redirect to reader list after import
+
+### Known Issues & Future Improvements
+
+1. **Audio URL Format**: Currently uses Django's `MEDIA_URL` - ensure it's absolute URL in production
+2. **Large Text Handling**: Very long lessons may hit TTS character limits - consider chunking
+3. **Audio Quality**: Currently uses Standard voices - could upgrade to WaveNet for better quality
+4. **Caching**: Audio files are cached by text hash - consider adding cache headers for browser caching
+5. **Error Recovery**: If TTS fails during import, user can manually trigger TTS generation later
+
+### Critical Deployment Step: Enable Google Cloud TTS API
+
+**Before deploying, you MUST enable the Text-to-Speech API in Google Cloud Console:**
+
+1. Go to: https://console.cloud.google.com/apis/library/texttospeech.googleapis.com
+2. Select your project (the one matching your credentials file - check the project ID in your JSON credentials)
+3. Click **Enable**
+4. Wait 2-5 minutes for the API to be fully activated
+
+**If you see error "SERVICE_DISABLED" or "API has not been used":**
+- The API is not enabled - this is the most common issue
+- Enable it using the link above or the URL provided in the error message
+- Wait a few minutes after enabling before retrying
+
+**Verify API is enabled:**
+- Check in Google Cloud Console under APIs & Services > Enabled APIs
+- Test TTS generation - should work after API is enabled
+
+### Files Changed Summary
+
+**Backend:**
+- `anki_web_app/flashcards/models.py` - Added listening time fields
+- `anki_web_app/flashcards/views.py` - TTS improvements, listening time endpoint
+- `anki_web_app/flashcards/serializers.py` - Added listening time serialization
+- `anki_web_app/flashcards/tts_service.py` - ElevenLabs fallback, improved error handling
+- `anki_web_app/flashcards/urls.py` - Added listening time route
+- `anki_web_app/flashcards/migrations/0008_add_listening_time_tracking.py` - New migration
+- `anki_web_app/requirements.txt` - Added google-cloud-texttospeech
+
+**Frontend:**
+- `anki_web_app/spanish_anki_frontend/src/views/ReaderView.vue` - Audio player, listening tracking, UI polish
+- `anki_web_app/spanish_anki_frontend/src/views/LessonImportView.vue` - Default TTS enabled, redirect fix
+- `anki_web_app/spanish_anki_frontend/src/services/ApiService.js` - Added listening time method
+
+**Configuration:**
+- `docker-compose.yml` - Added credentials mount and TTS environment variables
+
+**Documentation:**
+- `docs/GOOGLE_TTS_SETUP.md` - Detailed setup guide
+- `docs/GOOGLE_TTS_QUICKSTART.md` - Quick reference
+
+### Testing
+
+**Test Coverage Added:**
+- Created comprehensive test suite in `anki_web_app/flashcards/tests_reader.py`
+- **33 new tests** covering all reader features:
+  - Tokenization utility tests (4 tests)
+  - Lesson model tests (3 tests)
+  - Token model tests (2 tests)
+  - Lesson API tests (6 tests)
+  - Translation API tests (2 tests)
+  - Token click API tests (3 tests)
+  - Add to flashcards API tests (2 tests)
+  - TTS API tests (3 tests)
+  - Listening time API tests (3 tests)
+  - Translation service tests (2 tests)
+  - TTS service tests (3 tests)
+
+**Test Files:**
+- `anki_web_app/flashcards/tests_reader.py` - All reader feature tests
+
+**Running Reader Tests:**
+```bash
+# Run all reader tests
+docker-compose exec backend python manage.py test flashcards.tests_reader
+
+# Run specific test class
+docker-compose exec backend python manage.py test flashcards.tests_reader.LessonAPITests
+
+# Run with verbose output
+docker-compose exec backend python manage.py test flashcards.tests_reader -v 2
+```
+
+**Test Coverage:**
+- ✅ Tokenization (normalize, tokenize with punctuation, offsets)
+- ✅ Lesson CRUD operations (create, list, detail, user scoping)
+- ✅ Token operations (create, click tracking)
+- ✅ Translation API (success, failure, caching)
+- ✅ TTS generation (success, failure, lesson not found)
+- ✅ Listening time tracking (update, accumulate, not found)
+- ✅ Add to flashcards integration (card creation, notes)
+- ✅ User scoping (users can only access their own lessons/tokens)
+
+All tests pass successfully! ✅
