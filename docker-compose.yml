@@ -8,6 +8,7 @@ services:
     volumes:
       - ./anki_web_app:/app # Mounts the host's anki_web_app directory to /app in the container for development (hot-reloading for Python code)
       - ./data:/app/data # Mounts the host's data directory to /app/data in the container for CSV and DB persistence
+      - ~/.google-cloud/google-tts-credentials.json:/app/google-tts-credentials.json:ro # Google Cloud TTS credentials
       # Note: .env file is not mounted - settings.py reads from environment variables or uses defaults (optional, will use defaults if not present)
       # - db_data:/app/anki_web_app/data # Example for a named volume if you want Docker to manage it
     ports:
@@ -24,12 +25,16 @@ services:
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       # DeepL Translation API
       - DEEPL_API_KEY=${DEEPL_API_KEY:-e2cb5fbb-69e4-483b-8d16-e768ef87c8aa:fx}
+      # TTS Services
+      - GOOGLE_TTS_CREDENTIALS_PATH=/app/google-tts-credentials.json
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID:-21m00Tcm4TlvDq8ikWAM}
       # - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings # If needed
     networks:
       - app_services_network
     # Add healthcheck to ensure backend is ready
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 8000)); s.close()"]
+      test: [ "CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 8000)); s.close()" ]
       interval: 10s
       timeout: 5s
       retries: 5
