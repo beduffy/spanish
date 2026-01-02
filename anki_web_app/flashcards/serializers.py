@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Sentence, Review, Card, CardReview
+from .models import Sentence, Review, Card, CardReview, Lesson, Token, Phrase
 
 
 class SentenceSerializer(serializers.ModelSerializer):
@@ -241,8 +241,10 @@ class CardCreateSerializer(serializers.ModelSerializer):
         fields = [
             'front',
             'back',
+            'language',
             'tags',
             'notes',
+            'source',
             'create_reverse',
         ]
 
@@ -323,3 +325,108 @@ class CardReviewInputSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError()
+
+
+class LessonSerializer(serializers.ModelSerializer):
+    token_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Lesson
+        fields = [
+            'lesson_id', 'title', 'text', 'language', 'audio_url',
+            'source_type', 'source_url', 'created_at', 'token_count'
+        ]
+        read_only_fields = ['lesson_id', 'created_at']
+    
+    def get_token_count(self, obj):
+        return obj.tokens.count()
+
+
+class TokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Token
+        fields = [
+            'token_id', 'text', 'normalized', 'start_offset', 'end_offset',
+            'translation', 'clicked_count', 'added_to_flashcards', 'card_id'
+        ]
+        read_only_fields = ['token_id', 'clicked_count', 'added_to_flashcards', 'card_id']
+
+
+class LessonDetailSerializer(LessonSerializer):
+    tokens = TokenSerializer(many=True, read_only=True)
+    
+    class Meta(LessonSerializer.Meta):
+        fields = LessonSerializer.Meta.fields + ['tokens']
+
+
+class LessonCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['title', 'text', 'language', 'audio_url', 'source_type', 'source_url']
+    
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        lesson = Lesson.objects.create(**validated_data)
+        
+        # Tokenize the text
+        token_count = 0
+        try:
+            from .tokenization import tokenize_text
+            tokens_data = tokenize_text(lesson.text)
+            
+            if not tokens_data:
+                print(f"[LessonCreateSerializer] Warning: No tokens generated for lesson {lesson.lesson_id}")
+            else:
+                print(f"[LessonCreateSerializer] Generated {len(tokens_data)} tokens for lesson {lesson.lesson_id}")
+            
+            for token_data in tokens_data:
+                try:
+                    # Remove 'type' field as Token model doesn't have it
+                    token_data_clean = {k: v for k, v in token_data.items() if k != 'type'}
+                    Token.objects.create(
+                        lesson=lesson,
+                        **token_data_clean
+                    )
+                    token_count += 1
+                except Exception as e:
+                    print(f"[LessonCreateSerializer] Error creating token: {e}")
+                    print(f"[LessonCreateSerializer] Token data: {token_data}")
+                    import traceback
+                    traceback.print_exc()
+                    # Continue with other tokens even if one fails
+                    continue
+        except Exception as e:
+            print(f"[LessonCreateSerializer] Error during tokenization: {e}")
+            import traceback
+            traceback.print_exc()
+            # Still return the lesson even if tokenization fails
+        
+        # Refresh lesson to get updated token count
+        lesson.refresh_from_db()
+        return lesson
+    
+    def to_representation(self, instance):
+        """Add token_count to the response"""
+        data = super().to_representation(instance)
+        data['token_count'] = instance.tokens.count()
+        return data
+
+
+class TranslateRequestSerializer(serializers.Serializer):
+    text = serializers.CharField()
+    source_lang = serializers.CharField(default='es')
+    target_lang = serializers.CharField(default='en')
+
+
+class AddToFlashcardsSerializer(serializers.Serializer):
+    token_id = serializers.IntegerField(required=False)
+    phrase_id = serializers.IntegerField(required=False)
+    front = serializers.CharField()  # Word/phrase in source language
+    back = serializers.CharField()  # Translation
+    sentence_context = serializers.CharField(required=False, allow_blank=True)
+    lesson_id = serializers.IntegerField()
+    
+    def validate(self, attrs):
+        if not attrs.get('token_id') and not attrs.get('phrase_id'):
+            raise serializers.ValidationError("Either token_id or phrase_id required")
+        return attrs

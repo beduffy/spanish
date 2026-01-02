@@ -24,6 +24,7 @@
             <th>Front</th>
             <th>Back</th>
             <th>Tags</th>
+            <th>Notes</th>
             <th>Mastery</th>
             <th>Status</th>
             <th>Next Review</th>
@@ -40,6 +41,10 @@
               <td>
                 <span v-for="tag in card.tags" :key="tag" class="tag-badge">{{ tag }}</span>
                 <span v-if="!card.tags || card.tags.length === 0">-</span>
+              </td>
+              <td class="notes-preview" :title="card.notes || ''">
+                <span v-if="card.notes">{{ card.notes.substring(0, 50) }}{{ card.notes.length > 50 ? '...' : '' }}</span>
+                <span v-else>-</span>
               </td>
               <td>
                 <span v-if="card.mastery_level" :class="`badge-mastery badge-mastery-${card.mastery_level.color}`" :title="card.mastery_level.indicator || ''">
@@ -68,7 +73,7 @@
               </td>
             </tr>
             <tr v-if="expandedCards[card.card_id]" class="reviews-row">
-              <td colspan="9" class="reviews-cell">
+              <td colspan="10" class="reviews-cell">
                 <div v-if="loadingReviews[card.card_id]" class="loading-reviews">
                   Loading reviews...
                 </div>
@@ -341,6 +346,15 @@ th, td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.notes-preview {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85em;
+  color: #666;
 }
 
 tr:nth-child(even) {

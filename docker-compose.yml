@@ -18,6 +18,12 @@ services:
       - SECRET_KEY=${SECRET_KEY:-django-insecure-test-key-for-ci-only}
       - DEBUG=${DEBUG:-True}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      # Supabase configuration for backend authentication
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      # DeepL Translation API
+      - DEEPL_API_KEY=${DEEPL_API_KEY:-e2cb5fbb-69e4-483b-8d16-e768ef87c8aa:fx}
       # - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings # If needed
     networks:
       - app_services_network

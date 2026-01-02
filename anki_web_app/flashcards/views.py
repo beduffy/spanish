@@ -9,7 +9,7 @@ import csv
 import io
 import uuid
 
-from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS, Card, CardReview, StudySession, SessionActivity
+from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS, Card, CardReview, StudySession, SessionActivity, Lesson, Token, Phrase
 from .serializers import (
     SentenceSerializer,
     ReviewInputSerializer,
@@ -19,6 +19,12 @@ from .serializers import (
     CardCreateSerializer,
     CardDetailSerializer,
     CardReviewInputSerializer,
+    LessonSerializer,
+    LessonDetailSerializer,
+    LessonCreateSerializer,
+    TokenSerializer,
+    TranslateRequestSerializer,
+    AddToFlashcardsSerializer,
 )
 
 from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView, UpdateAPIView, DestroyAPIView
@@ -780,3 +786,277 @@ class CurrentUserAPIView(APIView):
             'is_authenticated': user.is_authenticated,
             'is_anonymous': user.is_anonymous,
         }, status=status.HTTP_200_OK)
+
+
+class LessonListCreateAPIView(UserScopedMixin, ListCreateAPIView):
+    """
+    List or create lessons.
+    POST: Create a new lesson (tokenizes automatically).
+    """
+    queryset = Lesson.objects.all().order_by('-created_at')
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return LessonCreateSerializer
+        return LessonSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class LessonDetailAPIView(UserScopedMixin, RetrieveAPIView):
+    """
+    Get lesson details with tokens.
+    """
+    queryset = Lesson.objects.all()
+    serializer_class = LessonDetailSerializer
+    lookup_field = 'pk'
+    permission_classes = [IsAuthenticated]
+
+
+class TranslateAPIView(APIView):
+    """
+    Translate text (word or sentence).
+    POST: {text, source_lang, target_lang}
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        from .translation_service import translate_text
+        
+        serializer = TranslateRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        text = serializer.validated_data['text']
+        source_lang = serializer.validated_data.get('source_lang', 'de')
+        target_lang = serializer.validated_data.get('target_lang', 'en')
+        
+        translation = translate_text(text, source_lang, target_lang)
+        
+        if translation:
+            return Response({
+                'text': text,
+                'translation': translation,
+                'source_lang': source_lang,
+                'target_lang': target_lang,
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {'error': 'Translation failed. Check API key configuration.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class TokenClickAPIView(APIView):
+    """
+    Record a token click and return translation.
+    GET: /api/flashcards/reader/tokens/<token_id>/click/
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, token_id, *args, **kwargs):
+        from .translation_service import translate_text, get_word_translation
+        
+        try:
+            token = Token.objects.get(token_id=token_id, lesson__user=request.user)
+        except Token.DoesNotExist:
+            return Response({'error': 'Token not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Increment click count
+        token.clicked_count += 1
+        token.save(update_fields=['clicked_count'])
+        
+        # Get translation if not cached
+        if not token.translation:
+            word_translation = get_word_translation(token.text, token.lesson.language, 'en')
+            if word_translation:
+                token.translation = word_translation.get('translation', '')
+                token.save(update_fields=['translation'])
+        
+        # Get sentence translation (for context)
+        lesson = token.lesson
+        sentence_text = self._get_sentence_context(lesson.text, token.start_offset)
+        sentence_translation = None
+        if sentence_text in lesson.sentence_translations:
+            sentence_translation = lesson.sentence_translations[sentence_text]
+        else:
+            sentence_translation = translate_text(sentence_text, lesson.language, 'en')
+            if sentence_translation:
+                lesson.sentence_translations[sentence_text] = sentence_translation
+                lesson.save(update_fields=['sentence_translations'])
+        
+        return Response({
+            'token': TokenSerializer(token).data,
+            'sentence': sentence_text,
+            'sentence_translation': sentence_translation,
+        }, status=status.HTTP_200_OK)
+    
+    def _get_sentence_context(self, text: str, offset: int) -> str:
+        """Extract sentence containing the token."""
+        # Find sentence boundaries
+        sentence_end = text.find('.', offset)
+        sentence_start = text.rfind('.', 0, offset) + 1
+        if sentence_start == 0:
+            sentence_start = 0
+        if sentence_end == -1:
+            sentence_end = len(text)
+        else:
+            sentence_end += 1
+        
+        return text[sentence_start:sentence_end].strip()
+
+
+class AddToFlashcardsAPIView(APIView):
+    """
+    Add a token/phrase to flashcards.
+    Creates a Card via existing Card API.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        serializer = AddToFlashcardsSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        token_id = data.get('token_id')
+        phrase_id = data.get('phrase_id')
+        front = data['front']
+        back = data['back']
+        sentence_context = data.get('sentence_context', '')
+        lesson_id = data['lesson_id']
+        
+        # Get lesson
+        try:
+            lesson = Lesson.objects.get(lesson_id=lesson_id, user=request.user)
+        except Lesson.DoesNotExist:
+            return Response({'error': 'Lesson not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get sentence translation if available
+        sentence_translation = None
+        if sentence_context:
+            # Check if we have a cached translation for this sentence
+            if sentence_context in lesson.sentence_translations:
+                sentence_translation = lesson.sentence_translations[sentence_context]
+            else:
+                # Try to get translation
+                from .translation_service import translate_text
+                sentence_translation = translate_text(sentence_context, lesson.language, 'en')
+                if sentence_translation:
+                    lesson.sentence_translations[sentence_context] = sentence_translation
+                    lesson.save(update_fields=['sentence_translations'])
+        
+        # Format notes with context and translation
+        notes_parts = [f"From lesson: {lesson.title}"]
+        if sentence_context:
+            notes_parts.append(f"\n\nContext: {sentence_context}")
+            if sentence_translation:
+                notes_parts.append(f"\nTranslation: {sentence_translation}")
+        
+        # Create Card using existing CardCreateSerializer logic
+        card_data = {
+            'front': front,
+            'back': back,
+            'language': lesson.language,
+            'tags': ['reader'],
+            'notes': ''.join(notes_parts),
+            'source': lesson.source_url or f"Lesson {lesson.lesson_id}",
+            'create_reverse': True,
+        }
+        
+        # Use existing Card creation endpoint logic
+        card_serializer = CardCreateSerializer(data=card_data, context={'request': request})
+        if not card_serializer.is_valid():
+            return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        card = card_serializer.save(user=request.user)
+        
+        # Update token/phrase
+        if token_id:
+            try:
+                token = Token.objects.get(token_id=token_id, lesson=lesson)
+                token.added_to_flashcards = True
+                token.card_id = card.card_id
+                token.save(update_fields=['added_to_flashcards', 'card_id'])
+            except Token.DoesNotExist:
+                pass
+        
+        if phrase_id:
+            try:
+                phrase = Phrase.objects.get(phrase_id=phrase_id, lesson=lesson)
+                phrase.added_to_flashcards = True
+                phrase.card_id = card.card_id
+                phrase.save(update_fields=['added_to_flashcards', 'card_id'])
+            except Phrase.DoesNotExist:
+                pass
+        
+        return Response({
+            'card_id': card.card_id,
+            'message': 'Card created successfully',
+        }, status=status.HTTP_201_CREATED)
+
+
+class GenerateTTSAPIView(APIView):
+    """
+    Generate TTS audio for a lesson or text snippet.
+    POST: {lesson_id, text (optional), language_code (optional)}
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def _get_language_code(self, language):
+        """Map language code to TTS format (e.g., 'de' -> 'de-DE', 'es' -> 'es-ES')."""
+        language_map = {
+            'de': 'de-DE',
+            'es': 'es-ES',
+            'fr': 'fr-FR',
+            'it': 'it-IT',
+            'pt': 'pt-PT',
+            'ru': 'ru-RU',
+            'ja': 'ja-JP',
+            'zh': 'zh-CN',
+            'ko': 'ko-KR',
+            'en': 'en-US',
+        }
+        return language_map.get(language.lower(), f"{language}-{language.upper()}")
+    
+    def post(self, request, *args, **kwargs):
+        from .tts_service import generate_tts_audio
+        
+        lesson_id = request.data.get('lesson_id')
+        text = request.data.get('text')
+        language_code = request.data.get('language_code')
+        
+        if lesson_id:
+            try:
+                lesson = Lesson.objects.get(lesson_id=lesson_id, user=request.user)
+                text = lesson.text
+                if not language_code:
+                    language_code = self._get_language_code(lesson.language)
+            except Lesson.DoesNotExist:
+                return Response({'error': 'Lesson not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not text:
+            return Response({'error': 'text or lesson_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not language_code:
+            language_code = 'de-DE'  # Default fallback
+        
+        audio_url = generate_tts_audio(text, language_code)
+        
+        if audio_url:
+            # Update lesson audio_url if lesson_id provided
+            if lesson_id:
+                lesson.audio_url = audio_url
+                lesson.save(update_fields=['audio_url'])
+            
+            return Response({
+                'audio_url': audio_url,
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {'error': 'TTS generation failed. Check API configuration (GOOGLE_TTS_CREDENTIALS_PATH or ELEVENLABS_API_KEY).'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

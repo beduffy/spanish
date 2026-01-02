@@ -278,6 +278,63 @@ New migrations created:
 ### Configuration
 - `docker-compose.yml` - Added environment variables
 
+## Recent Updates (January 2, 2026)
+
+### DeepL Translation Integration
+- **DeepL API Key Configured**: Added `DEEPL_API_KEY` environment variable to `docker-compose.yml`
+- **Translation Service Working**: Verified translation functionality for both sentences and single words
+- **Context Storage**: Enhanced flashcard creation to include sentence context and translation in notes field
+- **Card Serializer Updated**: Added `language` and `source` fields to `CardCreateSerializer` to ensure they're saved
+
+### UI Improvements
+- **Notes Column Added**: Added "Notes" column to All Cards page (`CardListView.vue`) to display context/notes
+- **Enhanced Notes Formatting**: Notes now include:
+  - Lesson title
+  - Original sentence context (in source language)
+  - Sentence translation (in target language)
+
+## Caching Strategy
+
+The reader feature uses a two-level caching strategy to minimize API calls and improve performance:
+
+### 1. Django Cache (Translation Service)
+- **Location**: `anki_web_app/flashcards/translation_service.py`
+- **Cache Backend**: Django's default cache (in-memory or database cache)
+- **Cache Key Format**: `translation:{source_lang}:{target_lang}:{text}`
+- **TTL**: 30 days (2,592,000 seconds)
+- **Purpose**: Caches DeepL API translation responses to avoid redundant API calls
+- **Implementation**:
+  ```python
+  cache_key = f"translation:{source_lang}:{target_lang}:{text}"
+  cached = cache.get(cache_key)
+  if cached:
+      return cached
+  # ... API call ...
+  cache.set(cache_key, translation, 60 * 60 * 24 * 30)
+  ```
+
+### 2. Database Caching (Lesson Model)
+- **Location**: `anki_web_app/flashcards/models.py` - `Lesson` model
+- **Field**: `sentence_translations` (JSONField)
+- **Format**: `{sentence_text: translation}`
+- **Purpose**: Persists sentence translations in the database for long-term storage
+- **Usage**: When a token is clicked, the sentence translation is:
+  1. Checked in `lesson.sentence_translations` dict
+  2. If not found, fetched via DeepL API
+  3. Stored in both Django cache and database
+  4. Used when creating flashcards to include context
+
+### 3. Token-Level Caching
+- **Location**: `Token` model - `translation` field
+- **Purpose**: Stores word-level translations directly on tokens
+- **Usage**: When a token is clicked, if `token.translation` is empty, it's fetched and saved
+
+### Cache Benefits
+- **Reduced API Costs**: DeepL free tier is 500k chars/month - caching helps stay within limits
+- **Faster Response Times**: Cached translations return instantly
+- **Better User Experience**: No waiting for API calls on repeated clicks
+- **Persistence**: Database caching ensures translations survive cache clears
+
 ## Notes
 
 - The implementation maintains backward compatibility with existing flashcard functionality
@@ -285,6 +342,57 @@ New migrations created:
 - The reader is a new feature that doesn't interfere with existing features
 - German is set as the default language throughout, but the system supports multiple languages
 - Error handling and logging added throughout for easier debugging
+- Context from reader lessons is now visible in the All Cards page
+
+## What's Next (From LINGQ_READER_PLAN.md)
+
+Based on the implementation plan, the next phases are:
+
+### Phase 3: Audio & Polish (Week 3)
+1. **TTS Integration** (Days 1-2)
+   - Complete Google Cloud TTS integration (currently basic implementation exists)
+   - Or integrate ElevenLabs as alternative
+   - Generate audio files for lessons
+   - Store audio URLs in Lesson model
+
+2. **Audio Player** (Day 3)
+   - Implement audio playback in ReaderView
+   - Add listening time tracking
+   - Sync audio with text (optional)
+
+3. **UI Polish** (Day 4)
+   - Improve token highlighting animations
+   - Enhance popover styling
+   - Add loading states
+   - Improve mobile responsiveness
+
+4. **Testing & Bug Fixes** (Day 5)
+   - Write E2E tests for reader flow
+   - Fix any remaining issues
+   - Performance optimization
+
+### Phase 4: YouTube & Advanced Features (Week 4)
+1. **YouTube Integration** (Days 1-3)
+   - Extract transcripts from YouTube URLs
+   - Sync audio with text timestamps
+   - Use `youtube-transcript-api` or similar library
+
+2. **Advanced Features** (Future)
+   - Phrase selection (drag to select multiple words)
+   - Dictionary integration (more detailed word meanings)
+   - Audio-text alignment (timestamps per word)
+   - Progress tracking per lesson
+   - Vocabulary lists generation
+
+### Current Status
+- ✅ Backend models and API endpoints
+- ✅ Frontend reader interface
+- ✅ Translation integration (DeepL)
+- ✅ Token click and flashcard creation
+- ✅ Context storage in flashcards
+- ⏳ TTS audio generation (basic implementation exists, needs completion)
+- ⏳ YouTube transcript extraction
+- ⏳ Advanced phrase selection
 
 ## Commands Reference
 
