@@ -115,8 +115,8 @@ fi
 
 echo "Running backend Django tests with coverage inside the 'backend' container..."
 # The command to run tests and generate coverage.xml. Output will be in /app/coverage.xml inside the container.
-# Run all test modules: tests.py and tests_card_functionality.py
-$DC_COMMAND exec -T backend coverage run manage.py test flashcards.tests flashcards.tests_card_functionality --noinput
+# Run all test modules: tests.py, tests_card_functionality.py, and tests_reader.py
+$DC_COMMAND exec -T backend coverage run manage.py test flashcards.tests flashcards.tests_card_functionality flashcards.tests_reader --noinput
 # Generate XML report from coverage data
 $DC_COMMAND exec -T backend coverage xml -o /app/coverage.xml
 echo "Backend Django tests completed and coverage report generated (coverage.xml in anki_web_app/)."
