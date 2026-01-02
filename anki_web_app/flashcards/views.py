@@ -10,6 +10,7 @@ import io
 import uuid
 
 from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS, Card, CardReview, StudySession, SessionActivity, Lesson, Token, Phrase
+from .tokenization import normalize_token
 from .serializers import (
     SentenceSerializer,
     ReviewInputSerializer,
@@ -22,8 +23,11 @@ from .serializers import (
     LessonSerializer,
     LessonDetailSerializer,
     LessonCreateSerializer,
+    LessonUpdateSerializer,
     TokenSerializer,
     TranslateRequestSerializer,
+    PhraseSerializer,
+    CreatePhraseSerializer,
     AddToFlashcardsSerializer,
 )
 
@@ -816,6 +820,34 @@ class LessonDetailAPIView(UserScopedMixin, RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
 
+class LessonUpdateAPIView(UserScopedMixin, UpdateAPIView):
+    """
+    Update a lesson (PUT/PATCH).
+    Re-tokenizes if text is changed.
+    """
+    queryset = Lesson.objects.all()
+    serializer_class = LessonUpdateSerializer
+    lookup_field = 'pk'
+    permission_classes = [IsAuthenticated]
+
+
+class LessonDeleteAPIView(UserScopedMixin, DestroyAPIView):
+    """
+    Delete a lesson (DELETE).
+    Also deletes associated tokens and phrases.
+    """
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
+    lookup_field = 'pk'
+    permission_classes = [IsAuthenticated]
+    
+    def perform_destroy(self, instance):
+        # Delete associated tokens and phrases (CASCADE should handle this, but being explicit)
+        instance.tokens.all().delete()
+        instance.phrases.all().delete()
+        instance.delete()
+
+
 class TranslateAPIView(APIView):
     """
     Translate text (word or sentence).
@@ -907,6 +939,90 @@ class TokenClickAPIView(APIView):
             sentence_end += 1
         
         return text[sentence_start:sentence_end].strip()
+
+
+class CreatePhraseAPIView(APIView):
+    """
+    Create a phrase from selected text.
+    POST: {lesson_id, start_offset, end_offset}
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        from .translation_service import translate_text
+        
+        serializer = CreatePhraseSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = serializer.validated_data
+        lesson_id = data['lesson_id']
+        start_offset = data['start_offset']
+        end_offset = data['end_offset']
+        
+        # Get lesson
+        try:
+            lesson = Lesson.objects.get(lesson_id=lesson_id, user=request.user)
+        except Lesson.DoesNotExist:
+            return Response({'error': 'Lesson not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Extract phrase text
+        phrase_text = lesson.text[start_offset:end_offset].strip()
+        if not phrase_text:
+            return Response({'error': 'Selected text is empty'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find start and end tokens
+        tokens = lesson.tokens.filter(
+            start_offset__gte=start_offset,
+            end_offset__lte=end_offset
+        ).order_by('start_offset')
+        
+        if not tokens.exists():
+            # Try to find tokens that overlap with the selection
+            tokens = lesson.tokens.filter(
+                start_offset__lt=end_offset,
+                end_offset__gt=start_offset
+            ).order_by('start_offset')
+        
+        if not tokens.exists():
+            return Response({'error': 'No tokens found in selected range'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        start_token = tokens.first()
+        end_token = tokens.last()
+        
+        # Check if phrase already exists
+        existing_phrase = Phrase.objects.filter(
+            lesson=lesson,
+            token_start=start_token,
+            token_end=end_token
+        ).first()
+        
+        if existing_phrase:
+            # Return existing phrase
+            return Response({
+                'phrase': PhraseSerializer(existing_phrase).data,
+                'message': 'Phrase already exists'
+            }, status=status.HTTP_200_OK)
+        
+        # Create phrase
+        phrase = Phrase.objects.create(
+            lesson=lesson,
+            text=phrase_text,
+            normalized=normalize_token(phrase_text),
+            token_start=start_token,
+            token_end=end_token
+        )
+        
+        # Get translation
+        translation = translate_text(phrase_text, lesson.language, 'en')
+        if translation:
+            phrase.translation = translation
+            phrase.save(update_fields=['translation'])
+        
+        return Response({
+            'phrase': PhraseSerializer(phrase).data,
+            'message': 'Phrase created successfully'
+        }, status=status.HTTP_201_CREATED)
 
 
 class AddToFlashcardsAPIView(APIView):

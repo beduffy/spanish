@@ -364,17 +364,43 @@ class TokenSerializer(serializers.ModelSerializer):
         read_only_fields = ['token_id', 'clicked_count', 'added_to_flashcards', 'card_id']
 
 
+class PhraseSerializer(serializers.ModelSerializer):
+    token_start_id = serializers.SerializerMethodField()
+    token_end_id = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Phrase
+        fields = [
+            'phrase_id', 'text', 'normalized', 'translation',
+            'added_to_flashcards', 'card_id', 'created_at',
+            'token_start_id', 'token_end_id'
+        ]
+        read_only_fields = ['phrase_id', 'added_to_flashcards', 'card_id', 'created_at', 'token_start_id', 'token_end_id']
+    
+    def get_token_start_id(self, obj):
+        if obj.token_start_id:
+            return obj.token_start_id
+        return obj.token_start.token_id if obj.token_start else None
+    
+    def get_token_end_id(self, obj):
+        if obj.token_end_id:
+            return obj.token_end_id
+        return obj.token_end.token_id if obj.token_end else None
+
+
 class LessonDetailSerializer(LessonSerializer):
     tokens = TokenSerializer(many=True, read_only=True)
+    phrases = PhraseSerializer(many=True, read_only=True)
     
     class Meta(LessonSerializer.Meta):
-        fields = LessonSerializer.Meta.fields + ['tokens']
+        fields = LessonSerializer.Meta.fields + ['tokens', 'phrases']
 
 
 class LessonCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = ['title', 'text', 'language', 'audio_url', 'source_type', 'source_url']
+        fields = ['lesson_id', 'title', 'text', 'language', 'audio_url', 'source_type', 'source_url']
+        read_only_fields = ['lesson_id']
     
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
@@ -424,10 +450,84 @@ class LessonCreateSerializer(serializers.ModelSerializer):
         return data
 
 
+class LessonUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['lesson_id', 'title', 'text', 'language', 'audio_url', 'source_type', 'source_url']
+        read_only_fields = ['lesson_id']
+    
+    def update(self, instance, validated_data):
+        text_changed = 'text' in validated_data and validated_data['text'] != instance.text
+        
+        # Update lesson fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # If text changed, re-tokenize
+        if text_changed:
+            # Delete existing tokens
+            instance.tokens.all().delete()
+            
+            # Tokenize the new text
+            token_count = 0
+            try:
+                from .tokenization import tokenize_text
+                tokens_data = tokenize_text(instance.text)
+                
+                if not tokens_data:
+                    print(f"[LessonUpdateSerializer] Warning: No tokens generated for lesson {instance.lesson_id}")
+                else:
+                    print(f"[LessonUpdateSerializer] Generated {len(tokens_data)} tokens for lesson {instance.lesson_id}")
+                
+                for token_data in tokens_data:
+                    try:
+                        # Remove 'type' field as Token model doesn't have it
+                        token_data_clean = {k: v for k, v in token_data.items() if k != 'type'}
+                        Token.objects.create(
+                            lesson=instance,
+                            **token_data_clean
+                        )
+                        token_count += 1
+                    except Exception as e:
+                        print(f"[LessonUpdateSerializer] Error creating token: {e}")
+                        print(f"[LessonUpdateSerializer] Token data: {token_data}")
+                        import traceback
+                        traceback.print_exc()
+                        # Continue with other tokens even if one fails
+                        continue
+            except Exception as e:
+                print(f"[LessonUpdateSerializer] Error during tokenization: {e}")
+                import traceback
+                traceback.print_exc()
+                # Still return the lesson even if tokenization fails
+        
+        # Refresh lesson to get updated token count
+        instance.refresh_from_db()
+        return instance
+    
+    def to_representation(self, instance):
+        """Add token_count to the response"""
+        data = super().to_representation(instance)
+        data['token_count'] = instance.tokens.count()
+        return data
+
+
 class TranslateRequestSerializer(serializers.Serializer):
     text = serializers.CharField()
     source_lang = serializers.CharField(default='es')
     target_lang = serializers.CharField(default='en')
+
+
+class CreatePhraseSerializer(serializers.Serializer):
+    lesson_id = serializers.IntegerField()
+    start_offset = serializers.IntegerField(help_text="Character offset where phrase starts")
+    end_offset = serializers.IntegerField(help_text="Character offset where phrase ends")
+    
+    def validate(self, attrs):
+        if attrs['start_offset'] >= attrs['end_offset']:
+            raise serializers.ValidationError("start_offset must be less than end_offset")
+        return attrs
 
 
 class AddToFlashcardsSerializer(serializers.Serializer):
