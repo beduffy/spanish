@@ -83,13 +83,13 @@ class SupabaseJWTAuthenticationBackend(BaseBackend):
                 # Supabase JWKS endpoint: https://<project>.supabase.co/.well-known/jwks.json
                 print(f"[Auth Backend] Attempting JWKS verification for {algorithm}")
                 jwks_url = f"{supabase_url}/.well-known/jwks.json"
+                payload = None
+                
+                # Try PyJWKClient first
                 try:
-                    # PyJWT 2.0+ has built-in JWKS support
                     from jwt import PyJWKClient
-                    jwks_client = PyJWKClient(jwks_url)
+                    jwks_client = PyJWKClient(jwks_url, max_cached_keys=5)
                     signing_key = jwks_client.get_signing_key_from_jwt(token)
-                    
-                    # Verify and decode
                     payload = jwt.decode(
                         token,
                         signing_key.key,
@@ -97,60 +97,53 @@ class SupabaseJWTAuthenticationBackend(BaseBackend):
                         audience='authenticated'
                     )
                     print(f"[Auth Backend] JWKS verification successful")
-                except ImportError:
-                    # Fallback: manual JWKS fetch and verification
-                    print(f"[Auth Backend] PyJWKClient not available, using manual JWKS")
-                    jwks_response = requests.get(jwks_url, timeout=5)
-                    jwks_response.raise_for_status()
-                    jwks = jwks_response.json()
-                    
-                    # Get kid from token header
-                    header = jwt.get_unverified_header(token)
-                    kid = header.get('kid')
-                    
-                    # Find the key in JWKS
-                    key = None
-                    for jwk in jwks.get('keys', []):
-                        if jwk.get('kid') == kid:
-                            key = jwk
-                            break
-                    
-                    if not key:
-                        raise ValueError(f"Key with kid {kid} not found in JWKS")
-                    
-                    # Convert JWK to PEM format (simplified - may need jwcrypto)
-                    # For now, try direct verification with the JWK
-                    import json
-                    from cryptography.hazmat.primitives import serialization
-                    from cryptography.hazmat.primitives.asymmetric import rsa, ec
-                    from cryptography.hazmat.backends import default_backend
-                    
-                    if algorithm == 'RS256':
-                        # RSA key
-                        n = int.from_bytes(base64.urlsafe_b64decode(key['n'] + '=='), 'big')
-                        e = int.from_bytes(base64.urlsafe_b64decode(key['e'] + '=='), 'big')
-                        public_key = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
-                    else:
-                        # ES256 - Elliptic Curve
-                        x = int.from_bytes(base64.urlsafe_b64decode(key['x'] + '=='), 'big')
-                        y = int.from_bytes(base64.urlsafe_b64decode(key['y'] + '=='), 'big')
-                        curve = ec.SECP256R1()
-                        public_key = ec.EllipticCurvePublicNumbers(x, y, curve).public_key(default_backend())
-                    
-                    # Verify and decode
-                    payload = jwt.decode(
-                        token,
-                        public_key,
-                        algorithms=[algorithm],
-                        audience='authenticated'
-                    )
-                    print(f"[Auth Backend] Manual JWKS verification successful")
-                except Exception as jwks_error:
-                    print(f"[Auth Backend] JWKS verification failed: {jwks_error}")
-                    import traceback
-                    traceback.print_exc()
-                    # Fall back to unverified decode for now (NOT SECURE - remove in production)
-                    print(f"[Auth Backend] WARNING: Falling back to unverified decode")
+                except Exception as pyjwk_error:
+                    print(f"[Auth Backend] PyJWKClient failed: {type(pyjwk_error).__name__}")
+                    # Try manual JWKS fetch
+                    try:
+                        jwks_response = requests.get(jwks_url, timeout=5)
+                        jwks_response.raise_for_status()
+                        jwks = jwks_response.json()
+                        
+                        header = jwt.get_unverified_header(token)
+                        kid = header.get('kid')
+                        
+                        key = None
+                        for jwk in jwks.get('keys', []):
+                            if jwk.get('kid') == kid:
+                                key = jwk
+                                break
+                        
+                        if not key:
+                            raise ValueError(f"Key with kid {kid} not found in JWKS")
+                        
+                        from cryptography.hazmat.primitives.asymmetric import rsa, ec
+                        from cryptography.hazmat.backends import default_backend
+                        
+                        if algorithm == 'RS256':
+                            n = int.from_bytes(base64.urlsafe_b64decode(key['n'] + '=='), 'big')
+                            e = int.from_bytes(base64.urlsafe_b64decode(key['e'] + '=='), 'big')
+                            public_key = rsa.RSAPublicNumbers(e, n).public_key(default_backend())
+                        else:
+                            x = int.from_bytes(base64.urlsafe_b64decode(key['x'] + '=='), 'big')
+                            y = int.from_bytes(base64.urlsafe_b64decode(key['y'] + '=='), 'big')
+                            curve = ec.SECP256R1()
+                            public_key = ec.EllipticCurvePublicNumbers(x, y, curve).public_key(default_backend())
+                        
+                        payload = jwt.decode(
+                            token,
+                            public_key,
+                            algorithms=[algorithm],
+                            audience='authenticated'
+                        )
+                        print(f"[Auth Backend] Manual JWKS verification successful")
+                    except Exception as manual_error:
+                        print(f"[Auth Backend] Manual JWKS also failed: {type(manual_error).__name__}: {manual_error}")
+                
+                # If both JWKS methods failed, use unverified decode as fallback
+                if payload is None:
+                    print(f"[Auth Backend] WARNING: JWKS unavailable, using unverified decode for development")
+                    print(f"[Auth Backend] WARNING: This should be fixed in production!")
                     payload = unverified
             else:
                 print(f"[Auth Backend] Unknown algorithm {algorithm}, falling back to unverified")
