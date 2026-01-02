@@ -393,7 +393,7 @@ Based on the implementation plan, the next phases are:
 - ✅ TTS audio generation (Google Cloud TTS + ElevenLabs fallback)
 - ✅ Audio player with listening time tracking
 - ✅ UI polish and animations
-- ✅ Comprehensive test coverage (33 new tests)
+- ✅ Comprehensive test coverage (46 tests total: 33 original + 13 new integration tests)
 - ⏳ YouTube transcript extraction
 - ⏳ Advanced phrase selection
 
@@ -685,4 +685,64 @@ docker-compose exec backend python manage.py test flashcards.tests_reader -v 2
 - ✅ Add to flashcards integration (card creation, notes)
 - ✅ User scoping (users can only access their own lessons/tokens)
 
+**New Integration Tests Added (13 tests):**
+- ✅ TTS Integration Tests (6 tests): Language code mapping, authentication, lesson updates
+- ✅ Listening Time Integration Tests (4 tests): Time formatting, serialization, updates
+- ✅ Lesson Import Flow Tests (3 tests): Full import flow, TTS generation flow, token positions
+
 All tests pass successfully! ✅
+
+### TTS Auto-Generation During Import
+
+The frontend attempts to auto-generate TTS after lesson import:
+1. Lesson is created via `/api/flashcards/reader/lessons/` POST endpoint
+2. Response includes `lesson_id` and `token_count`
+3. Frontend waits 500ms for session/auth to be established
+4. Frontend calls `/api/flashcards/reader/generate-tts/` with `lesson_id`
+5. Retry mechanism: up to 3 attempts with exponential backoff (1s, 2s delays)
+6. If TTS generation fails, user can manually generate from lesson page
+
+**Troubleshooting TTS Auto-Generation:**
+- Check browser console for TTS generation errors
+- Verify `lesson_id` is present in lesson creation response
+- Check backend logs for TTS service errors
+- Ensure Google Cloud TTS API is enabled
+- Verify credentials file exists at configured path
+- Check ElevenLabs API key if using fallback
+
+---
+
+## Commit Summary (January 2, 2026)
+
+### Changes Committed
+
+**Backend:**
+- ✅ Fixed `LessonCreateSerializer` to include `lesson_id` in response
+- ✅ Added `token_count` to lesson creation response
+- ✅ Enhanced TTS error handling with detailed logging
+- ✅ Added comprehensive integration tests (13 new tests)
+
+**Frontend:**
+- ✅ Fixed audio URL handling to use absolute backend URL in development
+- ✅ Enhanced error logging for TTS generation failures
+- ✅ Improved console logging for debugging TTS auto-generation
+
+**Tests:**
+- ✅ Added `TTSIntegrationTests` (6 tests): Language mapping, authentication, lesson updates
+- ✅ Added `ListeningTimeIntegrationTests` (4 tests): Time formatting, serialization, updates
+- ✅ Added `LessonImportFlowTests` (3 tests): Full import flow, TTS generation, token positions
+- ✅ All 13 new tests passing successfully
+
+**Documentation:**
+- ✅ Updated implementation doc with test coverage details
+- ✅ Documented TTS auto-generation flow and troubleshooting steps
+
+**Files Modified:**
+- `anki_web_app/flashcards/serializers.py` - Added `lesson_id` and `token_count` to response
+- `anki_web_app/flashcards/views.py` - Enhanced TTS error handling
+- `anki_web_app/flashcards/tests_reader.py` - Added 13 integration tests
+- `anki_web_app/spanish_anki_frontend/src/views/ReaderView.vue` - Fixed audio URL handling
+- `anki_web_app/spanish_anki_frontend/src/views/LessonImportView.vue` - Enhanced error logging
+- `docs/LINGQ_READER_IMPLEMENTATION.md` - Updated with test coverage and troubleshooting
+
+**Status:** ✅ All tests passing, TTS working, ready for next phase
