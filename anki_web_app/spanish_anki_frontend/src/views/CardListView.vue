@@ -285,12 +285,12 @@ export default {
 }
 
 .btn-primary {
-  background-color: #007bff;
+  background-color: var(--button-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #0056b3;
+  background-color: var(--button-primary-hover);
 }
 
 .btn-secondary {
@@ -305,40 +305,42 @@ export default {
 .loading-message, .error-message, .no-data-message {
   text-align: center;
   padding: 20px;
-  background-color: #f0f0f0;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
   margin: 20px auto;
+  color: var(--text-primary);
 }
 
 .error-message {
-  color: red;
-  background-color: #ffe0e0;
+  color: var(--error-color);
+  background-color: var(--error-bg);
 }
 
 .total-count {
   text-align: right;
   margin-bottom: 10px;
   font-size: 0.9em;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 15px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 thead {
-  background-color: #007bff;
+  background-color: var(--button-primary);
   color: white;
 }
 
 th, td {
   padding: 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   text-align: left;
   font-size: 0.9em;
+  color: var(--text-primary);
 }
 
 .text-preview {
@@ -367,8 +369,8 @@ tr:hover {
 
 .tag-badge {
   display: inline-block;
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 0.8em;
@@ -498,17 +500,17 @@ tr:hover {
 }
 
 .card-row:hover {
-  background-color: #f0f8ff;
+  background-color: var(--bg-tertiary);
 }
 
 .card-row.expanded {
-  background-color: #e6f3ff;
+  background-color: var(--bg-tertiary);
 }
 
 .reviews-btn {
   background: none;
   border: none;
-  color: #007bff;
+  color: var(--button-primary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -519,7 +521,7 @@ tr:hover {
 }
 
 .reviews-btn:hover {
-  background-color: #e6f3ff;
+  background-color: var(--bg-tertiary);
 }
 
 .reviews-btn.has-reviews {
@@ -532,18 +534,18 @@ tr:hover {
 }
 
 .reviews-row {
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
 }
 
 .reviews-cell {
   padding: 20px !important;
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
 }
 
 .loading-reviews {
   text-align: center;
   padding: 20px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .reviews-container {
@@ -553,15 +555,15 @@ tr:hover {
 
 .reviews-container h4 {
   margin: 0 0 15px 0;
-  color: #333;
+  color: var(--text-primary);
   font-size: 1.1em;
 }
 
 .reviews-table {
   width: 100%;
   border-collapse: collapse;
-  background-color: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: var(--card-bg);
+  box-shadow: 0 1px 3px var(--shadow);
 }
 
 .reviews-table thead {
@@ -572,17 +574,18 @@ tr:hover {
 .reviews-table th,
 .reviews-table td {
   padding: 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   text-align: left;
   font-size: 0.85em;
+  color: var(--text-primary);
 }
 
 .reviews-table tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
 }
 
 .reviews-table tbody tr:hover {
-  background-color: #f1f1f1;
+  background-color: var(--bg-tertiary);
 }
 
 .comment-cell,
@@ -624,7 +627,7 @@ tr:hover {
 .no-reviews {
   text-align: center;
   padding: 20px;
-  color: #666;
+  color: var(--text-secondary);
   font-style: italic;
 }
 </style>

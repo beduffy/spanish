@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="" data-theme="dark">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,6 +9,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title><%= htmlWebpackPlugin.options.title %></title>
+    <style>
+      /* Prevent flash of light mode */
+      html[data-theme="dark"] {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+      }
+      body {
+        margin: 0;
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+      }
+    </style>
   </head>
   <body>
     <noscript>

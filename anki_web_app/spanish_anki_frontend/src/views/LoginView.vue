@@ -125,19 +125,19 @@ export default {
 }
 
 .login-container {
-  background-color: #fff;
-  border: 1px solid #ddd;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 40px;
   max-width: 400px;
   width: 100%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px var(--shadow);
 }
 
 h1 {
   text-align: center;
   margin-bottom: 30px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .form-group {
@@ -148,23 +148,25 @@ label {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
 }
 
 input[type="email"],
 input[type="password"] {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   font-size: 1em;
   box-sizing: border-box;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
 }
 
 small {
   display: block;
   margin-top: 5px;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.85em;
 }
 
@@ -180,27 +182,27 @@ small {
 }
 
 .btn-primary {
-  background-color: #007bff;
+  background-color: var(--button-primary);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #0056b3;
+  background-color: var(--button-primary-hover);
 }
 
 .btn-primary:disabled {
-  background-color: #ccc;
+  background-color: var(--bg-tertiary);
   cursor: not-allowed;
 }
 
 .switch-mode {
   text-align: center;
   margin-top: 20px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .switch-mode a {
-  color: #007bff;
+  color: var(--link-color);
   text-decoration: none;
 }
 
@@ -217,12 +219,12 @@ small {
 }
 
 .error-message {
-  background-color: #ffe0e0;
-  color: #c00;
+  background-color: var(--error-bg);
+  color: var(--error-color);
 }
 
 .success-message {
-  background-color: #d4edda;
-  color: #155724;
+  background-color: var(--success-bg);
+  color: var(--success-color);
 }
 </style>

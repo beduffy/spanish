@@ -310,15 +310,15 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  background-color: #f0f8ff;
+  background-color: var(--bg-secondary);
   padding: 8px 15px;
   border-radius: 6px;
-  border: 1px solid #b3d9ff;
+  border: 1px solid var(--border-color);
 }
 
 .stat-label {
   font-size: 0.75em;
-  color: #666;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -327,7 +327,7 @@ export default {
 .stat-value {
   font-size: 1.2em;
   font-weight: bold;
-  color: #007bff;
+  color: var(--button-primary);
 }
 
 .card-header {
@@ -336,12 +336,12 @@ export default {
   align-items: center;
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .card-type-badge {
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
   padding: 5px 10px;
   border-radius: 12px;
   font-size: 0.8em;
@@ -349,20 +349,21 @@ export default {
 
 .card-csv-number {
   font-size: 0.9em;
-  color: #777;
+  color: var(--text-secondary);
 }
 
 .loading-message, .no-cards-message, .all-done-message, .error-message {
   text-align: center;
   padding: 20px;
-  background-color: #f0f0f0;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
   margin-top: 20px;
+  color: var(--text-primary);
 }
 
 .error-message {
-  color: red;
-  background-color: #ffe0e0;
+  color: var(--error-color);
+  background-color: var(--error-bg);
 }
 
 .central-error {
@@ -370,26 +371,28 @@ export default {
   text-align: center;
   padding: 15px;
   border-radius: 8px;
+  color: var(--text-primary);
 }
 
 .flashcard-container {
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 4px var(--shadow);
+  color: var(--text-primary);
 }
 
 .sentence-display {
   font-size: 1.2em;
-  color: #555;
+  color: var(--text-primary);
   margin-bottom: 15px;
   line-height: 1.5;
 }
 
 .last-reviewed {
   font-size: 0.8em;
-  color: #777;
+  color: var(--text-secondary);
   margin-bottom: 20px;
 }
 
@@ -410,28 +413,30 @@ export default {
 }
 
 .action-button:disabled {
-  background-color: #ccc;
+  background-color: var(--bg-tertiary);
   cursor: not-allowed;
 }
 
 .card-back {
   margin-top: 20px;
   padding-top: 15px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-color);
 }
 
 .comments-section {
-  background-color: #f9f9f9;
-  border: 1px solid #eee;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   padding: 10px;
   margin-top: 15px;
   border-radius: 4px;
   font-size: 0.9em;
+  color: var(--text-primary);
 }
 
 .comments-section strong {
   display: block;
   margin-bottom: 5px;
+  color: var(--text-primary);
 }
 
 .review-inputs {
@@ -446,16 +451,18 @@ export default {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .review-inputs input[type="number"],
 .review-inputs textarea {
   width: calc(100% - 22px);
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   font-size: 1em;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .review-inputs textarea {
@@ -471,9 +478,9 @@ export default {
 }
 
 .score-button {
-  background-color: #f0f0f0;
-  color: #333;
-  border: 2px solid #ccc;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 16px;
   cursor: pointer;
@@ -484,8 +491,8 @@ export default {
 }
 
 .score-button:hover {
-  background-color: #e0e0e0;
-  border-color: #999;
+  background-color: var(--bg-secondary);
+  border-color: var(--accent-color);
 }
 
 .score-button-active {
@@ -504,12 +511,13 @@ export default {
 }
 
 .card-stats {
-  background-color: #f0f8ff;
-  border: 1px solid #b3d9ff;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 12px;
   margin-top: 15px;
   font-size: 0.9em;
+  color: var(--text-primary);
 }
 
 .stat-item {
@@ -524,7 +532,7 @@ export default {
 }
 
 .stat-item strong {
-  color: #333;
+  color: var(--text-primary);
   min-width: 100px;
 }
 

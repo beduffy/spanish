@@ -75,7 +75,7 @@
           </div>
           <audio 
             ref="audioPlayer" 
-            :src="lesson.audio_url" 
+            :src="getAudioUrl(lesson.audio_url)" 
             @loadedmetadata="onAudioLoaded"
             @timeupdate="onTimeUpdate"
             @ended="onAudioEnded"
@@ -124,7 +124,12 @@
 
       <!-- Lesson Text with Tokens -->
       <div class="lesson-text-container">
-        <div class="lesson-text" ref="lessonText">
+        <div 
+          class="lesson-text" 
+          ref="lessonText"
+          @mouseup="handleTextSelection"
+          @selectstart="onSelectStart"
+        >
           <template v-if="tokens && tokens.length > 0">
             <span
               v-for="token in tokens"
@@ -132,6 +137,8 @@
               :class="getTokenClass(token)"
               @click="handleTokenClick(token, $event)"
               :data-token-id="token.token_id"
+              :data-start-offset="token.start_offset"
+              :data-end-offset="token.end_offset"
             >
               {{ token.text || '' }}
             </span>
@@ -161,10 +168,12 @@ export default {
       lessons: [],
       lesson: null,
       tokens: [],
+      phrases: [],
       isLoading: false,
       errorMessage: null,
       lessonId: null,
       selectedToken: null,
+      selectedPhrase: null,
       sentenceContext: null,
       sentenceTranslation: null,
       popoverStyle: {},
@@ -175,7 +184,9 @@ export default {
       listeningTimeInterval: null,
       lastListeningTime: 0,
       listeningTimeAccumulator: 0,
-      isGeneratingTTS: false
+      isGeneratingTTS: false,
+      selectionStart: null,
+      selectionEnd: null
     }
   },
   mounted() {
@@ -442,6 +453,19 @@ export default {
         return dateString
       }
     },
+    getAudioUrl(audioUrl) {
+      if (!audioUrl) return ''
+      // If already absolute URL, return as-is
+      if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+        return audioUrl
+      }
+      // In development, use backend URL directly
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `http://localhost:8000${audioUrl}`
+      }
+      // In production, use relative URL (will be proxied or served by nginx)
+      return audioUrl
+    },
     async generateTTSForLesson() {
       if (!this.lessonId || !this.lesson) return
       
@@ -517,7 +541,7 @@ export default {
 }
 
 .btn-primary {
-  background-color: #007bff;
+  background-color: var(--button-primary);
   color: white;
 }
 
@@ -533,11 +557,12 @@ export default {
 .loading-message, .error-message {
   text-align: center;
   padding: 40px;
+  color: var(--text-primary);
 }
 
 .loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #007bff;
+  border: 4px solid var(--spinner-border);
+  border-top: 4px solid var(--spinner-top);
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -551,7 +576,7 @@ export default {
 }
 
 .error-message {
-  color: #dc3545;
+  color: var(--error-color);
 }
 
 /* Lessons List */
@@ -574,24 +599,27 @@ export default {
 }
 
 .lesson-card {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   cursor: pointer;
   transition: box-shadow 0.2s;
+  background-color: var(--card-bg);
+  color: var(--text-primary);
 }
 
 .lesson-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px var(--shadow);
 }
 
 .lesson-card h3 {
   margin: 0 0 10px 0;
+  color: var(--text-primary);
 }
 
 .lesson-meta {
   font-size: 0.9em;
-  color: #666;
+  color: var(--text-secondary);
   margin: 10px 0;
 }
 
@@ -600,7 +628,7 @@ export default {
 }
 
 .lesson-preview {
-  color: #888;
+  color: var(--text-tertiary);
   font-size: 0.9em;
   margin-top: 10px;
 }
@@ -608,7 +636,7 @@ export default {
 .empty-state {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 /* Lesson Reader */
@@ -619,7 +647,7 @@ export default {
 .lesson-header {
   margin-bottom: 30px;
   padding-bottom: 20px;
-  border-bottom: 2px solid #eee;
+  border-bottom: 2px solid var(--border-color);
 }
 
 .lesson-title-section {
@@ -628,13 +656,14 @@ export default {
 
 .lesson-title-section h2 {
   margin: 0 0 10px 0;
+  color: var(--text-primary);
 }
 
 .listening-stats {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9em;
 }
 
@@ -651,8 +680,9 @@ export default {
   align-items: center;
   gap: 15px;
   padding: 15px;
-  background: #f5f5f5;
+  background: var(--audio-controls-bg);
   border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {
@@ -698,7 +728,7 @@ export default {
   display: flex;
   gap: 5px;
   font-size: 0.9em;
-  color: #666;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -706,14 +736,14 @@ export default {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: #ddd;
+  background: var(--audio-progress-bg);
   outline: none;
   cursor: pointer;
   transition: background 0.3s;
 }
 
 .audio-progress:hover {
-  background: #ccc;
+  background: var(--audio-progress-hover);
 }
 
 .audio-progress::-webkit-slider-thumb {
@@ -721,7 +751,7 @@ export default {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #007bff;
+  background: var(--button-primary);
   cursor: pointer;
 }
 
@@ -729,7 +759,7 @@ export default {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #007bff;
+  background: var(--button-primary);
   cursor: pointer;
   border: none;
 }
@@ -737,9 +767,9 @@ export default {
 .no-audio-message {
   margin-top: 15px;
   padding: 15px;
-  background: #fff3cd;
+  background: var(--warning-bg);
   border-radius: 4px;
-  color: #856404;
+  color: var(--warning-text);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -753,17 +783,20 @@ export default {
 }
 
 .lesson-text-container {
-  background: #f9f9f9;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 30px;
   margin-top: 20px;
   line-height: 2;
   font-size: 1.1em;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .lesson-text {
   max-width: 100%;
   word-wrap: break-word;
+  color: var(--text-primary);
 }
 
 .token {
@@ -774,27 +807,29 @@ export default {
   display: inline-block;
   white-space: pre-wrap;
   position: relative;
+  color: var(--text-primary);
 }
 
 .token:hover {
-  background-color: #e3f2fd;
+  background-color: var(--token-hover-bg);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px var(--shadow);
 }
 
 .token-clicked {
-  background-color: #bbdefb;
+  background-color: var(--token-clicked-bg);
   animation: tokenClick 0.3s ease;
 }
 
 .token-added {
-  background-color: #c8e6c9;
+  background-color: var(--token-added-bg);
   font-weight: 500;
-  border-bottom: 2px solid #4caf50;
+  border-bottom: 2px solid var(--token-added-border);
 }
 
 .token-added:hover {
-  background-color: #a5d6a7;
+  background-color: var(--token-added-bg);
+  opacity: 0.8;
 }
 
 @keyframes tokenClick {
@@ -811,14 +846,15 @@ export default {
 
 /* Popover */
 .token-popover {
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 20px var(--shadow);
   min-width: 300px;
   max-width: 500px;
   animation: popoverFadeIn 0.2s ease;
   z-index: 1000;
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
@@ -852,7 +888,11 @@ export default {
   align-items: center;
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.popover-header strong {
+  color: var(--text-primary);
 }
 
 .close-btn {
@@ -860,7 +900,7 @@ export default {
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
   padding: 0;
   width: 30px;
   height: 30px;
@@ -870,23 +910,28 @@ export default {
 }
 
 .close-btn:hover {
-  color: #000;
+  color: var(--text-primary);
 }
 
 .popover-body p {
   margin: 10px 0;
+  color: var(--text-primary);
+}
+
+.popover-body strong {
+  color: var(--text-primary);
 }
 
 .sentence-context, .sentence-translation {
   font-style: italic;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9em;
 }
 
 .popover-loading {
   text-align: center;
   padding: 20px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .popover-loading p {
@@ -895,8 +940,8 @@ export default {
 }
 
 .loading-spinner-small {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #007bff;
+  border: 3px solid var(--spinner-border);
+  border-top: 3px solid var(--spinner-top);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -907,7 +952,7 @@ export default {
 .no-tokens-message {
   text-align: center;
   padding: 20px;
-  color: #666;
+  color: var(--text-secondary);
   font-style: italic;
 }
 </style>
