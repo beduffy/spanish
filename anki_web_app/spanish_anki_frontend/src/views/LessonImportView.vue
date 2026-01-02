@@ -273,11 +273,14 @@ export default {
                 this.successMessage += ` (TTS: ${ttsResponse.data.error})`
               } else {
                 console.error('TTS generation failed: No audio URL returned', ttsResponse)
+                console.error('TTS response data:', JSON.stringify(ttsResponse?.data, null, 2))
                 this.successMessage += ' (TTS generation failed - you can generate it manually from the lesson page)'
               }
             } catch (ttsError) {
               console.error('TTS generation exception:', ttsError)
               console.error('TTS error response:', ttsError.response)
+              console.error('TTS error status:', ttsError.response?.status)
+              console.error('TTS error data:', ttsError.response?.data)
               const errorMsg = ttsError.response?.data?.error || ttsError.response?.data?.detail || ttsError.message || 'Check API configuration'
               this.successMessage += ` (TTS failed: ${errorMsg} - you can generate it manually from the lesson page)`
             }
