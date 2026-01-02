@@ -148,7 +148,7 @@ export default {
       sourceUrl: '',
       language: 'de',
       selectedFile: null,
-      generateTTS: false,
+      generateTTS: true,
       isLoading: false,
       isImporting: false,
       errorMessage: '',
@@ -233,28 +233,69 @@ export default {
           const tokenCount = response.data.token_count || 0
           this.successMessage = `Lesson imported successfully! (${tokenCount} tokens)`
 
-          // Generate TTS if requested
+          // Generate TTS if requested (always try, it's default now)
+          // Add delay to ensure session/auth is fully established
           if (this.generateTTS && lessonId) {
+            // Wait a bit for session to be established
+            await new Promise(resolve => setTimeout(resolve, 500))
+            
             try {
-              await ApiService.reader.generateTTS(lessonId)
-              this.successMessage += ' TTS audio generated.'
+              console.log('Generating TTS for lesson:', lessonId)
+              
+              // Retry mechanism for TTS generation (in case of auth timing issues)
+              let ttsResponse = null
+              let lastError = null
+              for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                  if (attempt > 0) {
+                    console.log(`TTS attempt ${attempt + 1}/3`)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+                  }
+                  ttsResponse = await ApiService.reader.generateTTS(lessonId)
+                  break // Success, exit retry loop
+                } catch (err) {
+                  lastError = err
+                  console.warn(`TTS attempt ${attempt + 1} failed:`, err.response?.status, err.response?.data)
+                  if (err.response?.status === 403 && attempt < 2) {
+                    // Auth error, wait longer and retry
+                    continue
+                  } else {
+                    throw err // Non-auth error or last attempt
+                  }
+                }
+              }
+              
+              console.log('TTS Response:', ttsResponse)
+              
+              if (ttsResponse && ttsResponse.data && ttsResponse.data.audio_url) {
+                this.successMessage += ' TTS audio generated.'
+                console.log('TTS audio URL:', ttsResponse.data.audio_url)
+              } else if (ttsResponse && ttsResponse.data && ttsResponse.data.error) {
+                console.error('TTS generation failed:', ttsResponse.data.error)
+                this.successMessage += ` (TTS: ${ttsResponse.data.error})`
+              } else {
+                console.error('TTS generation failed: No audio URL returned', ttsResponse)
+                this.successMessage += ' (TTS generation failed - you can generate it manually from the lesson page)'
+              }
             } catch (ttsError) {
-              console.warn('TTS generation failed:', ttsError)
-              this.successMessage += ' (TTS generation failed - check API configuration)'
+              console.error('TTS generation exception:', ttsError)
+              console.error('TTS error response:', ttsError.response)
+              const errorMsg = ttsError.response?.data?.error || ttsError.response?.data?.detail || ttsError.message || 'Check API configuration'
+              this.successMessage += ` (TTS failed: ${errorMsg} - you can generate it manually from the lesson page)`
             }
           }
 
-          // Redirect to lesson reader after a short delay
-          if (lessonId && this.$router) {
+          // Redirect back to reader list after a short delay
+          if (this.$router) {
             setTimeout(() => {
-              this.$router.push({ name: 'LessonDetail', params: { id: lessonId.toString() } }).catch((err) => {
+              this.$router.push({ name: 'Reader' }).catch((err) => {
                 console.error('Navigation error:', err)
                 // Fallback: try direct path
-                this.$router.push(`/reader/lessons/${lessonId}`).catch(() => {
+                this.$router.push('/reader').catch(() => {
                   console.error('Fallback navigation also failed')
                 })
               })
-            }, 1500)
+            }, 2000)
           }
         } else {
           throw new Error('Invalid response from server')

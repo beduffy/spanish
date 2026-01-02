@@ -259,6 +259,20 @@ export default {
                 throw error
             })
         },
+        
+        // Listening time tracking
+        updateListeningTime(lessonId, secondsListened) {
+            if (!lessonId || secondsListened === undefined) {
+                return Promise.reject(new Error('Lesson ID and seconds listened are required'))
+            }
+            return apiClient.post(`/reader/lessons/${lessonId}/listening-time/`, {
+                lesson_id: lessonId,
+                seconds_listened: secondsListened,
+            }).catch(error => {
+                console.error('Error updating listening time:', error)
+                throw error
+            })
+        },
     },
 
     // Example of how to handle potential Django CSRF if not using Django Rest Framework's session auth
