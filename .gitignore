@@ -7,6 +7,20 @@ coverage.xml
 .env.local
 .env.*.local
 
+# Database files
+*.sqlite3
+*.db
+
+# Media files (TTS audio, uploaded files)
+anki_web_app/media/
+media/
+
+# Google Cloud credentials (sensitive)
+**/google-tts-credentials.json
+**/*credentials*.json
+**/*-credentials.json
+~/.google-cloud/
+
 # Local nginx configuration (contains local paths and settings)
 nginx_spanish_anki_local_test.conf
 
