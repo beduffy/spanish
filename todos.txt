@@ -1,2 +1,10 @@
 make it so we can disable each card if we know it we master it
 have clarity and info on the algorithm and how many days and don't show cards that are not due or something?
+ONLY ALLOW BENFDUFFY AND  irene.castrovergel
+easy to batch add from all worksheets and stories! 
+auto find if word vs sentence and tag
+filter in review by tag and in cards list. sort by many
+get words from toucan and lingopie and? 
+dark mode
+no tables in supabase why? where are the tables and how to make it more editable and backupable?
+understand everything
