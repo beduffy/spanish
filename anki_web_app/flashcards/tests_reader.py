@@ -13,7 +13,7 @@ Tests cover:
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from unittest.mock import patch, MagicMock
 from flashcards.models import Lesson, Token, Phrase, Card
@@ -698,3 +698,320 @@ class TTSServiceTests(TestCase):
         result = _generate_elevenlabs_tts('Test', 'de-DE')
         
         self.assertIsNone(result)
+
+
+class TTSIntegrationTests(APITestCase):
+    """Comprehensive integration tests for TTS functionality."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+    
+    @patch('flashcards.tts_service.generate_tts_audio')
+    def test_lesson_import_with_tts_generation(self, mock_generate_tts):
+        """Test that TTS can be generated after lesson import."""
+        mock_generate_tts.return_value = '/media/tts/test_audio.mp3'
+        
+        # Create lesson
+        url = '/api/flashcards/reader/lessons/'
+        data = {
+            'title': 'Test Lesson',
+            'text': 'Hallo Welt. Wie geht es dir?',
+            'language': 'de',
+            'source_type': 'text'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        lesson_id = response.data['lesson_id']
+        
+        # Generate TTS
+        tts_url = '/api/flashcards/reader/generate-tts/'
+        tts_response = self.client.post(tts_url, {'lesson_id': lesson_id}, format='json')
+        
+        self.assertEqual(tts_response.status_code, status.HTTP_200_OK)
+        self.assertIn('audio_url', tts_response.data)
+        self.assertEqual(tts_response.data['audio_url'], '/media/tts/test_audio.mp3')
+        
+        # Verify lesson was updated
+        lesson = Lesson.objects.get(lesson_id=lesson_id)
+        self.assertEqual(lesson.audio_url, '/media/tts/test_audio.mp3')
+        mock_generate_tts.assert_called_once()
+    
+    @patch('flashcards.tts_service.generate_tts_audio')
+    def test_tts_generation_language_code_mapping(self, mock_generate_tts):
+        """Test that language codes are properly mapped for TTS."""
+        mock_generate_tts.return_value = '/media/tts/test.mp3'
+        
+        lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test',
+            text='Hola mundo',
+            language='es'
+        )
+        
+        url = '/api/flashcards/reader/generate-tts/'
+        response = self.client.post(url, {'lesson_id': lesson.lesson_id}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verify language code was mapped correctly (es -> es-ES)
+        call_args = mock_generate_tts.call_args
+        self.assertEqual(call_args[0][1], 'es-ES')  # language_code parameter
+    
+    @patch('flashcards.tts_service.generate_tts_audio')
+    def test_tts_generation_with_explicit_language_code(self, mock_generate_tts):
+        """Test TTS generation with explicit language code."""
+        mock_generate_tts.return_value = '/media/tts/test.mp3'
+        
+        lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test',
+            text='Bonjour le monde',
+            language='fr'
+        )
+        
+        url = '/api/flashcards/reader/generate-tts/'
+        response = self.client.post(url, {
+            'lesson_id': lesson.lesson_id,
+            'language_code': 'fr-FR'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        call_args = mock_generate_tts.call_args
+        self.assertEqual(call_args[0][1], 'fr-FR')
+    
+    def test_tts_generation_requires_authentication(self):
+        """Test that TTS generation requires authentication."""
+        # Create unauthenticated client
+        unauthenticated_client = APIClient()
+        
+        url = '/api/flashcards/reader/generate-tts/'
+        response = unauthenticated_client.post(url, {'lesson_id': 1}, format='json')
+        
+        # Should be 401 or 403 (both indicate auth failure)
+        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+    
+    @patch('flashcards.tts_service.generate_tts_audio')
+    def test_tts_generation_updates_lesson_audio_url(self, mock_generate_tts):
+        """Test that TTS generation updates lesson audio_url field."""
+        mock_generate_tts.return_value = '/media/tts/updated_audio.mp3'
+        
+        lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test',
+            text='Test text',
+            language='de',
+            audio_url=None
+        )
+        
+        self.assertIsNone(lesson.audio_url)
+        
+        url = '/api/flashcards/reader/generate-tts/'
+        response = self.client.post(url, {'lesson_id': lesson.lesson_id}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        lesson.refresh_from_db()
+        self.assertEqual(lesson.audio_url, '/media/tts/updated_audio.mp3')
+    
+    @patch('flashcards.tts_service.generate_tts_audio')
+    def test_tts_generation_returns_lesson_id_in_response(self, mock_generate_tts):
+        """Test that TTS response includes lesson_id."""
+        mock_generate_tts.return_value = '/media/tts/test.mp3'
+        
+        lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test',
+            text='Test text',
+            language='de'
+        )
+        
+        url = '/api/flashcards/reader/generate-tts/'
+        response = self.client.post(url, {'lesson_id': lesson.lesson_id}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('lesson_id', response.data)
+        self.assertEqual(response.data['lesson_id'], lesson.lesson_id)
+        self.assertIn('message', response.data)
+
+
+class ListeningTimeIntegrationTests(APITestCase):
+    """Integration tests for listening time tracking."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt',
+            language='de'
+        )
+    
+    def test_listening_time_starts_at_zero(self):
+        """Test that new lessons start with zero listening time."""
+        self.assertEqual(self.lesson.total_listening_time_seconds, 0)
+        self.assertIsNone(self.lesson.last_listened_at)
+    
+    def test_listening_time_serializer_includes_formatted_time(self):
+        """Test that lesson serializer includes formatted listening time."""
+        self.lesson.total_listening_time_seconds = 125  # 2 minutes 5 seconds
+        self.lesson.save()
+        
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('listening_time_formatted', response.data)
+        self.assertEqual(response.data['listening_time_formatted'], '2:05')
+    
+    def test_listening_time_formatted_for_hours(self):
+        """Test listening time formatting for hours."""
+        self.lesson.total_listening_time_seconds = 3665  # 1 hour 1 minute 5 seconds
+        self.lesson.save()
+        
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['listening_time_formatted'], '1:01:05')
+    
+    def test_listening_time_updates_last_listened_at(self):
+        """Test that updating listening time also updates last_listened_at."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/listening-time/'
+        response = self.client.post(url, {
+            'lesson_id': self.lesson.lesson_id,
+            'seconds_listened': 30
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.lesson.refresh_from_db()
+        self.assertIsNotNone(self.lesson.last_listened_at)
+        self.assertIn('last_listened_at', response.data)
+
+
+class LessonImportFlowTests(APITestCase):
+    """End-to-end tests for lesson import flow."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+    
+    def test_full_import_flow_with_tokenization(self):
+        """Test complete lesson import flow including tokenization."""
+        url = '/api/flashcards/reader/lessons/'
+        data = {
+            'title': 'German News Article',
+            'text': 'Das ist ein Test. Es funktioniert gut.',
+            'language': 'de',
+            'source_type': 'text',
+            'source_url': 'https://example.com/article'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Response should include lesson_id and token_count
+        self.assertIn('lesson_id', response.data)
+        self.assertIn('token_count', response.data)
+        self.assertGreater(response.data['token_count'], 0)
+        
+        lesson_id = response.data['lesson_id']
+        lesson = Lesson.objects.get(lesson_id=lesson_id)
+        self.assertEqual(lesson.title, 'German News Article')
+        self.assertEqual(lesson.text, 'Das ist ein Test. Es funktioniert gut.')
+        self.assertEqual(lesson.language, 'de')
+        self.assertEqual(lesson.source_type, 'text')
+        self.assertEqual(lesson.source_url, 'https://example.com/article')
+        
+        # Verify tokens were created
+        tokens = lesson.tokens.all()
+        self.assertGreater(len(tokens), 0)
+        # Check that tokens have proper structure
+        for token in tokens:
+            self.assertIsNotNone(token.text)
+            self.assertIsNotNone(token.normalized)
+            self.assertIsNotNone(token.start_offset)
+            self.assertIsNotNone(token.end_offset)
+    
+    @patch('flashcards.tts_service.generate_tts_audio')
+    def test_import_and_tts_generation_flow(self, mock_generate_tts):
+        """Test lesson import followed by TTS generation."""
+        mock_generate_tts.return_value = '/media/tts/imported_lesson.mp3'
+        
+        # Step 1: Import lesson
+        import_url = '/api/flashcards/reader/lessons/'
+        import_data = {
+            'title': 'Test Lesson',
+            'text': 'Hallo Welt',
+            'language': 'de',
+            'source_type': 'text'
+        }
+        import_response = self.client.post(import_url, import_data, format='json')
+        self.assertEqual(import_response.status_code, status.HTTP_201_CREATED)
+        # Get lesson_id from response or from created lesson
+        if 'lesson_id' in import_response.data:
+            lesson_id = import_response.data['lesson_id']
+        else:
+            lesson = Lesson.objects.filter(user=self.user).order_by('-created_at').first()
+            lesson_id = lesson.lesson_id if lesson else None
+            self.assertIsNotNone(lesson_id, "Lesson should have been created")
+        
+        # Step 2: Generate TTS
+        tts_url = '/api/flashcards/reader/generate-tts/'
+        tts_response = self.client.post(tts_url, {'lesson_id': lesson_id}, format='json')
+        self.assertEqual(tts_response.status_code, status.HTTP_200_OK)
+        
+        # Step 3: Verify lesson has audio_url
+        lesson = Lesson.objects.get(lesson_id=lesson_id)
+        self.assertEqual(lesson.audio_url, '/media/tts/imported_lesson.mp3')
+        
+        # Step 4: Get lesson detail and verify audio_url is included
+        detail_url = f'/api/flashcards/reader/lessons/{lesson_id}/'
+        detail_response = self.client.get(detail_url)
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.data['audio_url'], '/media/tts/imported_lesson.mp3')
+    
+    def test_lesson_import_creates_tokens_with_correct_positions(self):
+        """Test that tokens have correct start and end offsets."""
+        url = '/api/flashcards/reader/lessons/'
+        data = {
+            'title': 'Test',
+            'text': 'Hallo Welt',
+            'language': 'de',
+            'source_type': 'text'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        # Get lesson_id from response or from created lesson
+        if 'lesson_id' in response.data:
+            lesson_id = response.data['lesson_id']
+        else:
+            lesson = Lesson.objects.filter(user=self.user).order_by('-created_at').first()
+            lesson_id = lesson.lesson_id if lesson else None
+            self.assertIsNotNone(lesson_id, "Lesson should have been created")
+        lesson = Lesson.objects.get(lesson_id=lesson_id)
+        
+        tokens = list(lesson.tokens.all().order_by('start_offset'))
+        self.assertGreater(len(tokens), 0)
+        
+        # Verify tokens don't overlap and are in order
+        for i in range(len(tokens) - 1):
+            self.assertLessEqual(tokens[i].end_offset, tokens[i + 1].start_offset)
+        
+        # Verify first token starts at 0 or near 0
+        self.assertGreaterEqual(tokens[0].start_offset, 0)
+        
+        # Verify last token ends within text length
+        self.assertLessEqual(tokens[-1].end_offset, len(lesson.text))
