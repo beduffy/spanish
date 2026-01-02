@@ -7,9 +7,18 @@ coverage.xml
 .env.local
 .env.*.local
 
-# Database files
+# Database files (DO NOT COMMIT DATABASES)
 *.sqlite3
 *.db
+anki_web_app/db.sqlite3
+anki_web_app/*.sqlite3
+**/db.sqlite3
+
+# Backup files and directories
+backups/
+*.sqlite3.gz
+*.db.gz
+**/backups/
 
 # Media files (TTS audio, uploaded files)
 anki_web_app/media/
