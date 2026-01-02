@@ -208,6 +208,29 @@ export default {
             })
         },
         
+        updateLesson(lessonId, lessonData) {
+            if (!lessonId) {
+                return Promise.reject(new Error('Lesson ID is required'))
+            }
+            if (!lessonData) {
+                return Promise.reject(new Error('Lesson data is required'))
+            }
+            return apiClient.put(`/reader/lessons/${lessonId}/update/`, lessonData).catch(error => {
+                console.error('Error updating lesson:', error)
+                throw error
+            })
+        },
+        
+        deleteLesson(lessonId) {
+            if (!lessonId) {
+                return Promise.reject(new Error('Lesson ID is required'))
+            }
+            return apiClient.delete(`/reader/lessons/${lessonId}/delete/`).catch(error => {
+                console.error('Error deleting lesson:', error)
+                throw error
+            })
+        },
+        
         // Translation
         translateText(text, sourceLang = 'de', targetLang = 'en') {
             if (!text) {
@@ -230,6 +253,21 @@ export default {
             }
             return apiClient.get(`/reader/tokens/${tokenId}/click/`).catch(error => {
                 console.error('Error clicking token:', error)
+                throw error
+            })
+        },
+        
+        // Phrase creation
+        createPhrase(lessonId, startOffset, endOffset) {
+            if (!lessonId || startOffset === undefined || endOffset === undefined) {
+                return Promise.reject(new Error('Lesson ID, start offset, and end offset are required'))
+            }
+            return apiClient.post('/reader/phrases/create/', {
+                lesson_id: lessonId,
+                start_offset: startOffset,
+                end_offset: endOffset
+            }).catch(error => {
+                console.error('Error creating phrase:', error)
                 throw error
             })
         },
