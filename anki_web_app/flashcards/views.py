@@ -1024,6 +1024,10 @@ class GenerateTTSAPIView(APIView):
     
     def post(self, request, *args, **kwargs):
         from .tts_service import generate_tts_audio
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        logger.info(f"TTS API called - User: {request.user}, Data: {request.data}")
         
         lesson_id = request.data.get('lesson_id')
         text = request.data.get('text')
@@ -1035,28 +1039,71 @@ class GenerateTTSAPIView(APIView):
                 text = lesson.text
                 if not language_code:
                     language_code = self._get_language_code(lesson.language)
+                logger.info(f"Found lesson {lesson_id}, text length: {len(text)}, language_code: {language_code}")
             except Lesson.DoesNotExist:
+                logger.error(f"Lesson {lesson_id} not found for user {request.user}")
                 return Response({'error': 'Lesson not found'}, status=status.HTTP_404_NOT_FOUND)
         
         if not text:
+            logger.error("No text provided for TTS generation")
             return Response({'error': 'text or lesson_id required'}, status=status.HTTP_400_BAD_REQUEST)
         
         if not language_code:
             language_code = 'de-DE'  # Default fallback
         
+        logger.info(f"Generating TTS for text length {len(text)}, language: {language_code}")
         audio_url = generate_tts_audio(text, language_code)
         
         if audio_url:
+            logger.info(f"TTS generated successfully: {audio_url}")
             # Update lesson audio_url if lesson_id provided
             if lesson_id:
                 lesson.audio_url = audio_url
                 lesson.save(update_fields=['audio_url'])
+                logger.info(f"Updated lesson {lesson_id} with audio_url: {audio_url}")
             
             return Response({
                 'audio_url': audio_url,
+                'lesson_id': lesson_id,
+                'message': 'TTS audio generated successfully'
             }, status=status.HTTP_200_OK)
         else:
+            error_msg = 'TTS generation failed. Check API configuration (GOOGLE_TTS_CREDENTIALS_PATH or ELEVENLABS_API_KEY).'
+            logger.error(f"TTS Error: {error_msg}")
+            print(f"TTS Error: {error_msg}")
             return Response(
-                {'error': 'TTS generation failed. Check API configuration (GOOGLE_TTS_CREDENTIALS_PATH or ELEVENLABS_API_KEY).'},
+                {'error': error_msg},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class UpdateListeningTimeAPIView(APIView):
+    """
+    Update listening time for a lesson.
+    POST: {lesson_id, seconds_listened}
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        lesson_id = request.data.get('lesson_id')
+        seconds_listened = request.data.get('seconds_listened', 0)
+        
+        if not lesson_id:
+            return Response({'error': 'lesson_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            lesson = Lesson.objects.get(lesson_id=lesson_id, user=request.user)
+        except Lesson.DoesNotExist:
+            return Response({'error': 'Lesson not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Update listening time
+        lesson.total_listening_time_seconds += int(seconds_listened)
+        from django.utils import timezone
+        lesson.last_listened_at = timezone.now()
+        lesson.save(update_fields=['total_listening_time_seconds', 'last_listened_at'])
+        
+        return Response({
+            'lesson_id': lesson.lesson_id,
+            'total_listening_time_seconds': lesson.total_listening_time_seconds,
+            'last_listened_at': lesson.last_listened_at,
+        }, status=status.HTTP_200_OK)

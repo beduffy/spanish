@@ -329,17 +329,29 @@ class CardReviewInputSerializer(serializers.Serializer):
 
 class LessonSerializer(serializers.ModelSerializer):
     token_count = serializers.SerializerMethodField()
+    listening_time_formatted = serializers.SerializerMethodField()
     
     class Meta:
         model = Lesson
         fields = [
             'lesson_id', 'title', 'text', 'language', 'audio_url',
-            'source_type', 'source_url', 'created_at', 'token_count'
+            'source_type', 'source_url', 'created_at', 'token_count',
+            'total_listening_time_seconds', 'last_listened_at', 'listening_time_formatted'
         ]
-        read_only_fields = ['lesson_id', 'created_at']
+        read_only_fields = ['lesson_id', 'created_at', 'total_listening_time_seconds', 'last_listened_at']
     
     def get_token_count(self, obj):
         return obj.tokens.count()
+    
+    def get_listening_time_formatted(self, obj):
+        """Format listening time as MM:SS or HH:MM:SS."""
+        seconds = obj.total_listening_time_seconds or 0
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{secs:02d}"
+        return f"{minutes}:{secs:02d}"
 
 
 class TokenSerializer(serializers.ModelSerializer):
