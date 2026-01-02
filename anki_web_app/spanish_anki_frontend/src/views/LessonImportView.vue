@@ -244,7 +244,6 @@ export default {
               
               // Retry mechanism for TTS generation (in case of auth timing issues)
               let ttsResponse = null
-              let lastError = null
               for (let attempt = 0; attempt < 3; attempt++) {
                 try {
                   if (attempt > 0) {
@@ -254,7 +253,6 @@ export default {
                   ttsResponse = await ApiService.reader.generateTTS(lessonId)
                   break // Success, exit retry loop
                 } catch (err) {
-                  lastError = err
                   console.warn(`TTS attempt ${attempt + 1} failed:`, err.response?.status, err.response?.data)
                   if (err.response?.status === 403 && attempt < 2) {
                     // Auth error, wait longer and retry
