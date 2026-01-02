@@ -66,6 +66,13 @@ module.exports = defineConfig({
         target: 'http://backend:8000', // 'backend' is the service name in docker-compose.yml
         ws: true, // If you use websockets
         changeOrigin: true
+      },
+      '/media': { // Proxy media files (TTS audio, uploaded files) to Django backend
+        target: 'http://backend:8000',
+        ws: false,
+        changeOrigin: true,
+        secure: false,
+        logLevel: 'debug'
       }
     }
   },
