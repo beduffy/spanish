@@ -5,7 +5,53 @@ easy to batch add from all worksheets and stories!
 auto find if word vs sentence and tag
 filter in review by tag and in cards list. sort by many
 get words from toucan and lingopie and? 
-dark mode
 no tables in supabase why? where are the tables and how to make it more editable and backupable?
 understand everything
 make it easier to click submit and next. reoreder things etc.
+clearer understanding of ease efactor and next review date etc. and show curve or? and show how many words added etc per day. 
+super cheap/free llm to explain a sentence and how word fits
+find article always for nouns, combined. 
+Find verb and conjugation of verb
+auto create flash card
+more more more
+even use chatgpt to create images/videos/audio?
+
+
+
+
+
+alert shouldn't happen for adding flashcard
+fix empty space between words in long story
+fix popup not being seen
+make it easier to close popup
+
+
+use y2doc or my own thing to easily convert videos or blogs i care about to text. 
+Store numbers of words from blogs? or? 
+
+think more. 
+
+
+
+
+chatgpt. 
+
+What to prioritize (big payoff)
+
+lemmatization (sehen/sah/gesehen unify)
+
+store surface form + lemma + sentence
+
+fast “save” while reading
+
+“known/unknown” highlighting
+
+What to delay
+
+perfect grammar explanations
+
+perfect audio generation
+
+huge analytics dashboard
+
+importing 10 different formats
