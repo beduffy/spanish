@@ -29,15 +29,23 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
     async (config) => {
         try {
-            const token = await SupabaseService.getAccessToken();
+            // Try to get token with a small retry mechanism
+            let token = await SupabaseService.getAccessToken();
+            if (!token) {
+                // Wait a bit and try once more (for cases where session is still being established)
+                await new Promise(resolve => setTimeout(resolve, 100));
+                token = await SupabaseService.getAccessToken();
+            }
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
-                console.debug('Added Authorization header to request:', config.url);
+                console.log('[API] Added Authorization header to request:', config.url);
+                console.log('[API] Token preview:', token.substring(0, 20) + '...');
             } else {
-                console.warn('No access token available for request:', config.url);
+                console.error('[API] No access token available for request:', config.url);
+                console.error('[API] Session check:', await SupabaseService.getSession());
             }
         } catch (error) {
-            console.warn('Failed to get access token:', error);
+            console.error('[API] Failed to get access token:', error);
         }
         return config;
     },
@@ -167,6 +175,90 @@ export default {
                 'Content-Type': 'multipart/form-data',
             },
         });
+    },
+
+    // Reader API methods
+    reader: {
+        // Lessons
+        getLessons(page = 1) {
+            if (!page || page < 1) page = 1
+            return apiClient.get(`/reader/lessons/?page=${page}`).catch(error => {
+                console.error('Error fetching lessons:', error)
+                throw error
+            })
+        },
+        
+        createLesson(lessonData) {
+            if (!lessonData || !lessonData.title || !lessonData.text) {
+                return Promise.reject(new Error('Lesson data is required'))
+            }
+            return apiClient.post('/reader/lessons/', lessonData).catch(error => {
+                console.error('Error creating lesson:', error)
+                throw error
+            })
+        },
+        
+        getLesson(lessonId) {
+            if (!lessonId) {
+                return Promise.reject(new Error('Lesson ID is required'))
+            }
+            return apiClient.get(`/reader/lessons/${lessonId}/`).catch(error => {
+                console.error('Error fetching lesson:', error)
+                throw error
+            })
+        },
+        
+        // Translation
+        translateText(text, sourceLang = 'de', targetLang = 'en') {
+            if (!text) {
+                return Promise.reject(new Error('Text is required'))
+            }
+            return apiClient.post('/reader/translate/', {
+                text,
+                source_lang: sourceLang,
+                target_lang: targetLang,
+            }).catch(error => {
+                console.error('Error translating text:', error)
+                throw error
+            })
+        },
+        
+        // Token interaction
+        clickToken(tokenId) {
+            if (!tokenId) {
+                return Promise.reject(new Error('Token ID is required'))
+            }
+            return apiClient.get(`/reader/tokens/${tokenId}/click/`).catch(error => {
+                console.error('Error clicking token:', error)
+                throw error
+            })
+        },
+        
+        // Add to flashcards
+        addToFlashcards(data) {
+            if (!data || (!data.token_id && !data.phrase_id) || !data.front || !data.lesson_id) {
+                return Promise.reject(new Error('Invalid flashcard data'))
+            }
+            return apiClient.post('/reader/add-to-flashcards/', data).catch(error => {
+                console.error('Error adding to flashcards:', error)
+                throw error
+            })
+        },
+        
+        // TTS
+        generateTTS(lessonId, text = null, languageCode = 'de-DE') {
+            if (!lessonId && !text) {
+                return Promise.reject(new Error('Lesson ID or text is required'))
+            }
+            return apiClient.post('/reader/generate-tts/', {
+                lesson_id: lessonId,
+                text,
+                language_code: languageCode,
+            }).catch(error => {
+                console.error('Error generating TTS:', error)
+                throw error
+            })
+        },
     },
 
     // Example of how to handle potential Django CSRF if not using Django Rest Framework's session auth

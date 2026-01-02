@@ -18,6 +18,12 @@ from .views import (
     StudySessionEndAPIView,
     StudySessionListAPIView,
     CurrentUserAPIView,
+    LessonListCreateAPIView,
+    LessonDetailAPIView,
+    TranslateAPIView,
+    TokenClickAPIView,
+    AddToFlashcardsAPIView,
+    GenerateTTSAPIView,
 )
 
 app_name = 'flashcards'
@@ -42,5 +48,11 @@ urlpatterns = [
     path('sessions/heartbeat/', StudySessionHeartbeatAPIView.as_view(), name='study_session_heartbeat_api'),
     path('sessions/end/', StudySessionEndAPIView.as_view(), name='study_session_end_api'),
     path('current-user/', CurrentUserAPIView.as_view(), name='current_user_api'),
-    # Other flashcard app API endpoints will go here
+    # Reader endpoints
+    path('reader/lessons/', LessonListCreateAPIView.as_view(), name='lesson_list_create_api'),
+    path('reader/lessons/<int:pk>/', LessonDetailAPIView.as_view(), name='lesson_detail_api'),
+    path('reader/translate/', TranslateAPIView.as_view(), name='translate_api'),
+    path('reader/tokens/<int:token_id>/click/', TokenClickAPIView.as_view(), name='token_click_api'),
+    path('reader/add-to-flashcards/', AddToFlashcardsAPIView.as_view(), name='add_to_flashcards_api'),
+    path('reader/generate-tts/', GenerateTTSAPIView.as_view(), name='generate_tts_api'),
 ] 

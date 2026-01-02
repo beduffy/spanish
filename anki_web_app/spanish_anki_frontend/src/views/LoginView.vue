@@ -81,11 +81,12 @@ export default {
       try {
         await SupabaseService.signIn(this.email, this.password);
         this.successMessage = 'Login successful! Redirecting...';
+        // Wait a bit longer to ensure session is fully established
+        // and trigger auth state change
+        await new Promise(resolve => setTimeout(resolve, 500));
         // Redirect to intended page or home after successful login
-        setTimeout(() => {
-          const redirect = this.$route.query.redirect || '/';
-          this.$router.push(redirect);
-        }, 1000);
+        const redirect = this.$route.query.redirect || '/';
+        this.$router.push(redirect);
       } catch (error) {
         this.errorMessage = error.message || 'Failed to login. Please check your credentials.';
       } finally {

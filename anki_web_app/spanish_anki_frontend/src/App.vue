@@ -6,6 +6,7 @@
     <router-link to="/">Review Cards</router-link> | 
     <router-link to="/cards">All Cards</router-link> |
     <router-link to="/dashboard">Dashboard</router-link> |
+    <router-link to="/reader">Reader</router-link> |
     <router-link to="/calendar">Calendar</router-link>
     <span v-if="user" class="user-info">
       <button @click="handleLogout" class="logout-btn">Logout</button>

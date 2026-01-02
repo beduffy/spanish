@@ -55,10 +55,25 @@ export default {
     return supabase.auth.onAuthStateChange(callback)
   },
 
-  getAccessToken() {
+  async getAccessToken() {
     // Get current session and return access token
-    return supabase.auth.getSession().then(({ data: { session } }) => {
-      return session?.access_token || null
-    })
+    // Use getSession() which gets the current session synchronously from memory
+    // If that fails, try getUser() which forces a refresh
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        return session.access_token
+      }
+      // If no session, try getUser which may trigger a refresh
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: { session: refreshedSession } } = await supabase.auth.getSession()
+        return refreshedSession?.access_token || null
+      }
+      return null
+    } catch (error) {
+      console.warn('Error getting access token:', error)
+      return null
+    }
   }
 }

@@ -34,12 +34,25 @@ class SupabaseJWTAuthenticationMiddleware:
         if auth_header.startswith('Bearer '):
             from .auth_backend import SupabaseJWTAuthenticationBackend
             backend = SupabaseJWTAuthenticationBackend()
-            user = backend.authenticate(request)
-            if user:
-                request.user = user
-                print(f"[Middleware] Authentication successful for user: {user.username}")
-            else:
-                print(f"[Middleware] Authentication FAILED for path: {request.path}")
+            try:
+                token = auth_header.split('Bearer ')[1]
+                print(f"[Middleware] Calling backend.authenticate() with token (first 30 chars): {token[:30]}...")
+                user = backend.authenticate(request, token=token)
+                if user:
+                    request.user = user
+                    print(f"[Middleware] Authentication successful for user: {user.username}")
+                else:
+                    print(f"[Middleware] Authentication FAILED - backend returned None for path: {request.path}")
+                    # Check if SUPABASE_URL is configured
+                    from django.conf import settings
+                    supabase_url = getattr(settings, 'SUPABASE_URL', None)
+                    supabase_jwt_secret = getattr(settings, 'SUPABASE_JWT_SECRET', None)
+                    print(f"[Middleware] SUPABASE_URL configured: {bool(supabase_url)}")
+                    print(f"[Middleware] SUPABASE_JWT_SECRET configured: {bool(supabase_jwt_secret)}")
+            except Exception as e:
+                print(f"[Middleware] Exception during authentication: {e}")
+                import traceback
+                traceback.print_exc()
         else:
             print(f"[Middleware] No Bearer token found for path: {request.path}")
             # Development-only: Auto-login as test user if DEBUG=True and no token

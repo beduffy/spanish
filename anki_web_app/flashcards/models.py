@@ -398,3 +398,129 @@ class SessionActivity(models.Model):
         ordering = ['timestamp']
         verbose_name = "Session Activity"
         verbose_name_plural = "Session Activities"
+
+
+class Lesson(models.Model):
+    """
+    Represents an imported text/audio lesson (like a LingQ lesson).
+    """
+    lesson_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lessons')
+    
+    title = models.CharField(max_length=500)
+    text = models.TextField(help_text="Full text content")
+    language = models.CharField(max_length=10, default='de', help_text="Language code (de, es, etc.)")
+    
+    # Audio support
+    audio_url = models.URLField(blank=True, null=True, help_text="URL to audio file")
+    audio_file = models.FileField(upload_to='lessons/audio/', blank=True, null=True)
+    
+    # Source tracking
+    source_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('text', 'Text Paste'),
+            ('youtube', 'YouTube'),
+            ('url', 'URL'),
+            ('file', 'File Upload'),
+        ],
+        default='text'
+    )
+    source_url = models.URLField(blank=True, null=True, help_text="Original source URL")
+    
+    # Metadata
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Translation cache (sentence-level)
+    sentence_translations = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Cached translations: {sentence_text: translation}"
+    )
+    
+    # Listening time tracking
+    total_listening_time_seconds = models.IntegerField(default=0, help_text="Total seconds of audio listened")
+    last_listened_at = models.DateTimeField(blank=True, null=True, help_text="Last time audio was played")
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Lesson"
+        verbose_name_plural = "Lessons"
+
+
+class Token(models.Model):
+    """
+    Represents a word/phrase token within a lesson.
+    Used for highlighting and click-to-translate.
+    """
+    token_id = models.AutoField(primary_key=True)
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='tokens')
+    
+    # Token text and position
+    text = models.CharField(max_length=200, help_text="Surface form of the token")
+    normalized = models.CharField(max_length=200, db_index=True, help_text="Normalized form (lowercase, punctuation stripped)")
+    
+    # Position in lesson text
+    start_offset = models.IntegerField(help_text="Character offset where token starts")
+    end_offset = models.IntegerField(help_text="Character offset where token ends")
+    
+    # Translation cache (word-level)
+    translation = models.TextField(blank=True, null=True, help_text="Cached translation/gloss")
+    dictionary_entry = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Dictionary data: {meanings: [...], part_of_speech: '...'}"
+    )
+    
+    # User interaction tracking
+    clicked_count = models.IntegerField(default=0, help_text="How many times user clicked this token")
+    added_to_flashcards = models.BooleanField(default=False, help_text="Whether user added this to flashcards")
+    card_id = models.IntegerField(blank=True, null=True, help_text="ID of Card created from this token")
+    
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['start_offset']
+        indexes = [
+            models.Index(fields=['lesson', 'start_offset']),
+            models.Index(fields=['normalized']),
+        ]
+        verbose_name = "Token"
+        verbose_name_plural = "Tokens"
+
+
+class Phrase(models.Model):
+    """
+    Represents a multi-word phrase selected by the user.
+    """
+    phrase_id = models.AutoField(primary_key=True)
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='phrases')
+    
+    text = models.TextField(help_text="Full phrase text")
+    normalized = models.CharField(max_length=500, db_index=True)
+    
+    # Token references (which tokens make up this phrase)
+    token_start = models.ForeignKey(
+        Token,
+        on_delete=models.CASCADE,
+        related_name='phrase_starts',
+        help_text="First token in phrase"
+    )
+    token_end = models.ForeignKey(
+        Token,
+        on_delete=models.CASCADE,
+        related_name='phrase_ends',
+        help_text="Last token in phrase"
+    )
+    
+    translation = models.TextField(blank=True, null=True)
+    added_to_flashcards = models.BooleanField(default=False)
+    card_id = models.IntegerField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = "Phrase"
+        verbose_name_plural = "Phrases"

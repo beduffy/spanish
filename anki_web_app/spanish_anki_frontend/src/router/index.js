@@ -7,6 +7,8 @@ import CardEditorView from '../views/CardEditorView.vue'
 import ImportCardsView from '../views/ImportCardsView.vue'
 import CalendarView from '../views/CalendarView.vue'
 import LoginView from '../views/LoginView.vue'
+import ReaderView from '../views/ReaderView.vue'
+import LessonImportView from '../views/LessonImportView.vue'
 import SupabaseService from '../services/SupabaseService'
 
 const routes = [
@@ -57,6 +59,25 @@ const routes = [
     path: '/calendar',
     name: 'Calendar',
     component: CalendarView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/reader',
+    name: 'Reader',
+    component: ReaderView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/reader/import',
+    name: 'LessonImport',
+    component: LessonImportView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/reader/lessons/:id',
+    name: 'LessonDetail',
+    component: ReaderView,
+    props: (route) => ({ id: route.params.id }),
     meta: { requiresAuth: true }
   },
 ]

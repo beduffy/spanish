@@ -19,13 +19,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Root directory (parent of anki_web_app) - where .env file lives
 ROOT_DIR = BASE_DIR.parent
 
-# Configure python-decouple to read from root .env file
+# Configure python-decouple to read from root .env file or environment variables
 # This allows both Django and Vue to use the same .env file
+# In Docker, environment variables are passed directly, so decouple will read from those
 ENV_FILE = ROOT_DIR / '.env'
 if ENV_FILE.exists():
     config = Config(RepositoryEnv(str(ENV_FILE)))
 else:
-    # Fallback to default config if .env doesn't exist
+    # Fallback to default config (reads from environment variables)
+    # In Docker, environment variables are passed via docker-compose.yml
     config = default_config
 
 
@@ -136,6 +138,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"  # For production: collectstatic will put files here
 
+# Media files (for TTS audio, uploaded files)
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
@@ -165,10 +171,11 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Supabase Authentication Configuration
-# Reads from root .env file (same file used by frontend)
-SUPABASE_URL = config('SUPABASE_URL', default=None)  # e.g., 'https://xxx.supabase.co'
-SUPABASE_JWT_SECRET = config('SUPABASE_JWT_SECRET', default=None)  # JWT secret from Supabase project settings
-SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default=None)  # Anon key (same as frontend uses)
+# Reads from environment variables (set via docker-compose.yml) or .env file
+# In Docker, environment variables take precedence
+SUPABASE_URL = os.environ.get('SUPABASE_URL') or config('SUPABASE_URL', default=None)  # e.g., 'https://xxx.supabase.co'
+SUPABASE_JWT_SECRET = os.environ.get('SUPABASE_JWT_SECRET') or config('SUPABASE_JWT_SECRET', default=None)  # JWT secret from Supabase project settings
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY') or config('SUPABASE_ANON_KEY', default=None)  # Anon key (same as frontend uses)
 
 # Authentication Backends
 AUTHENTICATION_BACKENDS = [
