@@ -28,15 +28,24 @@
           v-for="lesson in lessons" 
           :key="lesson.lesson_id" 
           class="lesson-card"
-          @click="loadLesson(lesson.lesson_id)"
         >
-          <h3>{{ lesson.title }}</h3>
-          <p class="lesson-meta">
-            <span>{{ (lesson.language || 'de').toUpperCase() }}</span>
-            <span>{{ lesson.token_count || 0 }} tokens</span>
-            <span>{{ formatDate(lesson.created_at) }}</span>
-          </p>
-          <p class="lesson-preview">{{ (lesson.text || '').substring(0, 150) }}{{ lesson.text && lesson.text.length > 150 ? '...' : '' }}</p>
+          <div class="lesson-card-content" @click="loadLesson(lesson.lesson_id)">
+            <h3>{{ lesson.title }}</h3>
+            <p class="lesson-meta">
+              <span>{{ (lesson.language || 'de').toUpperCase() }}</span>
+              <span>{{ lesson.token_count || 0 }} tokens</span>
+              <span>{{ formatDate(lesson.created_at) }}</span>
+            </p>
+            <p class="lesson-preview">{{ (lesson.text || '').substring(0, 150) }}{{ lesson.text && lesson.text.length > 150 ? '...' : '' }}</p>
+          </div>
+          <div class="lesson-card-actions">
+            <button @click.stop="editLesson(lesson)" class="btn btn-edit" title="Edit lesson">
+              ✏️
+            </button>
+            <button @click.stop="confirmDeleteLesson(lesson)" class="btn btn-delete" title="Delete lesson">
+              🗑️
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -50,6 +59,14 @@
             <span class="listening-icon">🎧</span>
             <span>Listened: {{ lesson.listening_time_formatted }}</span>
           </div>
+        </div>
+        <div class="lesson-actions">
+          <button @click="editLesson(lesson)" class="btn btn-edit" title="Edit lesson">
+            ✏️ Edit
+          </button>
+          <button @click="confirmDeleteLesson(lesson)" class="btn btn-delete" title="Delete lesson">
+            🗑️ Delete
+          </button>
         </div>
         <div v-if="lesson.audio_url" class="audio-player-section">
           <div class="audio-controls">
@@ -93,14 +110,14 @@
       </div>
 
       <!-- Translation Popover -->
-      <div v-if="selectedToken" class="token-popover" :style="popoverStyle">
+      <div v-if="selectedToken || selectedPhrase" class="token-popover" :style="popoverStyle">
         <div class="popover-content">
           <div class="popover-header">
-            <strong>{{ selectedToken.text }}</strong>
+            <strong>{{ (selectedToken || selectedPhrase)?.text }}</strong>
             <button @click="closePopover" class="close-btn">×</button>
           </div>
-          <div v-if="selectedToken.translation" class="popover-body">
-            <p><strong>Translation:</strong> {{ selectedToken.translation }}</p>
+          <div v-if="(selectedToken || selectedPhrase)?.translation" class="popover-body">
+            <p><strong>Translation:</strong> {{ (selectedToken || selectedPhrase).translation }}</p>
             <p v-if="sentenceContext" class="sentence-context">
               <strong>Context:</strong> {{ sentenceContext }}
             </p>
@@ -110,9 +127,9 @@
             <button 
               @click="addToFlashcards" 
               class="btn btn-primary"
-              :disabled="selectedToken.added_to_flashcards"
+              :disabled="(selectedToken || selectedPhrase)?.added_to_flashcards"
             >
-              {{ selectedToken.added_to_flashcards ? '✓ Added to Flashcards' : 'Add to Flashcards' }}
+              {{ (selectedToken || selectedPhrase)?.added_to_flashcards ? '✓ Added to Flashcards' : 'Add to Flashcards' }}
             </button>
           </div>
           <div v-else class="popover-loading">
@@ -131,21 +148,124 @@
           @selectstart="onSelectStart"
         >
           <template v-if="tokens && tokens.length > 0">
-            <span
-              v-for="token in tokens"
-              :key="token.token_id"
-              :class="getTokenClass(token)"
-              @click="handleTokenClick(token, $event)"
-              :data-token-id="token.token_id"
-              :data-start-offset="token.start_offset"
-              :data-end-offset="token.end_offset"
-            >
-              {{ token.text || '' }}
-            </span>
+            <template v-for="(token, index) in tokens" :key="token.token_id">
+              <span
+                :class="getTokenClass(token)"
+                @click="handleTokenClick(token, $event)"
+                :data-token-id="token.token_id"
+                :data-start-offset="token.start_offset"
+                :data-end-offset="token.end_offset"
+              >
+                {{ token.text || '' }}
+              </span>
+              <span v-if="index < tokens.length - 1 && getTokenSpacing(token, tokens[index + 1])" class="token-spacing">
+                {{ getTokenSpacing(token, tokens[index + 1]) }}
+              </span>
+            </template>
           </template>
           <div v-else class="no-tokens-message">
             No tokens available. The lesson may not have been tokenized yet.
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div v-if="toastMessage" class="toast" :class="`toast-${toastType}`">
+      {{ toastMessage }}
+    </div>
+
+    <!-- Edit Lesson Modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Edit Lesson</h2>
+          <button @click="closeEditModal" class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="editError" class="error-message">
+            {{ editError }}
+          </div>
+          <form @submit.prevent="saveLesson">
+            <div class="form-group">
+              <label for="edit-title">Title</label>
+              <input 
+                id="edit-title"
+                v-model="editingLesson.title" 
+                type="text" 
+                required 
+                class="form-control"
+                placeholder="Lesson title"
+              />
+            </div>
+            <div class="form-group">
+              <label for="edit-language">Language</label>
+              <select 
+                id="edit-language"
+                v-model="editingLesson.language" 
+                class="form-control"
+                required
+              >
+                <option value="es">Spanish (es)</option>
+                <option value="de">German (de)</option>
+                <option value="fr">French (fr)</option>
+                <option value="it">Italian (it)</option>
+                <option value="pt">Portuguese (pt)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-text">Text</label>
+              <textarea 
+                id="edit-text"
+                v-model="editingLesson.text" 
+                rows="10" 
+                required 
+                class="form-control"
+                placeholder="Lesson text content"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="edit-audio-url">Audio URL (optional)</label>
+              <input 
+                id="edit-audio-url"
+                v-model="editingLesson.audio_url" 
+                type="url" 
+                class="form-control"
+                placeholder="https://..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="edit-source-type">Source Type</label>
+              <select 
+                id="edit-source-type"
+                v-model="editingLesson.source_type" 
+                class="form-control"
+              >
+                <option value="text">Text Paste</option>
+                <option value="youtube">YouTube</option>
+                <option value="url">URL</option>
+                <option value="file">File Upload</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-source-url">Source URL (optional)</label>
+              <input 
+                id="edit-source-url"
+                v-model="editingLesson.source_url" 
+                type="url" 
+                class="form-control"
+                placeholder="https://..."
+              />
+            </div>
+            <div class="form-actions">
+              <button type="button" @click="closeEditModal" class="btn btn-secondary">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="isSaving">
+                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -186,7 +306,14 @@ export default {
       listeningTimeAccumulator: 0,
       isGeneratingTTS: false,
       selectionStart: null,
-      selectionEnd: null
+      selectionEnd: null,
+      toastMessage: null,
+      toastTimeout: null,
+      toastType: 'success',
+      showEditModal: false,
+      editingLesson: null,
+      isSaving: false,
+      editError: null
     }
   },
   mounted() {
@@ -249,6 +376,7 @@ export default {
         if (response.data) {
           this.lesson = response.data
           this.tokens = Array.isArray(response.data.tokens) ? response.data.tokens : []
+          this.phrases = Array.isArray(response.data.phrases) ? response.data.phrases : []
         } else {
           throw new Error('Invalid response data')
         }
@@ -269,6 +397,12 @@ export default {
     },
     async handleTokenClick(token, event) {
       if (!token || !event || !event.target) return
+      
+      // Don't handle click if there's an active text selection
+      const selection = window.getSelection()
+      if (selection && selection.toString().trim().length > 0) {
+        return
+      }
       
       // Close any existing popover
       if (this.selectedToken && this.selectedToken.token_id === token.token_id) {
@@ -297,6 +431,7 @@ export default {
       }
 
       this.selectedToken = { ...token } // Copy token to avoid reactivity issues
+      this.selectedPhrase = null // Clear phrase selection
       this.sentenceContext = null
       this.sentenceTranslation = null
 
@@ -319,38 +454,72 @@ export default {
     },
     closePopover() {
       this.selectedToken = null
+      this.selectedPhrase = null
       this.sentenceContext = null
       this.sentenceTranslation = null
     },
     async addToFlashcards() {
-      if (!this.selectedToken || !this.lesson) return
+      if ((!this.selectedToken && !this.selectedPhrase) || !this.lesson) return
+
+      const item = this.selectedToken || this.selectedPhrase
+      const isPhrase = !!this.selectedPhrase
 
       try {
         await ApiService.reader.addToFlashcards({
-          token_id: this.selectedToken.token_id,
-          front: this.selectedToken.text,
-          back: this.selectedToken.translation || '',
+          token_id: isPhrase ? undefined : this.selectedToken.token_id,
+          phrase_id: isPhrase ? this.selectedPhrase.phrase_id : undefined,
+          front: item.text,
+          back: item.translation || '',
           sentence_context: this.sentenceContext || '',
           lesson_id: this.lesson.lesson_id
         })
         
-        // Update token status
-        this.selectedToken.added_to_flashcards = true
-        // Update in tokens array
-        const tokenIndex = this.tokens.findIndex(t => t.token_id === this.selectedToken.token_id)
-        if (tokenIndex !== -1) {
-          this.tokens[tokenIndex].added_to_flashcards = true
+        // Update status
+        if (isPhrase) {
+          this.selectedPhrase.added_to_flashcards = true
+          const phraseIndex = this.phrases.findIndex(p => p.phrase_id === this.selectedPhrase.phrase_id)
+          if (phraseIndex !== -1) {
+            this.phrases[phraseIndex].added_to_flashcards = true
+          }
+        } else {
+          this.selectedToken.added_to_flashcards = true
+          const tokenIndex = this.tokens.findIndex(t => t.token_id === this.selectedToken.token_id)
+          if (tokenIndex !== -1) {
+            this.tokens[tokenIndex].added_to_flashcards = true
+          }
         }
         
-        alert('Card added to flashcards successfully!')
+        const itemText = item.text || 'item'
+        this.showToast(`✓ Added "${itemText}" to flashcards`, 'success')
       } catch (error) {
         console.error('Error adding to flashcards:', error)
-        alert('Failed to add card to flashcards. Please try again.')
+        this.showToast('Failed to add card to flashcards. Please try again.', 'error')
       }
     },
     getTokenClass(token) {
       if (!token) return 'token'
       const classes = ['token']
+      
+      // Check if token is part of a phrase
+      // Phrases have token_start_id and token_end_id which are token IDs
+      const isInPhrase = this.phrases.some(phrase => {
+        const tokenStartId = phrase.token_start_id || phrase.token_start
+        const tokenEndId = phrase.token_end_id || phrase.token_end
+        if (!tokenStartId || !tokenEndId) return false
+        // Check if this token is between start and end tokens
+        const startToken = this.tokens.find(t => t.token_id === tokenStartId)
+        const endToken = this.tokens.find(t => t.token_id === tokenEndId)
+        if (!startToken || !endToken) return false
+        
+        // Token is in phrase if its offsets are within the phrase range
+        return token.start_offset >= startToken.start_offset && 
+               token.end_offset <= endToken.end_offset
+      })
+      
+      if (isInPhrase) {
+        classes.push('token-in-phrase')
+      }
+      
       if (token.added_to_flashcards) {
         classes.push('token-added')
       }
@@ -358,6 +527,140 @@ export default {
         classes.push('token-clicked')
       }
       return classes.join(' ')
+    },
+    onSelectStart() {
+      // Allow text selection
+      return true
+    },
+    async handleTextSelection() {
+      // Small delay to ensure selection is complete
+      setTimeout(() => {
+        const selection = window.getSelection()
+        if (!selection || selection.rangeCount === 0) {
+          return
+        }
+        
+        const range = selection.getRangeAt(0)
+        const selectedText = selection.toString().trim()
+        
+        // Only create phrase if there's actual text selected (more than one word)
+        if (!selectedText || selectedText.length < 2) {
+          return
+        }
+        
+        // Check if selection is within lesson text
+        const lessonTextElement = this.$refs.lessonText
+        if (!lessonTextElement || !lessonTextElement.contains(range.commonAncestorContainer)) {
+          return
+        }
+        
+        // Find tokens that are selected by checking which token elements are in the range
+        const selectedTokens = []
+        const tokenElements = lessonTextElement.querySelectorAll('[data-token-id]')
+        
+        tokenElements.forEach(element => {
+          const tokenId = parseInt(element.getAttribute('data-token-id'))
+          const token = this.tokens.find(t => t.token_id === tokenId)
+          
+          if (token && range.intersectsNode(element)) {
+            selectedTokens.push(token)
+          }
+        })
+        
+        if (selectedTokens.length < 2) {
+          // Single token or no tokens - let normal click handler deal with it
+          return
+        }
+        
+        // Sort tokens by offset
+        selectedTokens.sort((a, b) => a.start_offset - b.start_offset)
+        
+        const startOffset = selectedTokens[0].start_offset
+        const endOffset = selectedTokens[selectedTokens.length - 1].end_offset
+        
+        // Create phrase
+        this.createPhraseFromSelection(startOffset, endOffset, range)
+      }, 50)
+    },
+    async createPhraseFromSelection(startOffset, endOffset, range) {
+      try {
+        const response = await ApiService.reader.createPhrase(
+          this.lessonId,
+          startOffset,
+          endOffset
+        )
+        
+        if (response.data && response.data.phrase) {
+          const newPhrase = response.data.phrase
+          // Check if phrase already exists
+          const existingIndex = this.phrases.findIndex(p => p.phrase_id === newPhrase.phrase_id)
+          if (existingIndex === -1) {
+            this.phrases.push(newPhrase)
+          } else {
+            this.phrases[existingIndex] = newPhrase
+          }
+          
+          // Show popover for phrase
+          this.selectedPhrase = newPhrase
+          this.selectedToken = null
+          
+          // Get sentence context
+          const sentenceText = this.getSentenceContext(startOffset)
+          this.sentenceContext = sentenceText
+          
+          // Position popover
+          const rect = range.getBoundingClientRect()
+          this.popoverStyle = {
+            position: 'fixed',
+            top: `${rect.bottom + 10}px`,
+            left: `${rect.left}px`,
+            zIndex: 1000
+          }
+          
+          // Get sentence translation if available
+          if (this.lesson && sentenceText && this.lesson.sentence_translations) {
+            this.sentenceTranslation = this.lesson.sentence_translations[sentenceText] || null
+          }
+          
+          // Clear selection
+          window.getSelection().removeAllRanges()
+        }
+      } catch (error) {
+        console.error('Error creating phrase:', error)
+        // If phrase already exists (200 status), show it
+        if (error.response?.status === 200 && error.response?.data?.phrase) {
+          const existingPhrase = error.response.data.phrase
+          const existingIndex = this.phrases.findIndex(p => p.phrase_id === existingPhrase.phrase_id)
+          if (existingIndex === -1) {
+            this.phrases.push(existingPhrase)
+          } else {
+            this.phrases[existingIndex] = existingPhrase
+          }
+          this.selectedPhrase = existingPhrase
+          this.selectedToken = null
+          
+          // Position popover
+          const rect = range.getBoundingClientRect()
+          this.popoverStyle = {
+            position: 'fixed',
+            top: `${rect.bottom + 10}px`,
+            left: `${rect.left}px`,
+            zIndex: 1000
+          }
+        }
+      }
+    },
+    getSentenceContext(offset) {
+      if (!this.lesson || !this.lesson.text) return ''
+      
+      const text = this.lesson.text
+      const sentenceEnd = text.indexOf('.', offset)
+      const sentenceStart = text.lastIndexOf('.', offset) + 1
+      
+      const start = sentenceStart === 0 ? 0 : sentenceStart
+      const end = sentenceEnd === -1 ? text.length : sentenceEnd + 1
+      
+      return text.substring(start, end).trim()
     },
     toggleAudio() {
       const audioPlayer = this.$refs.audioPlayer
@@ -478,17 +781,122 @@ export default {
         if (response && response.data && response.data.audio_url) {
           // Reload lesson to get updated audio_url
           await this.loadLesson(this.lessonId)
-          alert('TTS audio generated successfully!')
+          this.showToast('TTS audio generated successfully!', 'success')
         } else {
           const errorMsg = response?.data?.error || 'Unknown error'
-          alert(`TTS generation failed: ${errorMsg}`)
+          this.showToast(`TTS generation failed: ${errorMsg}`, 'error')
         }
       } catch (error) {
         console.error('TTS generation error:', error)
         const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Check console for details'
-        alert(`TTS generation failed: ${errorMsg}`)
+        this.showToast(`TTS generation failed: ${errorMsg}`, 'error')
       } finally {
         this.isGeneratingTTS = false
+      }
+    },
+    editLesson(lesson) {
+      this.editingLesson = {
+        lesson_id: lesson.lesson_id,
+        title: lesson.title || '',
+        text: lesson.text || '',
+        language: lesson.language || 'de',
+        audio_url: lesson.audio_url || '',
+        source_type: lesson.source_type || 'text',
+        source_url: lesson.source_url || ''
+      }
+      this.editError = null
+      this.showEditModal = true
+    },
+    closeEditModal() {
+      this.showEditModal = false
+      this.editingLesson = null
+      this.editError = null
+      this.isSaving = false
+    },
+    async saveLesson() {
+      if (!this.editingLesson || !this.editingLesson.lesson_id) return
+      
+      this.isSaving = true
+      this.editError = null
+      
+      try {
+        const lessonData = {
+          title: this.editingLesson.title,
+          text: this.editingLesson.text,
+          language: this.editingLesson.language,
+          audio_url: this.editingLesson.audio_url || null,
+          source_type: this.editingLesson.source_type,
+          source_url: this.editingLesson.source_url || null
+        }
+        
+        await ApiService.reader.updateLesson(this.editingLesson.lesson_id, lessonData)
+        
+        // Reload lessons list or current lesson
+        if (this.lessonId === this.editingLesson.lesson_id) {
+          await this.loadLesson(this.lessonId)
+        } else {
+          await this.loadLessons()
+        }
+        
+        this.closeEditModal()
+        this.showToast('Lesson updated successfully!', 'success')
+      } catch (error) {
+        console.error('Error updating lesson:', error)
+        this.editError = error.response?.data?.error || error.response?.data?.detail || error.message || 'Failed to update lesson. Please try again.'
+      } finally {
+        this.isSaving = false
+      }
+    },
+    getTokenSpacing(currentToken, nextToken) {
+      if (!currentToken || !nextToken || !this.lesson) return ''
+      // Calculate spacing based on offsets in original text
+      const gap = nextToken.start_offset - currentToken.end_offset
+      if (gap <= 0) return ''
+      // Extract the spacing from the original lesson text
+      return this.lesson.text.substring(currentToken.end_offset, nextToken.start_offset)
+    },
+    showToast(message, type = 'success') {
+      this.toastMessage = message
+      this.toastType = type
+      
+      // Clear existing timeout
+      if (this.toastTimeout) {
+        clearTimeout(this.toastTimeout)
+      }
+      
+      // Auto-hide after 3 seconds
+      this.toastTimeout = setTimeout(() => {
+        this.toastMessage = null
+        this.toastTimeout = null
+      }, 3000)
+    },
+    confirmDeleteLesson(lesson) {
+      if (confirm(`Are you sure you want to delete "${lesson.title}"? This action cannot be undone.`)) {
+        this.deleteLesson(lesson.lesson_id)
+      }
+    },
+    async deleteLesson(lessonId) {
+      try {
+        await ApiService.reader.deleteLesson(lessonId)
+        
+        // If we're viewing the deleted lesson, go back to list
+        if (this.lessonId === lessonId) {
+          this.lessonId = null
+          this.lesson = null
+          this.tokens = []
+          this.phrases = []
+          if (this.$router) {
+            this.$router.push({ name: 'Reader' }).catch(() => {})
+          }
+        }
+        
+        // Reload lessons list
+        await this.loadLessons()
+        this.showToast('Lesson deleted successfully!', 'success')
+      } catch (error) {
+        console.error('Error deleting lesson:', error)
+        const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Failed to delete lesson. Please try again.'
+        this.showToast(`Failed to delete lesson: ${errorMsg}`, 'error')
       }
     }
   },
@@ -602,14 +1010,53 @@ export default {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
-  cursor: pointer;
   transition: box-shadow 0.2s;
   background-color: var(--card-bg);
   color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.lesson-card-content {
+  cursor: pointer;
+  flex: 1;
 }
 
 .lesson-card:hover {
   box-shadow: 0 2px 8px var(--shadow);
+}
+
+.lesson-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
+}
+
+.btn-edit, .btn-delete {
+  padding: 6px 12px;
+  font-size: 0.9em;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-edit {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-edit:hover, .btn-delete:hover {
+  opacity: 0.9;
 }
 
 .lesson-card h3 {
@@ -648,6 +1095,16 @@ export default {
   margin-bottom: 30px;
   padding-bottom: 20px;
   border-bottom: 2px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.lesson-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .lesson-title-section {
@@ -832,6 +1289,15 @@ export default {
   opacity: 0.8;
 }
 
+.token-in-phrase {
+  background-color: rgba(100, 181, 246, 0.2);
+  border-bottom: 2px solid rgba(100, 181, 246, 0.5);
+}
+
+.token-in-phrase:hover {
+  background-color: rgba(100, 181, 246, 0.3);
+}
+
 @keyframes tokenClick {
   0% {
     transform: scale(1);
@@ -954,5 +1420,158 @@ export default {
   padding: 20px;
   color: var(--text-secondary);
   font-style: italic;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--card-bg);
+  border-radius: 8px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px var(--shadow);
+  color: var(--text-primary);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1em;
+  font-family: inherit;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--button-primary);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .lesson-header {
+    flex-direction: column;
+  }
+  
+  .lesson-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.token-spacing {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+  z-index: 10000;
+  animation: toastSlideIn 0.3s ease;
+  max-width: 400px;
+  font-size: 0.95em;
+}
+
+.toast-success {
+  background-color: var(--success-bg);
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.toast-error {
+  background-color: var(--error-bg);
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .toast {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
 }
 </style>
