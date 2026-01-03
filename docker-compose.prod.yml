@@ -9,7 +9,8 @@ services:
       - ./anki_web_app:/app
       - ./data:/app/data
       - static_volume:/app/staticfiles
-      - ~/.google-cloud/google-tts-credentials.json:/app/google-tts-credentials.json:ro
+      # Mount Google TTS credentials from project directory (more reliable than ~/.google-cloud)
+      - ./anki_web_app/google-tts-credentials.json:/app/google-tts-credentials.json:ro
     env_file:
       - .env.prod
     environment:
