@@ -17,6 +17,7 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from unittest.mock import patch, MagicMock
 from flashcards.models import Lesson, Token, Phrase, Card, TokenStatus
+from flashcards.tokenization import normalize_token
 from flashcards.tokenization import tokenize_text, normalize_token
 from flashcards.translation_service import translate_text, get_word_translation
 from flashcards.tts_service import generate_tts_audio, _generate_google_tts, _generate_elevenlabs_tts
@@ -2063,6 +2064,268 @@ class DictionaryServiceTests(TestCase):
             self.assertIn('hallo', call_args[0][0].lower())
 
 
+class PhraseModelTests(TestCase):
+    """Test Phrase model functionality."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt. Das ist ein Test.',
+            language='de'
+        )
+        self.token1 = Token.objects.create(
+            lesson=self.lesson,
+            text='Hallo',
+            normalized='hallo',
+            start_offset=0,
+            end_offset=5
+        )
+        self.token2 = Token.objects.create(
+            lesson=self.lesson,
+            text='Welt',
+            normalized='welt',
+            start_offset=6,
+            end_offset=10
+        )
+
+    def test_create_phrase(self):
+        """Test creating a phrase."""
+        phrase = Phrase.objects.create(
+            lesson=self.lesson,
+            text='Hallo Welt',
+            normalized='hallo welt',
+            token_start=self.token1,
+            token_end=self.token2
+        )
+        
+        self.assertEqual(phrase.text, 'Hallo Welt')
+        self.assertEqual(phrase.normalized, 'hallo welt')
+        self.assertEqual(phrase.token_start, self.token1)
+        self.assertEqual(phrase.token_end, self.token2)
+        self.assertFalse(phrase.added_to_flashcards)
+        self.assertIsNone(phrase.card_id)
+
+    def test_phrase_with_translation(self):
+        """Test phrase with translation."""
+        phrase = Phrase.objects.create(
+            lesson=self.lesson,
+            text='Hallo Welt',
+            normalized='hallo welt',
+            token_start=self.token1,
+            token_end=self.token2,
+            translation='Hello World'
+        )
+        
+        self.assertEqual(phrase.translation, 'Hello World')
+
+    def test_phrase_added_to_flashcards(self):
+        """Test marking phrase as added to flashcards."""
+        phrase = Phrase.objects.create(
+            lesson=self.lesson,
+            text='Hallo Welt',
+            normalized='hallo welt',
+            token_start=self.token1,
+            token_end=self.token2
+        )
+        
+        phrase.added_to_flashcards = True
+        phrase.card_id = 123
+        phrase.save()
+        
+        phrase.refresh_from_db()
+        self.assertTrue(phrase.added_to_flashcards)
+        self.assertEqual(phrase.card_id, 123)
+
+
+class PhraseAPITests(APITestCase):
+    """Test Phrase API endpoints."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt. Das ist ein Test.',
+            language='de'
+        )
+        # Create tokens
+        self.token1 = Token.objects.create(
+            lesson=self.lesson,
+            text='Hallo',
+            normalized='hallo',
+            start_offset=0,
+            end_offset=5
+        )
+        self.token2 = Token.objects.create(
+            lesson=self.lesson,
+            text='Welt',
+            normalized='welt',
+            start_offset=6,
+            end_offset=10
+        )
+
+    @patch('flashcards.translation_service.translate_text')
+    def test_create_phrase_success(self, mock_translate):
+        """Test creating a phrase via API."""
+        mock_translate.return_value = 'Hello World'
+        
+        url = '/api/flashcards/reader/phrases/create/'
+        data = {
+            'lesson_id': self.lesson.lesson_id,
+            'token_start_id': self.token1.token_id,
+            'token_end_id': self.token2.token_id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('phrase', response.data)
+        self.assertEqual(response.data['phrase']['text'], 'Hallo Welt')
+        self.assertEqual(response.data['phrase']['translation'], 'Hello World')
+        
+        # Verify phrase was created
+        phrase = Phrase.objects.get(lesson=self.lesson, token_start=self.token1, token_end=self.token2)
+        self.assertEqual(phrase.text, 'Hallo Welt')
+        self.assertEqual(phrase.translation, 'Hello World')
+
+    def test_create_phrase_already_exists(self):
+        """Test creating a phrase that already exists."""
+        # Create existing phrase
+        existing_phrase = Phrase.objects.create(
+            lesson=self.lesson,
+            text='Hallo Welt',
+            normalized='hallo welt',
+            token_start=self.token1,
+            token_end=self.token2
+        )
+        
+        url = '/api/flashcards/reader/phrases/create/'
+        data = {
+            'lesson_id': self.lesson.lesson_id,
+            'token_start_id': self.token1.token_id,
+            'token_end_id': self.token2.token_id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('phrase', response.data)
+        self.assertEqual(response.data['phrase']['phrase_id'], existing_phrase.phrase_id)
+        self.assertIn('already exists', response.data['message'])
+
+    def test_create_phrase_missing_lesson_id(self):
+        """Test creating phrase without lesson_id."""
+        url = '/api/flashcards/reader/phrases/create/'
+        data = {
+            'token_start_id': self.token1.token_id,
+            'token_end_id': self.token2.token_id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+
+    def test_create_phrase_invalid_token_ids(self):
+        """Test creating phrase with invalid token IDs."""
+        url = '/api/flashcards/reader/phrases/create/'
+        data = {
+            'lesson_id': self.lesson.lesson_id,
+            'token_start_id': 99999,
+            'token_end_id': self.token2.token_id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+
+    def test_create_phrase_other_user_lesson(self):
+        """Test that users can't create phrases for other users' lessons."""
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+        other_lesson = Lesson.objects.create(
+            user=other_user,
+            title='Other Lesson',
+            text='Test',
+            language='de'
+        )
+        other_token = Token.objects.create(
+            lesson=other_lesson,
+            text='Test',
+            normalized='test',
+            start_offset=0,
+            end_offset=4
+        )
+        
+        url = '/api/flashcards/reader/phrases/create/'
+        data = {
+            'lesson_id': other_lesson.lesson_id,
+            'token_start_id': other_token.token_id,
+            'token_end_id': other_token.token_id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_create_phrase_tokens_not_in_order(self):
+        """Test creating phrase with tokens in wrong order."""
+        # Create token that comes after token2
+        token3 = Token.objects.create(
+            lesson=self.lesson,
+            text='Das',
+            normalized='das',
+            start_offset=12,
+            end_offset=15
+        )
+        
+        url = '/api/flashcards/reader/phrases/create/'
+        data = {
+            'lesson_id': self.lesson.lesson_id,
+            'token_start_id': token3.token_id,  # Later token
+            'token_end_id': self.token1.token_id  # Earlier token
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        # Should handle gracefully (either error or swap)
+        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_201_CREATED])
+
+    @patch('flashcards.translation_service.translate_text')
+    def test_create_phrase_translation_failure(self, mock_translate):
+        """Test creating phrase when translation fails."""
+        mock_translate.return_value = None
+        
+        url = '/api/flashcards/reader/phrases/create/'
+        data = {
+            'lesson_id': self.lesson.lesson_id,
+            'token_start_id': self.token1.token_id,
+            'token_end_id': self.token2.token_id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        # Should still create phrase even if translation fails
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        phrase = Phrase.objects.get(lesson=self.lesson, token_start=self.token1, token_end=self.token2)
+        self.assertIsNone(phrase.translation)
+
+
 class DictionaryIntegrationTests(APITestCase):
     """Test dictionary integration with token click API."""
     
@@ -2197,4 +2460,21 @@ class DictionaryIntegrationTests(APITestCase):
         token_data = next((t for t in tokens if t['token_id'] == self.token.token_id), None)
         self.assertIsNotNone(token_data)
         self.assertIn('dictionary_entry', token_data)
+        self.assertIsNotNone(token_data['dictionary_entry'])
         self.assertIn('meanings', token_data['dictionary_entry'])
+    
+    def test_token_serializer_excludes_empty_dictionary_entry(self):
+        """Test that TokenSerializer excludes empty dictionary_entry."""
+        self.token.dictionary_entry = {}  # Empty dict
+        self.token.save()
+        
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tokens = response.data.get('tokens', [])
+        token_data = next((t for t in tokens if t['token_id'] == self.token.token_id), None)
+        
+        self.assertIsNotNone(token_data)
+        # dictionary_entry should be None, not {}
+        self.assertIsNone(token_data.get('dictionary_entry'))

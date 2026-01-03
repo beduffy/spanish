@@ -580,7 +580,12 @@ export default {
     },
     getDictionaryEntry(item) {
       if (!item) return null
-      if (item.dictionary_entry && item.dictionary_entry.meanings && item.dictionary_entry.meanings.length > 0) {
+      // Handle both null and empty object cases
+      if (!item.dictionary_entry) return null
+      // Check if it's an empty object
+      if (Object.keys(item.dictionary_entry).length === 0) return null
+      // Check if it has meanings
+      if (item.dictionary_entry.meanings && item.dictionary_entry.meanings.length > 0) {
         return item.dictionary_entry
       }
       return null

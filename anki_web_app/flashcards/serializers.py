@@ -379,6 +379,7 @@ class LessonSerializer(serializers.ModelSerializer):
 
 class TokenSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
+    dictionary_entry = serializers.SerializerMethodField()
     
     class Meta:
         model = Token
@@ -387,6 +388,12 @@ class TokenSerializer(serializers.ModelSerializer):
             'translation', 'dictionary_entry', 'clicked_count', 'added_to_flashcards', 'card_id', 'status'
         ]
         read_only_fields = ['token_id', 'clicked_count', 'added_to_flashcards', 'card_id', 'status']
+    
+    def get_dictionary_entry(self, obj):
+        """Only return dictionary_entry if it has meaningful data."""
+        if obj.dictionary_entry and obj.dictionary_entry.get('meanings'):
+            return obj.dictionary_entry
+        return None
     
     def get_status(self, obj):
         """Get the known/unknown status for the current user."""

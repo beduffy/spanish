@@ -910,9 +910,31 @@ class TokenClickAPIView(APIView):
         # Get dictionary entry if not cached
         # dictionary_entry defaults to empty dict {}, so check if it has meanings
         if not token.dictionary_entry.get('meanings'):
-            dictionary_entry = get_dictionary_entry(token.text, token.lesson.language, 'en')
-            if dictionary_entry:
-                token.dictionary_entry = dictionary_entry
+            try:
+                # Try looking up the word itself first
+                dictionary_entry = get_dictionary_entry(token.text, token.lesson.language, 'en')
+                
+                # If lookup fails and we have a lemma, try the lemma instead
+                if not dictionary_entry and token.lemma and token.lemma != token.normalized:
+                    dictionary_entry = get_dictionary_entry(token.lemma, token.lesson.language, 'en')
+                    if dictionary_entry:
+                        # Log that we used lemma
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.debug(f"Dictionary lookup succeeded for lemma '{token.lemma}' (original: '{token.text}')")
+                
+                if dictionary_entry:
+                    token.dictionary_entry = dictionary_entry
+                else:
+                    # Log when dictionary lookup fails for debugging
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.debug(f"Dictionary lookup returned None for word '{token.text}' (lang: {token.lesson.language}, lemma: {token.lemma})")
+            except Exception as e:
+                # Log errors but don't fail the request
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Dictionary lookup error for '{token.text}': {e}", exc_info=True)
         
         # Save token with all updates
         update_fields = ['clicked_count']
