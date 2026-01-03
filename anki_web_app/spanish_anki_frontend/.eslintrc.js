@@ -28,12 +28,19 @@ module.exports = {
     {
       files: [
         '**/__tests__/*.{j,t}s?(x)',
-        '**/tests/unit/**/*.spec.{j,t}s?(x)',
-        '**/cypress/**/*.{js,ts}'
+        '**/tests/unit/**/*.spec.{j,t}s?(x)'
       ],
       env: {
-        jest: true,
-        'cypress/globals': true
+        jest: true
+      }
+    },
+    {
+      files: [
+        '**/cypress/**/*.{js,ts}'
+      ],
+      globals: {
+        cy: 'readonly',
+        Cypress: 'readonly'
       }
     }
   ]

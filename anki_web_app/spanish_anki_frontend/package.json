@@ -72,8 +72,7 @@
   },
   "lint-staged": {
     "*.{js,vue}": [
-      "eslint --fix",
-      "git add"
+      "eslint --fix"
     ]
   },
   "browserslist": [
