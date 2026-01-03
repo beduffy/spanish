@@ -10,6 +10,11 @@ The project has **three types of tests**:
 2. **Frontend Unit Tests** (Jest) - Component-level tests for Vue.js components
 3. **Frontend E2E Tests** (Cypress) - End-to-end browser tests that test the full application flow
 
+**Total Test Count: 246 tests**
+- Backend: 220 tests
+- Frontend Unit: 10 tests
+- E2E: 16 tests
+
 ---
 
 ## Test Structure
@@ -26,7 +31,7 @@ anki_web_app/flashcards/
 └── tests_study_sessions.py          # Study session tracking, AFK detection, active time
 ```
 
-**Total Backend Tests: ~222 tests** covering:
+**Total Backend Tests: 220 tests** covering:
 - SRS (Spaced Repetition System) algorithm logic
 - Sentence and Card models
 - API endpoints (CRUD, reviews, statistics)
@@ -44,7 +49,7 @@ anki_web_app/spanish_anki_frontend/tests/unit/
 └── example.spec.js                   # Example test template
 ```
 
-**Frontend Unit Tests: ~2-5 tests** (can be expanded)
+**Frontend Unit Tests: 10 tests** (can be expanded)
 
 ### Frontend E2E Tests (`anki_web_app/spanish_anki_frontend/cypress/e2e/`)
 
@@ -53,10 +58,11 @@ anki_web_app/spanish_anki_frontend/cypress/e2e/
 ├── card_flow.cy.js                  # Card review flow, submission, navigation
 ├── card_navigation.cy.js            # Navigation, card list, card creation
 ├── reader_flow.cy.js                # Reader: lesson import, token clicks, translations
+├── reader_mobile.cy.js              # Mobile reader: touch selection, phrase creation
 └── study_session.cy.js              # Study session tracking during reviews
 ```
 
-**E2E Tests: ~10+ test scenarios** covering:
+**E2E Tests: 16 test scenarios** covering:
 - Complete card review workflows
 - Navigation between pages
 - Dashboard statistics
@@ -432,6 +438,7 @@ ls anki_web_app/spanish_anki_frontend/cypress/videos/
 | `card_flow.cy.js` | Card review flow, submission, next card |
 | `card_navigation.cy.js` | Navigation, card list, card creation, dashboard |
 | `reader_flow.cy.js` | Lesson import, token clicks, translations |
+| `reader_mobile.cy.js` | Mobile reader: touch selection, phrase creation |
 | `study_session.cy.js` | Session tracking, statistics, history |
 
 ---
