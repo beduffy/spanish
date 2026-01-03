@@ -35,9 +35,11 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
-        # Read from .env.prod file (docker-compose automatically loads env_file)
-        SUPABASE_URL: ${SUPABASE_URL}
-        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        # IMPORTANT: These must be set in shell environment before running docker-compose
+        # Use: export $(cat .env.prod | grep -v '^#' | xargs) before building
+        # Or use deploy-frontend-prod.sh script
+        SUPABASE_URL: ${SUPABASE_URL:-}
+        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
     container_name: spanish_anki_frontend_prod
     env_file:
       - .env.prod
