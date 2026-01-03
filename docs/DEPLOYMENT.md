@@ -4,7 +4,21 @@ Complete guide for deploying Spanish Anki to production (Hetzner server).
 
 ## Quick Start
 
-### From Local Machine (Recommended)
+### IP-only (No Domain / No SSL) — Recommended if you don’t have a domain
+
+If you **don’t have a domain** (and won’t), deploy IP-only on port **8080**.
+
+One command from your local machine:
+
+```bash
+./deploy-ip-only.sh
+```
+
+Access the app at:
+
+- `http://5.75.174.115:8080`
+
+### Domain + SSL (Only if you have a domain)
 
 ```bash
 ./deploy-to-server.sh your-domain.com your-email@example.com
@@ -81,6 +95,17 @@ See `docs/ENVIRONMENT_VARIABLES.md` for complete reference.
 ./deploy-to-server.sh your-domain.com your-email@example.com
 ```
 
+**Option A2: IP-only deploy (No domain) — Recommended**
+
+```bash
+./deploy-ip-only.sh
+```
+
+This script:
+- rsyncs the repo to `/opt/spanish-anki` (excluding secrets like `.env.prod`)
+- rebuilds/restarts `docker-compose.prod.yml`
+- verifies `http://<server-ip>:8080/health`
+
 **Option B: Manual Transfer**
 ```bash
 rsync -avz --exclude 'node_modules' --exclude '__pycache__' --exclude '.git' \
@@ -146,12 +171,29 @@ cd /opt/spanish-anki
 nano .env.prod
 # Set: ALLOWED_HOSTS=5.75.174.115,localhost,127.0.0.1
 # Set: CORS_ALLOWED_ORIGINS=http://5.75.174.115:8080
-
-# Deploy without SSL
-docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 Access at: `http://5.75.174.115:8080`
+
+### Important: frontend build args come from the shell environment (not `env_file`)
+
+`docker-compose.prod.yml` uses build args like `${SUPABASE_URL}` / `${SUPABASE_ANON_KEY}`.
+Those are resolved from the **compose process environment**, not from `env_file: .env.prod`.
+
+So if you deploy manually on the server, do:
+
+```bash
+set -a
+. ./.env.prod
+set +a
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Or just use the local one-command deploy script:
+
+```bash
+./deploy-ip-only.sh
+```
 
 ## Frontend Rebuild (After Env Var Changes)
 
