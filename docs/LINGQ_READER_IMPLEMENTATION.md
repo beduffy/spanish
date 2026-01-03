@@ -371,18 +371,41 @@ Based on the implementation plan, the next phases are:
    - Fix any remaining issues
    - Performance optimization
 
-### Phase 4: YouTube & Advanced Features (Week 4)
-1. **YouTube Integration** (Days 1-3)
+### Phase 4: Advanced Features (Next Steps)
+
+**Note**: YouTube integration deferred - users can manually extract transcripts using tools like y2doc and paste text directly.
+
+**Recommended Next Features** (in order of priority):
+
+1. **Dictionary Integration** (High Priority)
+   - Integrate with dictionary API (e.g., Wiktionary, DeepL dictionary)
+   - Show multiple meanings, part of speech, example sentences
+   - Enhance popover with richer word information
+   - Store dictionary entries in `Token.dictionary_entry` JSONField
+
+2. **Progress Tracking** (Medium Priority)
+   - Track reading progress per lesson (words read, time spent)
+   - Mark lessons as "in progress", "completed"
+   - Show progress indicators in lesson list
+   - Track vocabulary growth over time
+
+3. **Vocabulary Lists** (Medium Priority)
+   - Generate vocabulary lists from lessons
+   - Export to CSV/Anki format
+   - Filter by "unknown words", "added to flashcards", etc.
+   - Statistics: total words, known words, learning words
+
+4. **Audio-Text Alignment** (Lower Priority)
+   - Word-level timestamps for audio sync
+   - Highlight words as audio plays
+   - Click word to jump to audio position
+   - Requires more advanced TTS or manual alignment
+
+5. **YouTube Integration** (Deferred)
    - Extract transcripts from YouTube URLs
    - Sync audio with text timestamps
    - Use `youtube-transcript-api` or similar library
-
-2. **Advanced Features** (Future)
-   - Phrase selection (drag to select multiple words)
-   - Dictionary integration (more detailed word meanings)
-   - Audio-text alignment (timestamps per word)
-   - Progress tracking per lesson
-   - Vocabulary lists generation
+   - **Status**: Deferred - users can use y2doc or similar tools manually
 
 ### Current Status
 - ✅ Backend models and API endpoints
@@ -394,8 +417,13 @@ Based on the implementation plan, the next phases are:
 - ✅ Audio player with listening time tracking
 - ✅ UI polish and animations
 - ✅ Comprehensive test coverage (46 tests total: 33 original + 13 new integration tests)
-- ⏳ YouTube transcript extraction
-- ⏳ Advanced phrase selection
+- ✅ Phrase selection (multi-word drag selection) - Completed January 2026
+- ✅ Token spacing fix - Visual spacing matches copied text
+- ✅ Toast notifications for flashcard additions
+- ⏳ YouTube transcript extraction (deferred - user can use y2doc manually)
+- ⏳ Dictionary integration (more detailed word meanings)
+- ⏳ Progress tracking per lesson
+- ⏳ Vocabulary lists generation
 
 ## Commands Reference
 
@@ -746,3 +774,52 @@ The frontend attempts to auto-generate TTS after lesson import:
 - `docs/LINGQ_READER_IMPLEMENTATION.md` - Updated with test coverage and troubleshooting
 
 **Status:** ✅ All tests passing, TTS working, ready for next phase
+
+---
+
+## Recent Updates (January 2026 - Phrase Selection & Spacing Fixes)
+
+### Phrase Selection Implementation
+- **Multi-word Selection**: Users can now drag-select multiple words to create phrases
+- **Backend API**: New `/api/flashcards/reader/phrases/create/` endpoint
+- **Frontend Integration**: Mouse selection detection and phrase creation
+- **Phrase Model**: Stores multi-word selections with token references
+- **Translation**: Phrases are automatically translated when created
+- **Flashcard Integration**: Phrases can be added to flashcards just like single tokens
+
+**Files Modified:**
+- `anki_web_app/flashcards/models.py` - Phrase model already existed
+- `anki_web_app/flashcards/serializers.py` - Added `PhraseSerializer` and `CreatePhraseSerializer`
+- `anki_web_app/flashcards/views.py` - Added `CreatePhraseAPIView`
+- `anki_web_app/flashcards/urls.py` - Added phrase creation route
+- `anki_web_app/spanish_anki_frontend/src/services/ApiService.js` - Added `createPhrase()` method
+- `anki_web_app/spanish_anki_frontend/src/views/ReaderView.vue` - Added phrase selection logic
+
+### Token Spacing Fix
+- **Issue**: Visual spacing between tokens appeared larger than actual spacing when copied
+- **Root Cause**: `display: inline-block` with padding was adding extra visual space
+- **Solution**: 
+  - Changed tokens to `display: inline` with no horizontal padding by default
+  - Added padding back on hover/click/added states for visual feedback
+  - Enhanced `getTokenSpacing()` to remove spaces before punctuation
+  - Normalized spacing after punctuation tokens
+- **Result**: Visual spacing now exactly matches copied text
+
+**Files Modified:**
+- `anki_web_app/spanish_anki_frontend/src/views/ReaderView.vue` - Updated token CSS and spacing logic
+
+### Toast Notifications
+- **Replaced**: All `alert()` calls with non-intrusive toast notifications
+- **Features**: Auto-dismissing, positioned bottom-right, success/error styling
+- **UX Improvement**: Better user experience for flashcard additions
+
+**Files Modified:**
+- `anki_web_app/spanish_anki_frontend/src/views/ReaderView.vue` - Added toast notification system
+
+### Authentication & UI Fixes
+- **Conditional Rendering**: Navigation and logout button only show when user is logged in
+- **Auth Backend**: Improved error handling for JWKS verification with fallback mechanisms
+
+**Files Modified:**
+- `anki_web_app/spanish_anki_frontend/src/views/App.vue` - Added `v-if="user"` directives
+- `anki_web_app/flashcards/auth_backend.py` - Enhanced error handling and fallbacks
