@@ -47,6 +47,30 @@ dont understand and see tokens, dictionary and many other features.
 listen amount and read amount wrong, and progress wrong. 
 mark lesson as completed. 
 
+Hackx anki calendar, hover over multiple words on phone. Num cards reviewed
+
+Random order anki review
+
+Next review time 
+Better logo
+Title should be german
+Better name
+
+If i give low scorenit shows immediately, shown later? Show how many cards etc 
+
+Edit card in review page and ask gemini flash there 
+
+Add animations to make it addictive
+
+Reset number ids or start from 1 or something
+
+More e2e with z fold 5 sim sim and order things better on anki review page 
+
+Audio in review page?
+
+Change all scores in all cards page to bebbetter and color graded.
+Enable to see entire notes easier or maybe edit does that. 
+
 list view for lessons?
 
 calendara view bursting out of view. and should show everything. 
