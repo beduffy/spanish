@@ -233,6 +233,9 @@
           class="lesson-text" 
           ref="lessonText"
           @mouseup="handleTextSelection"
+          @touchstart="handleTouchStart"
+          @touchmove="handleTouchMove"
+          @touchend="handleTouchEnd"
           @selectstart="onSelectStart"
         >
           <template v-if="tokens && tokens.length > 0">
@@ -410,7 +413,12 @@ export default {
       wordsReadThisSession: new Set(),
       progressUpdateInterval: null,
       // Computed dictionary entry for current selection
-      currentDictionaryEntry: null
+      currentDictionaryEntry: null,
+      // Touch selection tracking for mobile
+      touchStartElement: null,
+      touchStartOffset: null,
+      touchIsSelecting: false,
+      touchSelectionTimeout: null
     }
   },
   mounted() {
@@ -825,6 +833,174 @@ export default {
         // Create phrase
         this.createPhraseFromSelection(startOffset, endOffset, range)
       }, 50)
+    },
+    handleTouchStart(event) {
+      // Prevent default to avoid scrolling while selecting
+      if (event.touches.length === 1) {
+        const touch = event.touches[0]
+        const element = document.elementFromPoint(touch.clientX, touch.clientY)
+        
+        // Check if we're touching a token
+        const tokenElement = element?.closest('[data-token-id]')
+        if (tokenElement) {
+          this.touchStartElement = tokenElement
+          this.touchStartOffset = parseInt(tokenElement.getAttribute('data-start-offset'))
+          this.touchIsSelecting = false
+          
+          // Clear any existing selection timeout
+          if (this.touchSelectionTimeout) {
+            clearTimeout(this.touchSelectionTimeout)
+          }
+          
+          // Small delay to distinguish between tap and drag
+          this.touchSelectionTimeout = setTimeout(() => {
+            this.touchIsSelecting = true
+          }, 200)
+        }
+      }
+    },
+    handleTouchMove(event) {
+      // If we're selecting, prevent default scrolling
+      if (this.touchIsSelecting && event.touches.length === 1) {
+        event.preventDefault()
+        
+        // Update selection visually by using native selection API
+        const touch = event.touches[0]
+        const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY)
+        const tokenAtPoint = elementAtPoint?.closest('[data-token-id]')
+        
+        if (tokenAtPoint && this.touchStartElement) {
+          try {
+            const selection = window.getSelection()
+            selection.removeAllRanges()
+            
+            // Create range from touch start element to current touch position element
+            const newRange = document.createRange()
+            
+            // Determine start and end tokens
+            const startTokenId = parseInt(this.touchStartElement.getAttribute('data-token-id'))
+            const endTokenId = parseInt(tokenAtPoint.getAttribute('data-token-id'))
+            
+            // Get all tokens between start and end
+            const lessonTextElement = this.$refs.lessonText
+            if (lessonTextElement) {
+              const allTokens = Array.from(lessonTextElement.querySelectorAll('[data-token-id]'))
+              const startIndex = allTokens.findIndex(el => parseInt(el.getAttribute('data-token-id')) === startTokenId)
+              const endIndex = allTokens.findIndex(el => parseInt(el.getAttribute('data-token-id')) === endTokenId)
+              
+              if (startIndex !== -1 && endIndex !== -1) {
+                const startEl = startIndex < endIndex ? allTokens[startIndex] : allTokens[endIndex]
+                const endEl = startIndex < endIndex ? allTokens[endIndex] : allTokens[startIndex]
+                
+                // Create range from start to end token
+                newRange.setStartBefore(startEl)
+                newRange.setEndAfter(endEl)
+                selection.addRange(newRange)
+              }
+            }
+          } catch (e) {
+            // Selection API might fail on some browsers, try fallback
+            try {
+              // Fallback: use document.caretRangeFromPoint if available
+              if (document.caretRangeFromPoint) {
+                const range = document.caretRangeFromPoint(touch.clientX, touch.clientY)
+                if (range) {
+                  const selection = window.getSelection()
+                  selection.removeAllRanges()
+                  
+                  // Try to extend from start element
+                  const newRange = document.createRange()
+                  newRange.setStartBefore(this.touchStartElement)
+                  newRange.setEnd(range.startContainer, range.startOffset)
+                  selection.addRange(newRange)
+                }
+              }
+            } catch (fallbackError) {
+              console.debug('Touch selection error:', fallbackError)
+            }
+          }
+        }
+      }
+    },
+    handleTouchEnd(event) {
+      // Clear selection timeout
+      if (this.touchSelectionTimeout) {
+        clearTimeout(this.touchSelectionTimeout)
+        this.touchSelectionTimeout = null
+      }
+      
+      // If we were selecting, process the selection
+      if (this.touchIsSelecting) {
+        // Small delay to ensure selection is complete
+        setTimeout(() => {
+          this.processTouchSelection()
+        }, 100)
+      } else if (this.touchStartElement) {
+        // Single tap - handle as token click
+        const tokenId = parseInt(this.touchStartElement.getAttribute('data-token-id'))
+        const token = this.tokens.find(t => t.token_id === tokenId)
+        if (token) {
+          // Create a synthetic click event
+          const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          })
+          this.touchStartElement.dispatchEvent(clickEvent)
+        }
+      }
+      
+      // Reset touch tracking
+      this.touchStartElement = null
+      this.touchStartOffset = null
+      this.touchIsSelecting = false
+    },
+    processTouchSelection() {
+      const selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0) {
+        return
+      }
+      
+      const range = selection.getRangeAt(0)
+      const selectedText = selection.toString().trim()
+      
+      // Only create phrase if there's actual text selected (more than one word)
+      if (!selectedText || selectedText.length < 2) {
+        return
+      }
+      
+      // Check if selection is within lesson text
+      const lessonTextElement = this.$refs.lessonText
+      if (!lessonTextElement || !lessonTextElement.contains(range.commonAncestorContainer)) {
+        return
+      }
+      
+      // Find tokens that are selected
+      const selectedTokens = []
+      const tokenElements = lessonTextElement.querySelectorAll('[data-token-id]')
+      
+      tokenElements.forEach(element => {
+        const tokenId = parseInt(element.getAttribute('data-token-id'))
+        const token = this.tokens.find(t => t.token_id === tokenId)
+        
+        if (token && range.intersectsNode(element)) {
+          selectedTokens.push(token)
+        }
+      })
+      
+      if (selectedTokens.length < 2) {
+        // Single token or no tokens - let normal click handler deal with it
+        return
+      }
+      
+      // Sort tokens by offset
+      selectedTokens.sort((a, b) => a.start_offset - b.start_offset)
+      
+      const startOffset = selectedTokens[0].start_offset
+      const endOffset = selectedTokens[selectedTokens.length - 1].end_offset
+      
+      // Create phrase
+      this.createPhraseFromSelection(startOffset, endOffset, range)
     },
     async createPhraseFromSelection(startOffset, endOffset, range) {
       try {
@@ -1327,6 +1503,11 @@ export default {
     
     // Clean up reading progress tracking
     this.stopReadingProgressTracking()
+    
+    // Clean up touch selection timeout
+    if (this.touchSelectionTimeout) {
+      clearTimeout(this.touchSelectionTimeout)
+    }
   }
 }
 </script>
@@ -1743,6 +1924,11 @@ export default {
   max-width: 100%;
   word-wrap: break-word;
   color: var(--text-primary);
+  /* Improve touch selection on mobile */
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: pan-y pinch-zoom;
 }
 
 .token {
@@ -2215,6 +2401,30 @@ textarea.form-control {
 .token-spacing {
   user-select: text;
   -webkit-user-select: text;
+}
+
+/* Mobile touch selection improvements */
+@media (max-width: 768px) {
+  .lesson-text {
+    /* Allow text selection on mobile */
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  
+  .token {
+    /* Improve touch target size on mobile */
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Prevent accidental scrolling during selection */
+  .lesson-text-container:active {
+    touch-action: none;
+  }
 }
 
 /* Toast Notification */
