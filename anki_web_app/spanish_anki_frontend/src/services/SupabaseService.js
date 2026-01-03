@@ -40,12 +40,20 @@ export default {
   },
 
   async getSession() {
+    // Check for Cypress mock session in test mode
+    if (typeof window !== 'undefined' && window.__CYPRESS_MOCK_SESSION__) {
+      return window.__CYPRESS_MOCK_SESSION__
+    }
     const { data: { session }, error } = await supabase.auth.getSession()
     if (error) throw error
     return session
   },
 
   async getUser() {
+    // Check for Cypress mock session in test mode
+    if (typeof window !== 'undefined' && window.__CYPRESS_MOCK_SESSION__) {
+      return window.__CYPRESS_MOCK_SESSION__.user
+    }
     const { data: { user }, error } = await supabase.auth.getUser()
     if (error) throw error
     return user
