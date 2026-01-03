@@ -5,6 +5,8 @@ HIGH PRIORITY
 rename repo and folder... 
 Random order anki review
 
+security review .md
+
 Next review time show correct
 If i give low scorenit shows immediately, shown later? Show how many cards etc 
 Better logo
