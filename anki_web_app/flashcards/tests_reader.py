@@ -2183,8 +2183,8 @@ class PhraseAPITests(APITestCase):
         url = '/api/flashcards/reader/phrases/create/'
         data = {
             'lesson_id': self.lesson.lesson_id,
-            'token_start_id': self.token1.token_id,
-            'token_end_id': self.token2.token_id
+            'start_offset': self.token1.start_offset,
+            'end_offset': self.token2.end_offset
         }
         
         response = self.client.post(url, data, format='json')
@@ -2213,8 +2213,8 @@ class PhraseAPITests(APITestCase):
         url = '/api/flashcards/reader/phrases/create/'
         data = {
             'lesson_id': self.lesson.lesson_id,
-            'token_start_id': self.token1.token_id,
-            'token_end_id': self.token2.token_id
+            'start_offset': self.token1.start_offset,
+            'end_offset': self.token2.end_offset
         }
         
         response = self.client.post(url, data, format='json')
@@ -2228,27 +2228,29 @@ class PhraseAPITests(APITestCase):
         """Test creating phrase without lesson_id."""
         url = '/api/flashcards/reader/phrases/create/'
         data = {
-            'token_start_id': self.token1.token_id,
-            'token_end_id': self.token2.token_id
+            'start_offset': self.token1.start_offset,
+            'end_offset': self.token2.end_offset
         }
         
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response.data)
+        # Should have validation errors, not a single 'error' key
+        self.assertIn('lesson_id', response.data)
 
     def test_create_phrase_invalid_token_ids(self):
-        """Test creating phrase with invalid token IDs."""
+        """Test creating phrase with invalid offsets."""
         url = '/api/flashcards/reader/phrases/create/'
         data = {
             'lesson_id': self.lesson.lesson_id,
-            'token_start_id': 99999,
-            'token_end_id': self.token2.token_id
+            'start_offset': 99999,  # Invalid offset
+            'end_offset': 100000
         }
         
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Should return error about no tokens found
         self.assertIn('error', response.data)
 
     def test_create_phrase_other_user_lesson(self):
@@ -2264,47 +2266,34 @@ class PhraseAPITests(APITestCase):
             text='Test',
             language='de'
         )
-        other_token = Token.objects.create(
-            lesson=other_lesson,
-            text='Test',
-            normalized='test',
-            start_offset=0,
-            end_offset=4
-        )
         
         url = '/api/flashcards/reader/phrases/create/'
         data = {
             'lesson_id': other_lesson.lesson_id,
-            'token_start_id': other_token.token_id,
-            'token_end_id': other_token.token_id
+            'start_offset': 0,
+            'end_offset': 4
         }
         
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn('error', response.data)
 
-    def test_create_phrase_tokens_not_in_order(self):
-        """Test creating phrase with tokens in wrong order."""
-        # Create token that comes after token2
-        token3 = Token.objects.create(
-            lesson=self.lesson,
-            text='Das',
-            normalized='das',
-            start_offset=12,
-            end_offset=15
-        )
-        
+    def test_create_phrase_invalid_offsets(self):
+        """Test creating phrase with invalid offsets (start >= end)."""
         url = '/api/flashcards/reader/phrases/create/'
         data = {
             'lesson_id': self.lesson.lesson_id,
-            'token_start_id': token3.token_id,  # Later token
-            'token_end_id': self.token1.token_id  # Earlier token
+            'start_offset': self.token2.end_offset,  # Start after end
+            'end_offset': self.token1.start_offset
         }
         
         response = self.client.post(url, data, format='json')
         
-        # Should handle gracefully (either error or swap)
-        self.assertIn(response.status_code, [status.HTTP_400_BAD_REQUEST, status.HTTP_201_CREATED])
+        # Should fail validation
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Serializer validation error is in non_field_errors
+        self.assertIn('non_field_errors', response.data)
 
     @patch('flashcards.translation_service.translate_text')
     def test_create_phrase_translation_failure(self, mock_translate):
@@ -2314,8 +2303,8 @@ class PhraseAPITests(APITestCase):
         url = '/api/flashcards/reader/phrases/create/'
         data = {
             'lesson_id': self.lesson.lesson_id,
-            'token_start_id': self.token1.token_id,
-            'token_end_id': self.token2.token_id
+            'start_offset': self.token1.start_offset,
+            'end_offset': self.token2.end_offset
         }
         
         response = self.client.post(url, data, format='json')
