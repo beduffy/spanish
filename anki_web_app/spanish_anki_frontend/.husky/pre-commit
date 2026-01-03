@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+cd anki_web_app/spanish_anki_frontend
+
+# Run lint-staged (auto-fixes and stages fixes)
+npx lint-staged
+
+# Run quick tests (bail on first failure for speed)
+npm run test:quick || {
+    echo "❌ Quick tests failed. Commit aborted."
+    echo "Run 'npm run test:unit' to see full test output."
+    exit 1
+}
+
+echo "✅ Pre-commit checks passed!"

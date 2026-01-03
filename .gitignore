@@ -36,3 +36,6 @@ nginx_spanish_anki_local_test.conf
 # Cypress screenshots and videos
 anki_web_app/spanish_anki_frontend/cypress/screenshots/
 anki_web_app/spanish_anki_frontend/cypress/videos/
+
+# Husky (pre-commit hooks)
+anki_web_app/spanish_anki_frontend/.husky/_/
