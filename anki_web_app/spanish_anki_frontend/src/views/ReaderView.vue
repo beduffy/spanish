@@ -553,6 +553,10 @@ export default {
         if (response.data) {
           if (response.data.token) {
             this.selectedToken = response.data.token
+            // Debug: log dictionary entry
+            if (response.data.token.dictionary_entry) {
+              console.log('Dictionary entry received:', response.data.token.dictionary_entry)
+            }
             this.updateCurrentDictionaryEntry()
           }
           this.sentenceContext = response.data.sentence || null

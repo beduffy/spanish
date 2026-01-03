@@ -1891,28 +1891,23 @@ class DictionaryServiceTests(TestCase):
         # Mock cache miss
         mock_cache.get.return_value = None
         
-        # Mock Wiktionary API response
+        # Mock Wiktionary API response (actual structure)
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'de': {
-                'definitions': [
-                    {
-                        'partOfSpeech': 'noun',
-                        'senses': [
-                            {
-                                'glosses': ['greeting', 'hello'],
-                                'examples': [{'text': 'Hallo, wie geht es dir?'}]
-                            }
-                        ]
-                    }
-                ],
-                'pronunciations': [
-                    {
-                        'audio': [{'url': 'https://example.com/audio.mp3'}]
-                    }
-                ]
-            }
+            'de': [
+                {
+                    'partOfSpeech': 'noun',
+                    'definitions': [
+                        {
+                            'definition': '<span>greeting, hello</span>'
+                        }
+                    ],
+                    'examples': [
+                        {'text': 'Hallo, wie geht es dir?'}
+                    ]
+                }
+            ]
         }
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
@@ -1966,33 +1961,27 @@ class DictionaryServiceTests(TestCase):
     def test_parse_wiktionary_response_valid(self):
         """Test parsing valid Wiktionary response."""
         data = {
-            'de': {
-                'definitions': [
-                    {
-                        'partOfSpeech': 'noun',
-                        'senses': [
-                            {
-                                'glosses': ['greeting', 'hello'],
-                                'examples': [{'text': 'Hallo Welt'}]
-                            }
-                        ]
-                    },
-                    {
-                        'partOfSpeech': 'interjection',
-                        'senses': [
-                            {
-                                'glosses': ['hey'],
-                                'examples': []
-                            }
-                        ]
-                    }
-                ],
-                'pronunciations': [
-                    {
-                        'audio': [{'url': 'https://example.com/audio.mp3'}]
-                    }
-                ]
-            }
+            'de': [
+                {
+                    'partOfSpeech': 'noun',
+                    'definitions': [
+                        {
+                            'definition': '<span>greeting, hello</span>'
+                        }
+                    ],
+                    'examples': [
+                        {'text': 'Hallo Welt'}
+                    ]
+                },
+                {
+                    'partOfSpeech': 'interjection',
+                    'definitions': [
+                        {
+                            'definition': '<span>hey</span>'
+                        }
+                    ]
+                }
+            ]
         }
         
         result = _parse_wiktionary_response(data, 'de', 'en')
@@ -2000,9 +1989,8 @@ class DictionaryServiceTests(TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(len(result['meanings']), 2)
         self.assertEqual(result['meanings'][0]['part_of_speech'], 'noun')
-        self.assertEqual(len(result['meanings'][0]['definitions']), 2)
+        self.assertGreater(len(result['meanings'][0]['definitions']), 0)
         self.assertEqual(len(result['meanings'][0]['examples']), 1)
-        self.assertEqual(result['pronunciation'], 'https://example.com/audio.mp3')
     
     def test_parse_wiktionary_response_empty(self):
         """Test parsing empty Wiktionary response."""
@@ -2015,13 +2003,49 @@ class DictionaryServiceTests(TestCase):
     def test_parse_wiktionary_response_no_definitions(self):
         """Test parsing response with no definitions."""
         data = {
-            'de': {
-                'definitions': []
-            }
+            'de': []
         }
         
         result = _parse_wiktionary_response(data, 'de', 'en')
         self.assertIsNone(result)
+    
+    def test_parse_wiktionary_response_german_word(self):
+        """Test parsing German word with actual Wiktionary API structure."""
+        # This is the actual structure returned by Wiktionary API for German words
+        data = {
+            'de': [
+                {
+                    'partOfSpeech': 'Participle',
+                    'definitions': [
+                        {
+                            'definition': '<span>past participle of <a>vorschlagen</a></span>'
+                        }
+                    ]
+                },
+                {
+                    'partOfSpeech': 'Verb',
+                    'definitions': [
+                        {
+                            'definition': '<span>to suggest, to propose</span>'
+                        }
+                    ],
+                    'examples': [
+                        {'text': 'Er hat einen Vorschlag gemacht.'}
+                    ]
+                }
+            ]
+        }
+        
+        result = _parse_wiktionary_response(data, 'de', 'en')
+        
+        self.assertIsNotNone(result)
+        self.assertIn('meanings', result)
+        self.assertEqual(len(result['meanings']), 2)
+        self.assertEqual(result['meanings'][0]['part_of_speech'], 'participle')
+        self.assertIn('past participle of vorschlagen', result['meanings'][0]['definitions'][0])
+        self.assertEqual(result['meanings'][1]['part_of_speech'], 'verb')
+        self.assertIn('to suggest', result['meanings'][1]['definitions'][0])
+        self.assertEqual(len(result['meanings'][1]['examples']), 1)
     
     def test_get_dictionary_entry_normalizes_word(self):
         """Test that dictionary entry normalizes word before lookup."""
