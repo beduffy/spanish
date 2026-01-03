@@ -11,7 +11,7 @@
     "lint:fix": "vue-cli-service lint --fix",
     "test:quick": "vue-cli-service test:unit --maxWorkers=2 --bail",
     "precommit": "npm run lint && npm run test:quick",
-    "prepare": "husky install"
+    "prepare": "node -e \"const fs = require('fs'); const path = require('path'); const repoRoot = path.resolve(__dirname, '../..'); const gitDir = path.join(repoRoot, '.git'); if (fs.existsSync(gitDir)) { try { require('child_process').execSync('husky install', {stdio: 'pipe', cwd: __dirname, env: {...process.env}}); } catch(e) { if (e.message.includes('.git') || e.stderr?.toString().includes('.git')) { console.log('Skipping husky install (no .git in husky context)'); } else { throw e; } } } else { console.log('Skipping husky install (no .git directory found)'); }\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
