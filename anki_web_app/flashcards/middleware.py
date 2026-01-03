@@ -55,9 +55,12 @@ class SupabaseJWTAuthenticationMiddleware:
                 traceback.print_exc()
         else:
             print(f"[Middleware] No Bearer token found for path: {request.path}")
-            # Development-only: Auto-login as test user if DEBUG=True and no token
+            # Development-only: Auto-login as test user ONLY if explicitly enabled
+            # This prevents accidental auto-login in production even if DEBUG=True
             from django.conf import settings
-            if settings.DEBUG and not auth_header:
+            import os
+            allow_auto_login = os.environ.get('ALLOW_AUTO_LOGIN', '').lower() == 'true'
+            if settings.DEBUG and allow_auto_login and not auth_header:
                 test_user, created = User.objects.get_or_create(
                     username='testuser',
                     defaults={
@@ -71,7 +74,7 @@ class SupabaseJWTAuthenticationMiddleware:
                     test_user.save()
                     print(f"[Middleware] Created test user: testuser")
                 request.user = test_user
-                print(f"[Middleware] Auto-logged in as test user (DEBUG mode)")
+                print(f"[Middleware] Auto-logged in as test user (DEBUG mode + ALLOW_AUTO_LOGIN=true)")
         
         response = self.get_response(request)
         return response

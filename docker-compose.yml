@@ -13,18 +13,22 @@ services:
       # - db_data:/app/anki_web_app/data # Example for a named volume if you want Docker to manage it
     ports:
       - "8000:8000"
+    env_file:
+      - .env # Optional: Load from .env file if it exists (create from .env.example)
     environment:
       - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal
       # Set default SECRET_KEY for CI if .env doesn't exist
       - SECRET_KEY=${SECRET_KEY:-django-insecure-test-key-for-ci-only}
       - DEBUG=${DEBUG:-True}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      # Explicitly enable auto-login for local development (NEVER set in production)
+      - ALLOW_AUTO_LOGIN=${ALLOW_AUTO_LOGIN:-true}
       # Supabase configuration for backend authentication
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      # DeepL Translation API
-      - DEEPL_API_KEY=${DEEPL_API_KEY:-e2cb5fbb-69e4-483b-8d16-e768ef87c8aa:fx}
+      # DeepL Translation API (required - set in .env file or environment)
+      - DEEPL_API_KEY=${DEEPL_API_KEY:-}
       # TTS Services
       - GOOGLE_TTS_CREDENTIALS_PATH=/app/google-tts-credentials.json
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}

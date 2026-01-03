@@ -54,8 +54,11 @@ class SupabaseJWTAuthentication(authentication.BaseAuthentication):
             
             return (user, token)
         
-        # In DEBUG mode, if no token provided, use test user (for E2E tests)
-        if settings.DEBUG and not auth_header:
+        # In DEBUG mode, if no token provided, use test user ONLY if explicitly enabled
+        # This prevents accidental auto-login in production even if DEBUG=True
+        import os
+        allow_auto_login = os.environ.get('ALLOW_AUTO_LOGIN', '').lower() == 'true'
+        if settings.DEBUG and allow_auto_login and not auth_header:
             test_user, created = User.objects.get_or_create(
                 username='testuser',
                 defaults={

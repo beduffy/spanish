@@ -43,6 +43,8 @@ jobs:
         SECRET_KEY: django-insecure-test-key-for-ci-only
         DEBUG: "True"
         ALLOWED_HOSTS: localhost,127.0.0.1
+        # Enable auto-login for tests (backend auto-logs in as testuser in DEBUG mode)
+        ALLOW_AUTO_LOGIN: "true"
       run: |
         export DOCKER_HOST=unix:///var/run/docker.sock
         # The run_all_tests.sh script will exit with a non-zero code if tests fail

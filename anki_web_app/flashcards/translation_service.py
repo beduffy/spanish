@@ -19,14 +19,14 @@ def translate_text(text: str, source_lang: str = 'de', target_lang: str = 'en') 
     Translate text using DeepL API.
     Caches results in Django cache.
     """
-    if not DEEPL_API_KEY:
-        return None
-    
     # Check cache first
     cache_key = f"translation:{source_lang}:{target_lang}:{text}"
     cached = cache.get(cache_key)
-    if cached:
+    if cached is not None:
         return cached
+
+    if not DEEPL_API_KEY:
+        return None
     
     try:
         response = requests.post(

@@ -781,6 +781,7 @@ class ListeningTimeAPITests(APITestCase):
 class TranslationServiceTests(TestCase):
     """Test translation service functions."""
 
+    @patch('flashcards.translation_service.DEEPL_API_KEY', 'test-deepl-key')
     @patch('flashcards.translation_service.requests.post')
     @patch('flashcards.translation_service.cache')
     def test_translate_text_success(self, mock_cache, mock_post):
