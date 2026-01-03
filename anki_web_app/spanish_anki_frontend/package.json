@@ -6,7 +6,11 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
-    "lint": "vue-cli-service lint"
+    "test:unit:watch": "vue-cli-service test:unit --watch",
+    "lint": "vue-cli-service lint",
+    "lint:fix": "vue-cli-service lint --fix",
+    "test:quick": "vue-cli-service test:unit --maxWorkers=2 --bail",
+    "precommit": "npm run lint && npm run test:quick"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
@@ -29,7 +33,9 @@
     "cypress": "^14.3.3",
     "eslint": "^7.32.0",
     "eslint-plugin-vue": "^8.0.3",
-    "jest": "^27.0.5"
+    "husky": "^8.0.3",
+    "jest": "^27.0.5",
+    "lint-staged": "^15.2.0"
   },
   "eslintConfig": {
     "root": true,
@@ -43,7 +49,9 @@
     "parserOptions": {
       "parser": "@babel/eslint-parser"
     },
-    "rules": {},
+    "rules": {
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+    },
     "overrides": [
       {
         "files": [
@@ -54,6 +62,12 @@
           "jest": true
         }
       }
+    ]
+  },
+  "lint-staged": {
+    "*.{js,vue}": [
+      "eslint --fix",
+      "git add"
     ]
   },
   "browserslist": [
