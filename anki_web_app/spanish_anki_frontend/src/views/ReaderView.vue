@@ -922,7 +922,7 @@ export default {
         }
       }
     },
-    handleTouchEnd(event) {
+    handleTouchEnd() {
       // Clear selection timeout
       if (this.touchSelectionTimeout) {
         clearTimeout(this.touchSelectionTimeout)
