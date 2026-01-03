@@ -25,6 +25,17 @@ fi
 
 echo -e "${GREEN}✓ Docker Compose found: $DC_COMMAND${NC}"
 
+# Run validation before deployment
+if [ -f scripts/validate-deployment.sh ]; then
+    echo ""
+    echo -e "${YELLOW}Running pre-deployment validation...${NC}"
+    ./scripts/validate-deployment.sh || {
+        echo -e "${RED}❌ Validation failed! Please fix errors before deploying.${NC}"
+        exit 1
+    }
+    echo ""
+fi
+
 # Check if Docker is running
 if ! docker info >/dev/null 2>&1; then
   echo -e "${RED}Error: Docker is not running.${NC}" >&2
