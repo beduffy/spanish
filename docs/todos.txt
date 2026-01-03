@@ -17,6 +17,8 @@ more more more
 even use chatgpt to create images/videos/audio?
 
 
+rename repo and folder... 
+
 
 
 
@@ -27,11 +29,55 @@ make it easier to close popup
 
 
 use y2doc or my own thing to easily convert videos or blogs i care about to text. 
+
+maybe youtube integration isnt even needed. Would be convenient? 
+How many youtube videos have auto dubbing? Could I show live transcription of german of german (or english translation to german) and then click on the words like reimplementing lingopie but ANY VIDEO? how difficult? 
+
 Store numbers of words from blogs? or? 
 
 think more. 
 
+too many afk sessions
 
+
+
+Cheapest LLM APIs (good enough quality for Anki)
+
+Prices are per 1M tokens (input vs output). For Anki, output pricing matters a lot because explanations are output-heavy.
+
+Google Gemini 2.5 Flash-Lite (very cheap, good for short explanations)
+$0.10 in / $0.40 out (standard). 
+Google AI for Developers
+
+DeepSeek (deepseek-chat, V3.2) (extremely cheap; quality often surprisingly strong)
+$0.28 in (cache miss) / $0.42 out 
+api-docs.deepseek.com
+
+OpenAI GPT-4o mini (reliable instruction-following; great for “be concise”)
+$0.15 in / $0.60 out 
+OpenAI Platform
+
+Anthropic Claude Haiku (usually very nice writing style; costs more)
+Example: Claude Haiku 3: $0.25 in / $1.25 out 
+platform.claude.com
+
+Groq hosted Llama (fast, cheap-ish, great latency)
+Example shown: Llama 3.3 70B: $0.59 in / $0.79 out 
+Groq
++1
+
+What “cheap” looks like per Anki card
+
+If one card uses ~300 input + 300 output tokens:
+
+Gemini Flash-Lite: about $0.00015 
+Google AI for Developers
+
+DeepSeek-chat: about $0.00021 
+api-docs.deepseek.com
+
+GPT-4o mini: about $0.000225 
+OpenAI Platform
 
 
 chatgpt. 
@@ -55,3 +101,31 @@ perfect audio generation
 huge analytics dashboard
 
 importing 10 different formats
+
+
+
+6) What I’d prioritize next (concrete)
+
+Given your list, here’s the “highest leverage next 10”:
+
+Suspend/mastered on card + “known words highlighting”
+
+Review page shows only Due today + optional “Study ahead”
+
+Card details: interval, ease, next due (simple and transparent)
+
+One-tap “Add card” with no alerts, just subtle toast
+
+Fix popover positioning + close UX
+
+Add tags: source + topic + grammar
+
+Batch add from a lesson (select 10 words → add)
+
+Lemmatization storage (even if heuristic first)
+
+Export: CSV (cards + scheduling fields) + a DB dump script
+
+Basic stats: minutes read, cards added, reviews done
+
+Everything else goes into a backlog.

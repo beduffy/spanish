@@ -918,13 +918,13 @@ The migration will create:
    - Show progress indicators in lesson list
    - Track vocabulary growth over time
 
-5. **Vocabulary Lists** (Medium Priority)
+5. **Vocabulary Lists** (Medium Priority) meh. 
    - Generate vocabulary lists from lessons
    - Export to CSV/Anki format
    - Filter by "unknown words", "added to flashcards", etc.
    - Statistics: total words, known words, learning words
 
-6. **Audio-Text Alignment** (Lower Priority)
+6. **Audio-Text Alignment** (Lower Priority). hmm could be toggleable if not good? but great for sitting back. 
    - Word-level timestamps for audio sync
    - Highlight words as audio plays
    - Click word to jump to audio position
@@ -933,10 +933,6 @@ The migration will create:
 7. **Multiple Language Support** (Lower Priority)
    - Currently supports German (default) and Spanish
    - Add more languages as needed
-
-8. **Community Hints** (Future - if multi-user)
-   - User-contributed translations/hints
-   - Community dictionary entries
 
 ---
 
