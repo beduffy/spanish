@@ -63,6 +63,7 @@ services:
 volumes:
   static_volume:
 
+
 networks:
   app_services_network:
     driver: bridge
