@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Card, CardReview, StudySession, SessionActivity
+from .models import Card, CardReview, StudySession, SessionActivity, TokenStatus
 
 # Register your models here.
 
@@ -29,3 +29,11 @@ class SessionActivityAdmin(admin.ModelAdmin):
     list_display = ['activity_id', 'session', 'timestamp']
     list_filter = ['timestamp']
     search_fields = ['session__user__username']
+
+
+@admin.register(TokenStatus)
+class TokenStatusAdmin(admin.ModelAdmin):
+    list_display = ['status_id', 'user', 'token', 'status', 'updated_at']
+    list_filter = ['status', 'updated_at']
+    search_fields = ['user__username', 'token__text', 'token__normalized']
+    readonly_fields = ['created_at', 'updated_at']
