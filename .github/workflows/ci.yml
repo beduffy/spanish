@@ -88,11 +88,26 @@ jobs:
           ./anki_web_app/spanish_anki_frontend/cypress/videos/
         retention-days: 7 # Optional: how long to keep the artifacts
 
+    - name: Copy coverage.xml from container
+      if: always()
+      run: |
+        # Copy coverage.xml from Docker container to host
+        docker cp spanish_anki_backend:/app/coverage.xml ./anki_web_app/coverage.xml || echo "Coverage file not found in container"
+        # Verify file exists
+        if [ -f "./anki_web_app/coverage.xml" ]; then
+          echo "Coverage file found at ./anki_web_app/coverage.xml"
+          ls -lh ./anki_web_app/coverage.xml
+        else
+          echo "WARNING: Coverage file not found"
+        fi
+
     - name: Upload coverage to Codecov
+      if: always()
       continue-on-error: true  # Don't fail CI if Codecov upload fails (known GPG issues)
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: ${{ github.repository }}
         files: ./anki_web_app/coverage.xml # Explicitly point to the coverage file
-        fail_ci_if_error: false  # Don't fail CI on Codecov errors 
+        fail_ci_if_error: false  # Don't fail CI on Codecov errors
+        verbose: true  # Enable verbose output for debugging 
