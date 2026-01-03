@@ -39,6 +39,8 @@ think more.
 
 too many afk sessions
 
+create many stats and charts. 
+
 
 
 Cheapest LLM APIs (good enough quality for Anki)
