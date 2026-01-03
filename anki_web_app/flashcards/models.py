@@ -443,6 +443,36 @@ class Lesson(models.Model):
     total_listening_time_seconds = models.IntegerField(default=0, help_text="Total seconds of audio listened")
     last_listened_at = models.DateTimeField(blank=True, null=True, help_text="Last time audio was played")
     
+    # Reading progress tracking
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('not_started', 'Not Started'),
+            ('in_progress', 'In Progress'),
+            ('completed', 'Completed'),
+        ],
+        default='not_started',
+        help_text="Reading progress status"
+    )
+    words_read = models.IntegerField(default=0, help_text="Number of words/tokens read")
+    reading_time_seconds = models.IntegerField(default=0, help_text="Total seconds spent reading")
+    last_read_at = models.DateTimeField(blank=True, null=True, help_text="Last time lesson was read")
+    completed_at = models.DateTimeField(blank=True, null=True, help_text="When lesson was marked as completed")
+    
+    def get_progress_percentage(self):
+        """Calculate reading progress as a percentage based on words read."""
+        total_words = self.tokens.count()
+        if total_words == 0:
+            return 0
+        return min(100, int((self.words_read / total_words) * 100))
+    
+    def mark_completed(self):
+        """Mark lesson as completed and set completed_at timestamp."""
+        if self.status != 'completed':
+            self.status = 'completed'
+            self.completed_at = timezone.now()
+            self.save(update_fields=['status', 'completed_at'])
+    
     class Meta:
         ordering = ['-created_at']
         verbose_name = "Lesson"
@@ -460,6 +490,7 @@ class Token(models.Model):
     # Token text and position
     text = models.CharField(max_length=200, help_text="Surface form of the token")
     normalized = models.CharField(max_length=200, db_index=True, help_text="Normalized form (lowercase, punctuation stripped)")
+    lemma = models.CharField(max_length=200, db_index=True, blank=True, null=True, help_text="Lemmatized form (base form, e.g., sehen for sah/gesehen)")
     
     # Position in lesson text
     start_offset = models.IntegerField(help_text="Character offset where token starts")
@@ -485,9 +516,48 @@ class Token(models.Model):
         indexes = [
             models.Index(fields=['lesson', 'start_offset']),
             models.Index(fields=['normalized']),
+            models.Index(fields=['lemma']),
         ]
         verbose_name = "Token"
         verbose_name_plural = "Tokens"
+
+
+class TokenStatus(models.Model):
+    """
+    Tracks known/unknown status for tokens per user.
+    Allows multiple users to have different vocabulary statuses for the same token.
+    """
+    STATUS_CHOICES = [
+        ('unknown', 'Unknown'),
+        ('known', 'Known'),
+    ]
+    
+    status_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='token_statuses')
+    token = models.ForeignKey(Token, on_delete=models.CASCADE, related_name='statuses')
+    
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='unknown',
+        help_text="Whether the user knows this word"
+    )
+    
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        unique_together = [['user', 'token']]
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['token', 'status']),
+        ]
+        verbose_name = "Token Status"
+        verbose_name_plural = "Token Statuses"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.token.text} ({self.status})"
 
 
 class Phrase(models.Model):

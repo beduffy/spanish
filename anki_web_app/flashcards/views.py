@@ -9,7 +9,7 @@ import csv
 import io
 import uuid
 
-from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS, Card, CardReview, StudySession, SessionActivity, Lesson, Token, Phrase
+from .models import Sentence, Review, GRADUATING_INTERVAL_DAYS, Card, CardReview, StudySession, SessionActivity, Lesson, Token, Phrase, TokenStatus
 from .tokenization import normalize_token
 from .serializers import (
     SentenceSerializer,
@@ -891,6 +891,7 @@ class TokenClickAPIView(APIView):
     
     def get(self, request, token_id, *args, **kwargs):
         from .translation_service import translate_text, get_word_translation
+        from .dictionary_service import get_dictionary_entry
         
         try:
             token = Token.objects.get(token_id=token_id, lesson__user=request.user)
@@ -899,14 +900,28 @@ class TokenClickAPIView(APIView):
         
         # Increment click count
         token.clicked_count += 1
-        token.save(update_fields=['clicked_count'])
         
         # Get translation if not cached
         if not token.translation:
             word_translation = get_word_translation(token.text, token.lesson.language, 'en')
             if word_translation:
                 token.translation = word_translation.get('translation', '')
-                token.save(update_fields=['translation'])
+        
+        # Get dictionary entry if not cached
+        # dictionary_entry defaults to empty dict {}, so check if it has meanings
+        if not token.dictionary_entry.get('meanings'):
+            dictionary_entry = get_dictionary_entry(token.text, token.lesson.language, 'en')
+            if dictionary_entry:
+                token.dictionary_entry = dictionary_entry
+        
+        # Save token with all updates
+        update_fields = ['clicked_count']
+        if token.translation:
+            update_fields.append('translation')
+        # Only save dictionary_entry if it has meaningful data
+        if token.dictionary_entry and token.dictionary_entry.get('meanings'):
+            update_fields.append('dictionary_entry')
+        token.save(update_fields=update_fields)
         
         # Get sentence translation (for context)
         lesson = token.lesson
@@ -921,7 +936,7 @@ class TokenClickAPIView(APIView):
                 lesson.save(update_fields=['sentence_translations'])
         
         return Response({
-            'token': TokenSerializer(token).data,
+            'token': TokenSerializer(token, context={'request': request}).data,
             'sentence': sentence_text,
             'sentence_translation': sentence_translation,
         }, status=status.HTTP_200_OK)
@@ -1223,3 +1238,140 @@ class UpdateListeningTimeAPIView(APIView):
             'total_listening_time_seconds': lesson.total_listening_time_seconds,
             'last_listened_at': lesson.last_listened_at,
         }, status=status.HTTP_200_OK)
+
+
+class UpdateReadingProgressAPIView(APIView):
+    """
+    Update reading progress for a lesson.
+    PATCH: {words_read_delta, reading_time_seconds_delta, status}
+    - words_read_delta: increment to add to words_read (can be negative)
+    - reading_time_seconds_delta: increment to add to reading_time_seconds (can be negative)
+    - status: optional, can be 'not_started', 'in_progress', or 'completed'
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def patch(self, request, *args, **kwargs):
+        lesson_id = kwargs.get('pk') or request.data.get('lesson_id')
+        
+        if not lesson_id:
+            return Response({'error': 'lesson_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            lesson = Lesson.objects.get(lesson_id=lesson_id, user=request.user)
+        except Lesson.DoesNotExist:
+            return Response({'error': 'Lesson not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        update_fields = []
+        
+        # Update words_read
+        words_read_delta = request.data.get('words_read_delta')
+        if words_read_delta is not None:
+            lesson.words_read = max(0, lesson.words_read + int(words_read_delta))
+            update_fields.append('words_read')
+        
+        # Update reading_time_seconds
+        reading_time_seconds_delta = request.data.get('reading_time_seconds_delta')
+        if reading_time_seconds_delta is not None:
+            lesson.reading_time_seconds = max(0, lesson.reading_time_seconds + int(reading_time_seconds_delta))
+            update_fields.append('reading_time_seconds')
+        
+        # Update status
+        new_status = request.data.get('status')
+        if new_status in ['not_started', 'in_progress', 'completed']:
+            lesson.status = new_status
+            update_fields.append('status')
+            
+            # If marking as completed, set completed_at
+            if new_status == 'completed' and not lesson.completed_at:
+                lesson.completed_at = timezone.now()
+                update_fields.append('completed_at')
+            # If un-completing, clear completed_at
+            elif new_status != 'completed' and lesson.completed_at:
+                lesson.completed_at = None
+                update_fields.append('completed_at')
+        
+        # Update last_read_at if any reading progress changed
+        if words_read_delta is not None or reading_time_seconds_delta is not None:
+            lesson.last_read_at = timezone.now()
+            update_fields.append('last_read_at')
+            
+            # Auto-update status to 'in_progress' if not already completed
+            if lesson.status == 'not_started':
+                lesson.status = 'in_progress'
+                update_fields.append('status')
+        
+        if update_fields:
+            lesson.save(update_fields=update_fields)
+        
+        # Return updated lesson data
+        serializer = LessonSerializer(lesson)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TokenStatusAPIView(APIView):
+    """
+    Mark a token as known or unknown for the current user.
+    POST: {token_id, status} where status is 'known' or 'unknown'
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, token_id, *args, **kwargs):
+        # token_id comes from URL path
+        status_value = request.data.get('status')
+        
+        if not status_value:
+            return Response({'error': 'status is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if status_value not in ['known', 'unknown']:
+            return Response({'error': "status must be 'known' or 'unknown'"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            token = Token.objects.get(token_id=token_id)
+            # Verify user has access to the lesson
+            if token.lesson.user != request.user:
+                return Response({'error': 'Token not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Token.DoesNotExist:
+            return Response({'error': 'Token not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get or create TokenStatus
+        token_status, created = TokenStatus.objects.get_or_create(
+            user=request.user,
+            token=token,
+            defaults={'status': status_value}
+        )
+        
+        if not created:
+            token_status.status = status_value
+            token_status.save(update_fields=['status'])
+        
+        return Response({
+            'token_id': token.token_id,
+            'status': token_status.status,
+            'created': created,
+        }, status=status.HTTP_200_OK)
+    
+    def delete(self, request, token_id, *args, **kwargs):
+        """
+        Remove the status for a token (reset to no status).
+        DELETE: /api/flashcards/reader/tokens/<token_id>/status/
+        """
+        try:
+            token = Token.objects.get(token_id=token_id)
+            # Verify user has access to the lesson
+            if token.lesson.user != request.user:
+                return Response({'error': 'Token not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Token.DoesNotExist:
+            return Response({'error': 'Token not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            token_status = TokenStatus.objects.get(user=request.user, token=token)
+            token_status.delete()
+            return Response({
+                'token_id': token.token_id,
+                'message': 'Status removed'
+            }, status=status.HTTP_200_OK)
+        except TokenStatus.DoesNotExist:
+            return Response({
+                'token_id': token.token_id,
+                'message': 'No status to remove'
+            }, status=status.HTTP_200_OK)

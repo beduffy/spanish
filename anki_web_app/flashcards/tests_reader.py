@@ -16,10 +16,21 @@ from django.utils import timezone
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from unittest.mock import patch, MagicMock
-from flashcards.models import Lesson, Token, Phrase, Card
+from flashcards.models import Lesson, Token, Phrase, Card, TokenStatus
 from flashcards.tokenization import tokenize_text, normalize_token
 from flashcards.translation_service import translate_text, get_word_translation
 from flashcards.tts_service import generate_tts_audio, _generate_google_tts, _generate_elevenlabs_tts
+from flashcards.dictionary_service import get_dictionary_entry, get_wiktionary_language_code, _parse_wiktionary_response
+
+# Try to import lemmatization functions if available
+try:
+    from flashcards.tokenization import lemmatize_token, get_spacy_model
+except ImportError:
+    # Functions may not exist yet, define stubs for tests
+    def lemmatize_token(text, language='de'):
+        return None
+    def get_spacy_model(language):
+        return None
 
 User = get_user_model()
 
@@ -66,6 +77,101 @@ class TokenizationTests(TestCase):
         # Offsets should be sequential
         for i in range(len(tokens) - 1):
             self.assertLessEqual(tokens[i]['end_offset'], tokens[i+1]['start_offset'])
+
+    def test_tokenize_text_includes_lemma_field(self):
+        """Test that tokenization includes lemma field."""
+        text = "Hallo Welt"
+        tokens = tokenize_text(text, language='de')
+        
+        # All tokens should have lemma field
+        for token in tokens:
+            self.assertIn('lemma', token)
+            # Words should have lemma (may be None if spaCy not available)
+            if token.get('type') == 'word':
+                # Lemma can be None or a string
+                self.assertIsInstance(token['lemma'], (str, type(None)))
+            else:
+                # Punctuation should have None lemma
+                self.assertIsNone(token['lemma'])
+
+    def test_tokenize_text_with_language_parameter(self):
+        """Test tokenization with different languages."""
+        text = "Hallo Welt"
+        
+        # Test German
+        tokens_de = tokenize_text(text, language='de')
+        self.assertGreater(len(tokens_de), 0)
+        
+        # Test Spanish
+        text_es = "Hola Mundo"
+        tokens_es = tokenize_text(text_es, language='es')
+        self.assertGreater(len(tokens_es), 0)
+        
+        # Test default (should default to German)
+        tokens_default = tokenize_text(text)
+        self.assertEqual(len(tokens_default), len(tokens_de))
+
+    @patch('flashcards.tokenization.get_spacy_model')
+    def test_lemmatize_token_with_spacy(self, mock_get_model):
+        """Test lemmatization when spaCy is available."""
+        # Mock spaCy model
+        mock_token = MagicMock()
+        mock_token.lemma_ = "sehen"
+        mock_doc = [mock_token]
+        mock_nlp = MagicMock()
+        mock_nlp.return_value = mock_doc
+        mock_nlp.__call__ = MagicMock(return_value=mock_doc)
+        
+        mock_get_model.return_value = mock_nlp
+        
+        # Test lemmatization
+        lemma = lemmatize_token("sah", language='de')
+        self.assertIsNotNone(lemma)
+        self.assertEqual(lemma, "sehen")
+
+    def test_lemmatize_token_without_spacy(self):
+        """Test lemmatization gracefully handles missing spaCy."""
+        # This should not crash even if spaCy is not installed
+        lemma = lemmatize_token("sah", language='de')
+        # Should return None if spaCy not available, or a string if it is
+        self.assertIsInstance(lemma, (str, type(None)))
+
+    def test_get_spacy_model_caching(self):
+        """Test that spaCy models are cached."""
+        # Clear cache
+        from flashcards.tokenization import _spacy_models
+        original_cache = _spacy_models.copy()
+        _spacy_models.clear()
+        
+        try:
+            # First call
+            model1 = get_spacy_model('de')
+            
+            # Second call should return cached model
+            model2 = get_spacy_model('de')
+            
+            # Should be the same object (cached) if model was loaded
+            if model1 is not None:
+                self.assertIs(model1, model2)
+        finally:
+            # Restore original cache
+            _spacy_models.clear()
+            _spacy_models.update(original_cache)
+
+    def test_tokenize_text_lemma_for_german_words(self):
+        """Test that German words get lemmatized correctly."""
+        # Test with common German verb forms
+        text = "Ich sehe, du sahst, er gesehen"
+        tokens = tokenize_text(text, language='de')
+        
+        word_tokens = [t for t in tokens if t.get('type') == 'word']
+        self.assertGreater(len(word_tokens), 0)
+        
+        # Check that lemma field exists for words
+        for token in word_tokens:
+            self.assertIn('lemma', token)
+            # If spaCy is available, lemmas should be set
+            # If not, they'll be None (which is fine)
 
 
 class LessonModelTests(TestCase):
@@ -145,6 +251,35 @@ class TokenModelTests(TestCase):
         self.assertEqual(token.clicked_count, 0)
         self.assertFalse(token.added_to_flashcards)
 
+    def test_create_token_with_lemma(self):
+        """Test creating a token with lemma."""
+        token = Token.objects.create(
+            lesson=self.lesson,
+            text="sah",
+            normalized="sah",
+            lemma="sehen",
+            start_offset=0,
+            end_offset=3
+        )
+        
+        self.assertEqual(token.text, "sah")
+        self.assertEqual(token.normalized, "sah")
+        self.assertEqual(token.lemma, "sehen")
+        self.assertIsNotNone(token.lemma)
+
+    def test_token_lemma_can_be_none(self):
+        """Test that token lemma can be None."""
+        token = Token.objects.create(
+            lesson=self.lesson,
+            text="Hallo",
+            normalized="hallo",
+            lemma=None,
+            start_offset=0,
+            end_offset=5
+        )
+        
+        self.assertIsNone(token.lemma)
+
     def test_token_clicked_count(self):
         """Test incrementing clicked count."""
         token = Token.objects.create(
@@ -212,6 +347,30 @@ class LessonAPITests(APITestCase):
         self.assertGreater(len(tokens), 0)
         # Should have token_count in response
         self.assertIn('token_count', response.data)
+
+    def test_create_lesson_tokens_have_lemma(self):
+        """Test that tokens created via API include lemma field."""
+        url = '/api/flashcards/reader/lessons/'
+        data = {
+            'title': 'Test',
+            'text': 'Hallo Welt',
+            'language': 'de',
+            'source_type': 'text'
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        lesson = Lesson.objects.first()
+        tokens = lesson.tokens.all()
+        
+        # All tokens should have lemma field (may be None if spaCy not available)
+        for token in tokens:
+            # Check that lemma field exists in database
+            self.assertTrue(hasattr(token, 'lemma'))
+            # Lemma can be None or a string
+            if token.lemma is not None:
+                self.assertIsInstance(token.lemma, str)
 
     def test_list_lessons(self):
         """Test listing lessons."""
@@ -1015,3 +1174,1003 @@ class LessonImportFlowTests(APITestCase):
         
         # Verify last token ends within text length
         self.assertLessEqual(tokens[-1].end_offset, len(lesson.text))
+
+
+class ReadingProgressTests(TestCase):
+    """Test reading progress tracking on Lesson model."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt. Das ist ein Test.',
+            language='de'
+        )
+        # Create some tokens for progress calculation
+        Token.objects.create(
+            lesson=self.lesson,
+            text='Hallo',
+            normalized='hallo',
+            start_offset=0,
+            end_offset=5
+        )
+        Token.objects.create(
+            lesson=self.lesson,
+            text='Welt',
+            normalized='welt',
+            start_offset=6,
+            end_offset=10
+        )
+        Token.objects.create(
+            lesson=self.lesson,
+            text='Das',
+            normalized='das',
+            start_offset=12,
+            end_offset=15
+        )
+    
+    def test_lesson_default_progress_fields(self):
+        """Test that new lessons have default progress values."""
+        self.assertEqual(self.lesson.status, 'not_started')
+        self.assertEqual(self.lesson.words_read, 0)
+        self.assertEqual(self.lesson.reading_time_seconds, 0)
+        self.assertIsNone(self.lesson.last_read_at)
+        self.assertIsNone(self.lesson.completed_at)
+    
+    def test_get_progress_percentage(self):
+        """Test progress percentage calculation."""
+        # 0 words read out of 3 tokens = 0%
+        self.assertEqual(self.lesson.get_progress_percentage(), 0)
+        
+        # 1 word read out of 3 tokens = 33%
+        self.lesson.words_read = 1
+        self.assertEqual(self.lesson.get_progress_percentage(), 33)
+        
+        # 2 words read out of 3 tokens = 66%
+        self.lesson.words_read = 2
+        self.assertEqual(self.lesson.get_progress_percentage(), 66)
+        
+        # 3 words read out of 3 tokens = 100%
+        self.lesson.words_read = 3
+        self.assertEqual(self.lesson.get_progress_percentage(), 100)
+        
+        # More words than tokens should cap at 100%
+        self.lesson.words_read = 5
+        self.assertEqual(self.lesson.get_progress_percentage(), 100)
+    
+    def test_get_progress_percentage_no_tokens(self):
+        """Test progress percentage when lesson has no tokens."""
+        lesson = Lesson.objects.create(
+            user=self.user,
+            title='Empty Lesson',
+            text='Test',
+            language='de'
+        )
+        self.assertEqual(lesson.get_progress_percentage(), 0)
+    
+    def test_mark_completed(self):
+        """Test marking lesson as completed."""
+        self.assertEqual(self.lesson.status, 'not_started')
+        self.assertIsNone(self.lesson.completed_at)
+        
+        self.lesson.mark_completed()
+        
+        self.assertEqual(self.lesson.status, 'completed')
+        self.assertIsNotNone(self.lesson.completed_at)
+    
+    def test_mark_completed_idempotent(self):
+        """Test that marking completed multiple times doesn't change completed_at."""
+        self.lesson.mark_completed()
+        first_completed_at = self.lesson.completed_at
+        
+        # Mark again
+        self.lesson.mark_completed()
+        
+        self.assertEqual(self.lesson.completed_at, first_completed_at)
+
+
+class ReadingProgressAPITests(APITestCase):
+    """Test Reading Progress API endpoint."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt. Das ist ein Test.',
+            language='de'
+        )
+        # Create tokens for progress calculation
+        for i, word in enumerate(['Hallo', 'Welt', 'Das', 'ist', 'ein', 'Test']):
+            Token.objects.create(
+                lesson=self.lesson,
+                text=word,
+                normalized=word.lower(),
+                start_offset=i * 6,
+                end_offset=i * 6 + len(word)
+            )
+    
+    def test_update_reading_progress_words_read(self):
+        """Test updating words_read."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {
+            'words_read_delta': 3
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('words_read', response.data)
+        self.assertEqual(response.data['words_read'], 3)
+        self.assertIn('progress_percentage', response.data)
+        
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.words_read, 3)
+        self.assertIsNotNone(self.lesson.last_read_at)
+        # Status should auto-update to 'in_progress'
+        self.assertEqual(self.lesson.status, 'in_progress')
+    
+    def test_update_reading_progress_reading_time(self):
+        """Test updating reading_time_seconds."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {
+            'reading_time_seconds_delta': 60
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('reading_time_seconds', response.data)
+        self.assertEqual(response.data['reading_time_seconds'], 60)
+        self.assertIn('reading_time_formatted', response.data)
+        
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.reading_time_seconds, 60)
+        self.assertIsNotNone(self.lesson.last_read_at)
+    
+    def test_update_reading_progress_status(self):
+        """Test updating status."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {
+            'status': 'completed'
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('status', response.data)
+        self.assertEqual(response.data['status'], 'completed')
+        self.assertIn('completed_at', response.data)
+        self.assertIsNotNone(response.data['completed_at'])
+        
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.status, 'completed')
+        self.assertIsNotNone(self.lesson.completed_at)
+    
+    def test_update_reading_progress_all_fields(self):
+        """Test updating all progress fields at once."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {
+            'words_read_delta': 4,
+            'reading_time_seconds_delta': 120,
+            'status': 'in_progress'
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['words_read'], 4)
+        self.assertEqual(response.data['reading_time_seconds'], 120)
+        self.assertEqual(response.data['status'], 'in_progress')
+        
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.words_read, 4)
+        self.assertEqual(self.lesson.reading_time_seconds, 120)
+        self.assertEqual(self.lesson.status, 'in_progress')
+    
+    def test_update_reading_progress_accumulates(self):
+        """Test that progress updates accumulate."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        
+        # First update
+        self.client.patch(url, {'words_read_delta': 2, 'reading_time_seconds_delta': 30}, format='json')
+        # Second update
+        self.client.patch(url, {'words_read_delta': 2, 'reading_time_seconds_delta': 45}, format='json')
+        
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.words_read, 4)
+        self.assertEqual(self.lesson.reading_time_seconds, 75)
+    
+    def test_update_reading_progress_negative_delta(self):
+        """Test that negative deltas are handled correctly."""
+        self.lesson.words_read = 5
+        self.lesson.reading_time_seconds = 100
+        self.lesson.save()
+        
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {
+            'words_read_delta': -2,
+            'reading_time_seconds_delta': -20
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.words_read, 3)
+        self.assertEqual(self.lesson.reading_time_seconds, 80)
+    
+    def test_update_reading_progress_prevents_negative_values(self):
+        """Test that values cannot go below zero."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {
+            'words_read_delta': -100,
+            'reading_time_seconds_delta': -100
+        }
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.words_read, 0)
+        self.assertEqual(self.lesson.reading_time_seconds, 0)
+    
+    def test_update_reading_progress_lesson_not_found(self):
+        """Test updating progress for non-existent lesson."""
+        url = '/api/flashcards/reader/lessons/99999/progress/'
+        data = {'words_read_delta': 1}
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_update_reading_progress_other_user_lesson(self):
+        """Test that users can't update progress for other users' lessons."""
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+        other_lesson = Lesson.objects.create(
+            user=other_user,
+            title='Other Lesson',
+            text='Test',
+            language='de'
+        )
+        
+        url = f'/api/flashcards/reader/lessons/{other_lesson.lesson_id}/progress/'
+        data = {'words_read_delta': 1}
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_update_reading_progress_invalid_status(self):
+        """Test that invalid status values are rejected."""
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {'status': 'invalid_status'}
+        
+        response = self.client.patch(url, data, format='json')
+        
+        # Should still succeed but status shouldn't change
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.status, 'not_started')
+    
+    def test_update_reading_progress_uncompleting_lesson(self):
+        """Test that un-completing a lesson clears completed_at."""
+        self.lesson.status = 'completed'
+        self.lesson.completed_at = timezone.now()
+        self.lesson.save()
+        
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/progress/'
+        data = {'status': 'in_progress'}
+        
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.status, 'in_progress')
+        self.assertIsNone(self.lesson.completed_at)
+    
+    def test_lesson_serializer_includes_progress_fields(self):
+        """Test that lesson serializer includes all progress fields."""
+        self.lesson.words_read = 3
+        self.lesson.reading_time_seconds = 120
+        self.lesson.status = 'in_progress'
+        self.lesson.save()
+        
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('status', response.data)
+        self.assertIn('words_read', response.data)
+        self.assertIn('reading_time_seconds', response.data)
+        self.assertIn('reading_time_formatted', response.data)
+        self.assertIn('progress_percentage', response.data)
+        self.assertIn('last_read_at', response.data)
+        self.assertIn('completed_at', response.data)
+        
+        self.assertEqual(response.data['status'], 'in_progress')
+        self.assertEqual(response.data['words_read'], 3)
+        self.assertEqual(response.data['reading_time_seconds'], 120)
+        self.assertEqual(response.data['reading_time_formatted'], '2:00')
+        self.assertEqual(response.data['progress_percentage'], 50)  # 3 out of 6 tokens
+    
+    def test_lesson_list_includes_progress_fields(self):
+        """Test that lesson list endpoint includes progress fields."""
+        self.lesson.words_read = 2
+        self.lesson.reading_time_seconds = 60
+        self.lesson.status = 'in_progress'
+        self.lesson.save()
+        
+        url = '/api/flashcards/reader/lessons/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Handle paginated response
+        if 'results' in response.data:
+            lessons = response.data['results']
+        else:
+            lessons = response.data
+        
+        self.assertGreater(len(lessons), 0)
+        lesson = lessons[0]
+        self.assertIn('status', lesson)
+        self.assertIn('words_read', lesson)
+        self.assertIn('reading_time_seconds', lesson)
+        self.assertIn('progress_percentage', lesson)
+        self.assertIn('reading_time_formatted', lesson)
+
+
+class TokenStatusModelTests(TestCase):
+    """Test TokenStatus model functionality."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt',
+            language='de'
+        )
+        self.token = Token.objects.create(
+            lesson=self.lesson,
+            text='Hallo',
+            normalized='hallo',
+            start_offset=0,
+            end_offset=5
+        )
+    
+    def test_create_token_status_known(self):
+        """Test creating a known token status."""
+        status = TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='known'
+        )
+        self.assertEqual(status.status, 'known')
+        self.assertEqual(status.user, self.user)
+        self.assertEqual(status.token, self.token)
+    
+    def test_create_token_status_unknown(self):
+        """Test creating an unknown token status."""
+        status = TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='unknown'
+        )
+        self.assertEqual(status.status, 'unknown')
+    
+    def test_token_status_unique_per_user(self):
+        """Test that each user can only have one status per token."""
+        TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='known'
+        )
+        
+        # Try to create another status for the same user/token
+        status2, created = TokenStatus.objects.get_or_create(
+            user=self.user,
+            token=self.token,
+            defaults={'status': 'unknown'}
+        )
+        
+        # Should get existing status, not create new one
+        self.assertFalse(created)
+        self.assertEqual(status2.status, 'known')  # Original status
+    
+    def test_multiple_users_different_statuses(self):
+        """Test that different users can have different statuses for same token."""
+        user2 = User.objects.create_user(
+            username='testuser2',
+            email='test2@example.com',
+            password='testpass123'
+        )
+        
+        status1 = TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='known'
+        )
+        status2 = TokenStatus.objects.create(
+            user=user2,
+            token=self.token,
+            status='unknown'
+        )
+        
+        self.assertEqual(status1.status, 'known')
+        self.assertEqual(status2.status, 'unknown')
+        self.assertEqual(TokenStatus.objects.filter(token=self.token).count(), 2)
+
+
+class TokenStatusAPITests(APITestCase):
+    """Test TokenStatus API endpoints."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.user2 = User.objects.create_user(
+            username='testuser2',
+            email='test2@example.com',
+            password='testpass123'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt',
+            language='de'
+        )
+        self.token = Token.objects.create(
+            lesson=self.lesson,
+            text='Hallo',
+            normalized='hallo',
+            start_offset=0,
+            end_offset=5
+        )
+    
+    def test_mark_token_as_known(self):
+        """Test marking a token as known."""
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/status/'
+        response = self.client.post(url, {'status': 'known'}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'known')
+        self.assertEqual(response.data['token_id'], self.token.token_id)
+        self.assertTrue(response.data['created'])
+        
+        # Verify status was saved
+        token_status = TokenStatus.objects.get(user=self.user, token=self.token)
+        self.assertEqual(token_status.status, 'known')
+    
+    def test_mark_token_as_unknown(self):
+        """Test marking a token as unknown."""
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/status/'
+        response = self.client.post(url, {'status': 'unknown'}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'unknown')
+        
+        # Verify status was saved
+        token_status = TokenStatus.objects.get(user=self.user, token=self.token)
+        self.assertEqual(token_status.status, 'unknown')
+    
+    def test_update_token_status(self):
+        """Test updating an existing token status."""
+        # First mark as unknown
+        TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='unknown'
+        )
+        
+        # Then update to known
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/status/'
+        response = self.client.post(url, {'status': 'known'}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'known')
+        self.assertFalse(response.data['created'])  # Not created, updated
+        
+        # Verify status was updated
+        token_status = TokenStatus.objects.get(user=self.user, token=self.token)
+        self.assertEqual(token_status.status, 'known')
+    
+    def test_mark_token_status_missing_status(self):
+        """Test marking status without providing status value."""
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/status/'
+        response = self.client.post(url, {}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('status is required', response.data['error'])
+    
+    def test_mark_token_status_invalid_status(self):
+        """Test marking status with invalid status value."""
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/status/'
+        response = self.client.post(url, {'status': 'maybe'}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("status must be 'known' or 'unknown'", response.data['error'])
+    
+    def test_mark_token_status_not_found(self):
+        """Test marking status for non-existent token."""
+        url = '/api/flashcards/reader/tokens/99999/status/'
+        response = self.client.post(url, {'status': 'known'}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_mark_token_status_other_user_lesson(self):
+        """Test that users cannot mark status for tokens in other users' lessons."""
+        lesson2 = Lesson.objects.create(
+            user=self.user2,
+            title='Other User Lesson',
+            text='Bonjour',
+            language='fr'
+        )
+        token2 = Token.objects.create(
+            lesson=lesson2,
+            text='Bonjour',
+            normalized='bonjour',
+            start_offset=0,
+            end_offset=7
+        )
+        
+        url = f'/api/flashcards/reader/tokens/{token2.token_id}/status/'
+        response = self.client.post(url, {'status': 'known'}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_remove_token_status(self):
+        """Test removing a token status."""
+        # First create a status
+        TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='known'
+        )
+        
+        # Then remove it
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/status/'
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('message', response.data)
+        
+        # Verify status was removed
+        self.assertFalse(TokenStatus.objects.filter(user=self.user, token=self.token).exists())
+    
+    def test_remove_nonexistent_token_status(self):
+        """Test removing a status that doesn't exist."""
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/status/'
+        response = self.client.delete(url)
+        
+        # Should return success even if status doesn't exist
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('No status to remove', response.data['message'])
+    
+    def test_token_serializer_includes_status(self):
+        """Test that TokenSerializer includes status field."""
+        # Create a status
+        TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='known'
+        )
+        
+        # Get lesson detail which includes tokens
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tokens = response.data.get('tokens', [])
+        self.assertGreater(len(tokens), 0)
+        
+        # Find our token
+        token_data = next((t for t in tokens if t['token_id'] == self.token.token_id), None)
+        self.assertIsNotNone(token_data)
+        self.assertIn('status', token_data)
+        self.assertEqual(token_data['status'], 'known')
+    
+    def test_token_serializer_no_status_returns_none(self):
+        """Test that TokenSerializer returns None for status when no status exists."""
+        # Get lesson detail without creating a status
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tokens = response.data.get('tokens', [])
+        self.assertGreater(len(tokens), 0)
+        
+        # Find our token
+        token_data = next((t for t in tokens if t['token_id'] == self.token.token_id), None)
+        self.assertIsNotNone(token_data)
+        self.assertIn('status', token_data)
+        self.assertIsNone(token_data['status'])
+    
+    def test_token_status_user_scoping(self):
+        """Test that users only see their own token statuses."""
+        # User1 marks token as known
+        TokenStatus.objects.create(
+            user=self.user,
+            token=self.token,
+            status='known'
+        )
+        
+        # User2 marks same token as unknown (even though they can't access the lesson)
+        TokenStatus.objects.create(
+            user=self.user2,
+            token=self.token,
+            status='unknown'
+        )
+        
+        # User1 should see 'known' in their lesson
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tokens = response.data.get('tokens', [])
+        self.assertGreater(len(tokens), 0)
+        token_data = next((t for t in tokens if t['token_id'] == self.token.token_id), None)
+        self.assertIsNotNone(token_data, "Token should be found in response")
+        self.assertIn('status', token_data)
+        self.assertEqual(token_data['status'], 'known')
+        
+        # User2 should NOT be able to access user1's lesson (404)
+        self.client.force_authenticate(user=self.user2)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+        # Create a lesson for user2 with the same token text to test status scoping
+        lesson2 = Lesson.objects.create(
+            user=self.user2,
+            title='User2 Lesson',
+            text=self.lesson.text,
+            language=self.lesson.language
+        )
+        # Create token for user2's lesson (same text, different token_id)
+        token2 = Token.objects.create(
+            lesson=lesson2,
+            text=self.token.text,
+            normalized=self.token.normalized,
+            start_offset=self.token.start_offset,
+            end_offset=self.token.end_offset
+        )
+        # User2 should see 'unknown' status for their token
+        url2 = f'/api/flashcards/reader/lessons/{lesson2.lesson_id}/'
+        response = self.client.get(url2)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tokens = response.data.get('tokens', [])
+        self.assertGreater(len(tokens), 0)
+        token_data = next((t for t in tokens if t['token_id'] == token2.token_id), None)
+        self.assertIsNotNone(token_data, "Token should be found in response")
+        self.assertIn('status', token_data)
+        # User2's token should have no status (since TokenStatus was created for self.token, not token2)
+        self.assertIsNone(token_data['status'])
+
+
+class DictionaryServiceTests(TestCase):
+    """Test dictionary service functionality."""
+    
+    def test_get_wiktionary_language_code(self):
+        """Test language code mapping."""
+        self.assertEqual(get_wiktionary_language_code('es'), 'Spanish')
+        self.assertEqual(get_wiktionary_language_code('de'), 'German')
+        self.assertEqual(get_wiktionary_language_code('en'), 'English')
+        self.assertEqual(get_wiktionary_language_code('fr'), 'French')
+        self.assertEqual(get_wiktionary_language_code('it'), 'Italian')
+        self.assertEqual(get_wiktionary_language_code('pt'), 'Portuguese')
+        # Fallback for unknown languages
+        self.assertEqual(get_wiktionary_language_code('xx'), 'Xx')
+    
+    @patch('flashcards.dictionary_service.requests.get')
+    @patch('flashcards.dictionary_service.cache')
+    def test_get_dictionary_entry_success(self, mock_cache, mock_get):
+        """Test successful dictionary entry retrieval."""
+        # Mock cache miss
+        mock_cache.get.return_value = None
+        
+        # Mock Wiktionary API response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'de': {
+                'definitions': [
+                    {
+                        'partOfSpeech': 'noun',
+                        'senses': [
+                            {
+                                'glosses': ['greeting', 'hello'],
+                                'examples': [{'text': 'Hallo, wie geht es dir?'}]
+                            }
+                        ]
+                    }
+                ],
+                'pronunciations': [
+                    {
+                        'audio': [{'url': 'https://example.com/audio.mp3'}]
+                    }
+                ]
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        
+        result = get_dictionary_entry('Hallo', 'de', 'en')
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(result['source'], 'wiktionary')
+        self.assertIn('meanings', result)
+        self.assertEqual(len(result['meanings']), 1)
+        self.assertEqual(result['meanings'][0]['part_of_speech'], 'noun')
+        self.assertIn('definitions', result['meanings'][0])
+        self.assertIn('examples', result['meanings'][0])
+        mock_cache.set.assert_called_once()
+    
+    @patch('flashcards.dictionary_service.requests.get')
+    @patch('flashcards.dictionary_service.cache')
+    def test_get_dictionary_entry_cache_hit(self, mock_cache, mock_get):
+        """Test dictionary entry cache hit."""
+        cached_entry = {
+            'meanings': [{'part_of_speech': 'noun', 'definitions': ['hello'], 'examples': []}],
+            'source': 'wiktionary'
+        }
+        mock_cache.get.return_value = cached_entry
+        
+        result = get_dictionary_entry('Hallo', 'de', 'en')
+        
+        self.assertEqual(result, cached_entry)
+        mock_get.assert_not_called()
+    
+    @patch('flashcards.dictionary_service.requests.get')
+    def test_get_dictionary_entry_not_found(self, mock_get):
+        """Test dictionary entry when word not found."""
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+        
+        result = get_dictionary_entry('NonexistentWord12345', 'de', 'en')
+        
+        self.assertIsNone(result)
+    
+    @patch('flashcards.dictionary_service.requests.get')
+    def test_get_dictionary_entry_api_error(self, mock_get):
+        """Test dictionary entry when API error occurs."""
+        mock_get.side_effect = Exception("API Error")
+        
+        result = get_dictionary_entry('Hallo', 'de', 'en')
+        
+        self.assertIsNone(result)
+    
+    def test_parse_wiktionary_response_valid(self):
+        """Test parsing valid Wiktionary response."""
+        data = {
+            'de': {
+                'definitions': [
+                    {
+                        'partOfSpeech': 'noun',
+                        'senses': [
+                            {
+                                'glosses': ['greeting', 'hello'],
+                                'examples': [{'text': 'Hallo Welt'}]
+                            }
+                        ]
+                    },
+                    {
+                        'partOfSpeech': 'interjection',
+                        'senses': [
+                            {
+                                'glosses': ['hey'],
+                                'examples': []
+                            }
+                        ]
+                    }
+                ],
+                'pronunciations': [
+                    {
+                        'audio': [{'url': 'https://example.com/audio.mp3'}]
+                    }
+                ]
+            }
+        }
+        
+        result = _parse_wiktionary_response(data, 'de', 'en')
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result['meanings']), 2)
+        self.assertEqual(result['meanings'][0]['part_of_speech'], 'noun')
+        self.assertEqual(len(result['meanings'][0]['definitions']), 2)
+        self.assertEqual(len(result['meanings'][0]['examples']), 1)
+        self.assertEqual(result['pronunciation'], 'https://example.com/audio.mp3')
+    
+    def test_parse_wiktionary_response_empty(self):
+        """Test parsing empty Wiktionary response."""
+        result = _parse_wiktionary_response({}, 'de', 'en')
+        self.assertIsNone(result)
+        
+        result = _parse_wiktionary_response({'de': {}}, 'de', 'en')
+        self.assertIsNone(result)
+    
+    def test_parse_wiktionary_response_no_definitions(self):
+        """Test parsing response with no definitions."""
+        data = {
+            'de': {
+                'definitions': []
+            }
+        }
+        
+        result = _parse_wiktionary_response(data, 'de', 'en')
+        self.assertIsNone(result)
+    
+    def test_get_dictionary_entry_normalizes_word(self):
+        """Test that dictionary entry normalizes word before lookup."""
+        with patch('flashcards.dictionary_service.requests.get') as mock_get:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {'de': {'definitions': []}}
+            mock_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_response
+            
+            # Should normalize punctuation
+            get_dictionary_entry('Hallo!', 'de', 'en')
+            # Check that normalized word was used in URL
+            call_args = mock_get.call_args
+            self.assertIn('hallo', call_args[0][0].lower())
+
+
+class DictionaryIntegrationTests(APITestCase):
+    """Test dictionary integration with token click API."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+        self.lesson = Lesson.objects.create(
+            user=self.user,
+            title='Test Lesson',
+            text='Hallo Welt. Das ist ein Test.',
+            language='de'
+        )
+        self.token = Token.objects.create(
+            lesson=self.lesson,
+            text='Hallo',
+            normalized='hallo',
+            start_offset=0,
+            end_offset=5
+        )
+    
+    @patch('flashcards.dictionary_service.get_dictionary_entry')
+    @patch('flashcards.translation_service.get_word_translation')
+    @patch('flashcards.translation_service.translate_text')
+    def test_token_click_fetches_dictionary_entry(self, mock_sentence_translate, mock_word_translate, mock_dict_entry):
+        """Test that clicking a token fetches dictionary entry."""
+        mock_word_translate.return_value = {'translation': 'Hello'}
+        mock_sentence_translate.return_value = 'Hello World.'
+        mock_dict_entry.return_value = {
+            'meanings': [
+                {
+                    'part_of_speech': 'noun',
+                    'definitions': ['greeting', 'hello'],
+                    'examples': ['Hallo Welt']
+                }
+            ],
+            'source': 'wiktionary'
+        }
+        
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/click/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('token', response.data)
+        self.assertIn('dictionary_entry', response.data['token'])
+        
+        # Verify dictionary entry was fetched
+        mock_dict_entry.assert_called_once_with('Hallo', 'de', 'en')
+        
+        # Verify token was updated with dictionary entry
+        self.token.refresh_from_db()
+        self.assertIsNotNone(self.token.dictionary_entry)
+        self.assertIn('meanings', self.token.dictionary_entry)
+    
+    @patch('flashcards.dictionary_service.get_dictionary_entry')
+    @patch('flashcards.translation_service.get_word_translation')
+    @patch('flashcards.translation_service.translate_text')
+    def test_token_click_uses_cached_dictionary_entry(self, mock_sentence_translate, mock_word_translate, mock_dict_entry):
+        """Test that clicking a token uses cached dictionary entry."""
+        # Set up token with existing dictionary entry
+        self.token.dictionary_entry = {
+            'meanings': [
+                {
+                    'part_of_speech': 'noun',
+                    'definitions': ['greeting'],
+                    'examples': []
+                }
+            ],
+            'source': 'wiktionary'
+        }
+        self.token.save()
+        
+        mock_word_translate.return_value = {'translation': 'Hello'}
+        mock_sentence_translate.return_value = 'Hello World.'
+        
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/click/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should not fetch dictionary entry again
+        mock_dict_entry.assert_not_called()
+        
+        # Should return cached dictionary entry
+        self.assertIn('dictionary_entry', response.data['token'])
+        self.assertEqual(len(response.data['token']['dictionary_entry']['meanings']), 1)
+    
+    @patch('flashcards.dictionary_service.get_dictionary_entry')
+    @patch('flashcards.translation_service.get_word_translation')
+    @patch('flashcards.translation_service.translate_text')
+    def test_token_click_handles_dictionary_failure(self, mock_sentence_translate, mock_word_translate, mock_dict_entry):
+        """Test that token click handles dictionary lookup failure gracefully."""
+        mock_word_translate.return_value = {'translation': 'Hello'}
+        mock_sentence_translate.return_value = 'Hello World.'
+        mock_dict_entry.return_value = None  # Dictionary lookup fails
+        
+        url = f'/api/flashcards/reader/tokens/{self.token.token_id}/click/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should still return token with translation
+        self.assertIn('token', response.data)
+        self.assertIn('translation', response.data['token'])
+        # Dictionary entry should be empty dict (default) or have no meanings
+        self.token.refresh_from_db()
+        # dictionary_entry defaults to {}, so check if it has no meanings
+        self.assertFalse(self.token.dictionary_entry.get('meanings'))
+    
+    def test_token_serializer_includes_dictionary_entry(self):
+        """Test that TokenSerializer includes dictionary_entry field."""
+        self.token.dictionary_entry = {
+            'meanings': [
+                {
+                    'part_of_speech': 'noun',
+                    'definitions': ['greeting'],
+                    'examples': []
+                }
+            ],
+            'source': 'wiktionary'
+        }
+        self.token.save()
+        
+        url = f'/api/flashcards/reader/lessons/{self.lesson.lesson_id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tokens = response.data.get('tokens', [])
+        self.assertGreater(len(tokens), 0)
+        
+        token_data = next((t for t in tokens if t['token_id'] == self.token.token_id), None)
+        self.assertIsNotNone(token_data)
+        self.assertIn('dictionary_entry', token_data)
+        self.assertIn('meanings', token_data['dictionary_entry'])

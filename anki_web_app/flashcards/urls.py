@@ -28,6 +28,8 @@ from .views import (
     AddToFlashcardsAPIView,
     GenerateTTSAPIView,
     UpdateListeningTimeAPIView,
+    UpdateReadingProgressAPIView,
+    TokenStatusAPIView,
 )
 
 app_name = 'flashcards'
@@ -63,4 +65,6 @@ urlpatterns = [
     path('reader/add-to-flashcards/', AddToFlashcardsAPIView.as_view(), name='add_to_flashcards_api'),
     path('reader/generate-tts/', GenerateTTSAPIView.as_view(), name='generate_tts_api'),
     path('reader/lessons/<int:lesson_id>/listening-time/', UpdateListeningTimeAPIView.as_view(), name='update_listening_time_api'),
-] 
+    path('reader/lessons/<int:pk>/progress/', UpdateReadingProgressAPIView.as_view(), name='update_reading_progress_api'),
+    path('reader/tokens/<int:token_id>/status/', TokenStatusAPIView.as_view(), name='token_status_api'),
+]

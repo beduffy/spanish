@@ -35,8 +35,18 @@
               <span>{{ (lesson.language || 'de').toUpperCase() }}</span>
               <span>{{ lesson.token_count || 0 }} tokens</span>
               <span>{{ formatDate(lesson.created_at) }}</span>
+              <span class="status-badge" :class="`status-${lesson.status || 'not_started'}`">
+                {{ getStatusLabel(lesson.status || 'not_started') }}
+              </span>
             </p>
+            <div v-if="lesson.progress_percentage !== undefined" class="progress-bar-container">
+              <div class="progress-bar" :style="{ width: `${lesson.progress_percentage}%` }"></div>
+              <span class="progress-text">{{ lesson.progress_percentage }}%</span>
+            </div>
             <p class="lesson-preview">{{ (lesson.text || '').substring(0, 150) }}{{ lesson.text && lesson.text.length > 150 ? '...' : '' }}</p>
+            <div v-if="lesson.reading_time_formatted" class="lesson-reading-time">
+              <small>Reading time: {{ lesson.reading_time_formatted }}</small>
+            </div>
           </div>
           <div class="lesson-card-actions">
             <button @click.stop="editLesson(lesson)" class="btn btn-edit" title="Edit lesson">
@@ -55,9 +65,22 @@
       <div class="lesson-header">
         <div class="lesson-title-section">
           <h2>{{ lesson.title }}</h2>
-          <div v-if="lesson.listening_time_formatted" class="listening-stats">
-            <span class="listening-icon">🎧</span>
-            <span>Listened: {{ lesson.listening_time_formatted }}</span>
+          <div class="lesson-stats">
+            <div v-if="lesson.listening_time_formatted" class="listening-stats">
+              <span class="listening-icon">🎧</span>
+              <span>Listened: {{ lesson.listening_time_formatted }}</span>
+            </div>
+            <div v-if="lesson.reading_time_formatted" class="reading-stats">
+              <span class="reading-icon">📖</span>
+              <span>Read: {{ lesson.reading_time_formatted }}</span>
+            </div>
+            <div v-if="lesson.progress_percentage !== undefined" class="progress-stats">
+              <span class="progress-icon">📊</span>
+              <span>{{ lesson.progress_percentage }}% complete</span>
+              <span class="status-badge" :class="`status-${lesson.status}`">
+                {{ getStatusLabel(lesson.status) }}
+              </span>
+            </div>
           </div>
         </div>
         <div class="lesson-actions">
@@ -116,21 +139,86 @@
             <strong>{{ (selectedToken || selectedPhrase)?.text }}</strong>
             <button @click="closePopover" class="close-btn">×</button>
           </div>
-          <div v-if="(selectedToken || selectedPhrase)?.translation" class="popover-body">
-            <p><strong>Translation:</strong> {{ (selectedToken || selectedPhrase).translation }}</p>
-            <p v-if="sentenceContext" class="sentence-context">
-              <strong>Context:</strong> {{ sentenceContext }}
-            </p>
-            <p v-if="sentenceTranslation" class="sentence-translation">
-              <strong>Sentence:</strong> {{ sentenceTranslation }}
-            </p>
-            <button 
-              @click="addToFlashcards" 
-              class="btn btn-primary"
-              :disabled="(selectedToken || selectedPhrase)?.added_to_flashcards"
-            >
-              {{ (selectedToken || selectedPhrase)?.added_to_flashcards ? '✓ Added to Flashcards' : 'Add to Flashcards' }}
-            </button>
+          <div v-if="(selectedToken || selectedPhrase)?.translation || currentDictionaryEntry" class="popover-body">
+            <!-- Dictionary Entry Section -->
+            <div v-if="currentDictionaryEntry" class="dictionary-section">
+              <div v-for="(meaning, index) in currentDictionaryEntry.meanings" :key="index" class="meaning-item">
+                <div v-if="meaning.part_of_speech" class="part-of-speech">
+                  <span class="pos-tag">{{ meaning.part_of_speech }}</span>
+                </div>
+                <ul class="definitions-list">
+                  <li v-for="(definition, defIndex) in meaning.definitions" :key="defIndex" class="definition-item">
+                    {{ definition }}
+                  </li>
+                </ul>
+                <div v-if="meaning.examples && meaning.examples.length > 0" class="examples-section">
+                  <strong class="examples-label">Examples:</strong>
+                  <ul class="examples-list">
+                    <li v-for="(example, exIndex) in meaning.examples" :key="exIndex" class="example-item">
+                      <em>{{ example }}</em>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Fallback Translation (if no dictionary entry) -->
+            <div v-if="!currentDictionaryEntry && (selectedToken || selectedPhrase)?.translation" class="translation-section">
+              <p><strong>Translation:</strong> {{ (selectedToken || selectedPhrase).translation }}</p>
+            </div>
+            
+            <!-- Sentence Context -->
+            <div v-if="sentenceContext" class="sentence-context-section">
+              <p class="sentence-context">
+                <strong>Context:</strong> {{ sentenceContext }}
+              </p>
+            </div>
+            <div v-if="sentenceTranslation" class="sentence-translation-section">
+              <p class="sentence-translation">
+                <strong>Sentence:</strong> {{ sentenceTranslation }}
+              </p>
+            </div>
+            
+            <!-- Known/Unknown Status Buttons (only for tokens, not phrases) -->
+            <div v-if="selectedToken && !selectedPhrase" class="popover-status-actions">
+              <div class="status-buttons">
+                <button 
+                  @click="markTokenAsKnown"
+                  class="btn btn-status"
+                  :class="{ 'btn-status-active': selectedToken?.status === 'known' }"
+                  :disabled="isUpdatingStatus"
+                >
+                  {{ selectedToken?.status === 'known' ? '✓ Known' : 'Mark as Known' }}
+                </button>
+                <button 
+                  @click="markTokenAsUnknown"
+                  class="btn btn-status"
+                  :class="{ 'btn-status-active': selectedToken?.status === 'unknown' }"
+                  :disabled="isUpdatingStatus"
+                >
+                  {{ selectedToken?.status === 'unknown' ? '✗ Unknown' : 'Mark as Unknown' }}
+                </button>
+                <button 
+                  v-if="selectedToken?.status"
+                  @click="removeTokenStatus"
+                  class="btn btn-status btn-status-clear"
+                  :disabled="isUpdatingStatus"
+                >
+                  Clear Status
+                </button>
+              </div>
+            </div>
+            
+            <!-- Add to Flashcards Button -->
+            <div class="popover-actions">
+              <button 
+                @click="addToFlashcards" 
+                class="btn btn-primary"
+                :disabled="(selectedToken || selectedPhrase)?.added_to_flashcards"
+              >
+                {{ (selectedToken || selectedPhrase)?.added_to_flashcards ? '✓ Added to Flashcards' : 'Add to Flashcards' }}
+              </button>
+            </div>
           </div>
           <div v-else class="popover-loading">
             <div class="loading-spinner-small"></div>
@@ -313,7 +401,16 @@ export default {
       showEditModal: false,
       editingLesson: null,
       isSaving: false,
-      editError: null
+      editError: null,
+      isUpdatingStatus: false,
+      // Reading progress tracking
+      readingTimeInterval: null,
+      readingStartTime: null,
+      lastProgressUpdate: null,
+      wordsReadThisSession: new Set(),
+      progressUpdateInterval: null,
+      // Computed dictionary entry for current selection
+      currentDictionaryEntry: null
     }
   },
   mounted() {
@@ -328,6 +425,12 @@ export default {
     },
     id() {
       this.initializeLessonId()
+    },
+    selectedToken() {
+      this.updateCurrentDictionaryEntry()
+    },
+    selectedPhrase() {
+      this.updateCurrentDictionaryEntry()
     }
   },
   methods: {
@@ -367,6 +470,9 @@ export default {
       }
     },
     async loadLesson(lessonId) {
+      // Stop tracking for previous lesson
+      this.stopReadingProgressTracking()
+      
       this.lessonId = lessonId
       this.isLoading = true
       this.errorMessage = null
@@ -377,6 +483,9 @@ export default {
           this.lesson = response.data
           this.tokens = Array.isArray(response.data.tokens) ? response.data.tokens : []
           this.phrases = Array.isArray(response.data.phrases) ? response.data.phrases : []
+          
+          // Start tracking reading progress for this lesson
+          this.startReadingProgressTracking()
         } else {
           throw new Error('Invalid response data')
         }
@@ -403,6 +512,9 @@ export default {
       if (selection && selection.toString().trim().length > 0) {
         return
       }
+      
+      // Track word read
+      this.trackWordRead(token.token_id)
       
       // Close any existing popover
       if (this.selectedToken && this.selectedToken.token_id === token.token_id) {
@@ -434,12 +546,14 @@ export default {
       this.selectedPhrase = null // Clear phrase selection
       this.sentenceContext = null
       this.sentenceTranslation = null
+      this.updateCurrentDictionaryEntry()
 
       try {
         const response = await ApiService.reader.clickToken(token.token_id)
         if (response.data) {
           if (response.data.token) {
             this.selectedToken = response.data.token
+            this.updateCurrentDictionaryEntry()
           }
           this.sentenceContext = response.data.sentence || null
           this.sentenceTranslation = response.data.sentence_translation || null
@@ -449,6 +563,7 @@ export default {
         // Still show popover with cached translation if available
         if (token.translation) {
           this.selectedToken = { ...token }
+          this.updateCurrentDictionaryEntry()
         }
       }
     },
@@ -457,6 +572,18 @@ export default {
       this.selectedPhrase = null
       this.sentenceContext = null
       this.sentenceTranslation = null
+      this.currentDictionaryEntry = null
+    },
+    getDictionaryEntry(item) {
+      if (!item) return null
+      if (item.dictionary_entry && item.dictionary_entry.meanings && item.dictionary_entry.meanings.length > 0) {
+        return item.dictionary_entry
+      }
+      return null
+    },
+    updateCurrentDictionaryEntry() {
+      const item = this.selectedToken || this.selectedPhrase
+      this.currentDictionaryEntry = this.getDictionaryEntry(item)
     },
     async addToFlashcards() {
       if ((!this.selectedToken && !this.selectedPhrase) || !this.lesson) return
@@ -526,7 +653,80 @@ export default {
       if (token.clicked_count && token.clicked_count > 0) {
         classes.push('token-clicked')
       }
+      
+      // Add status-based classes for known/unknown highlighting
+      if (token.status === 'known') {
+        classes.push('token-known')
+      } else if (token.status === 'unknown') {
+        classes.push('token-unknown')
+      }
       return classes.join(' ')
+    },
+    async markTokenAsKnown() {
+      if (!this.selectedToken || this.isUpdatingStatus) return
+      
+      this.isUpdatingStatus = true
+      try {
+        await ApiService.reader.updateTokenStatus(this.selectedToken.token_id, 'known')
+        
+        // Update the token status in the local state
+        this.selectedToken.status = 'known'
+        const tokenIndex = this.tokens.findIndex(t => t.token_id === this.selectedToken.token_id)
+        if (tokenIndex !== -1) {
+          this.tokens[tokenIndex].status = 'known'
+        }
+        
+        this.showToast('Word marked as known', 'success')
+      } catch (error) {
+        console.error('Error marking token as known:', error)
+        this.showToast('Failed to update status', 'error')
+      } finally {
+        this.isUpdatingStatus = false
+      }
+    },
+    async markTokenAsUnknown() {
+      if (!this.selectedToken || this.isUpdatingStatus) return
+      
+      this.isUpdatingStatus = true
+      try {
+        await ApiService.reader.updateTokenStatus(this.selectedToken.token_id, 'unknown')
+        
+        // Update the token status in the local state
+        this.selectedToken.status = 'unknown'
+        const tokenIndex = this.tokens.findIndex(t => t.token_id === this.selectedToken.token_id)
+        if (tokenIndex !== -1) {
+          this.tokens[tokenIndex].status = 'unknown'
+        }
+        
+        this.showToast('Word marked as unknown', 'success')
+      } catch (error) {
+        console.error('Error marking token as unknown:', error)
+        this.showToast('Failed to update status', 'error')
+      } finally {
+        this.isUpdatingStatus = false
+      }
+    },
+    async removeTokenStatus() {
+      if (!this.selectedToken || this.isUpdatingStatus) return
+      
+      this.isUpdatingStatus = true
+      try {
+        await ApiService.reader.removeTokenStatus(this.selectedToken.token_id)
+        
+        // Update the token status in the local state
+        this.selectedToken.status = null
+        const tokenIndex = this.tokens.findIndex(t => t.token_id === this.selectedToken.token_id)
+        if (tokenIndex !== -1) {
+          this.tokens[tokenIndex].status = null
+        }
+        
+        this.showToast('Status cleared', 'success')
+      } catch (error) {
+        console.error('Error removing token status:', error)
+        this.showToast('Failed to clear status', 'error')
+      } finally {
+        this.isUpdatingStatus = false
+      }
     },
     onSelectStart() {
       // Allow text selection
@@ -920,6 +1120,105 @@ export default {
         const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Failed to delete lesson. Please try again.'
         this.showToast(`Failed to delete lesson: ${errorMsg}`, 'error')
       }
+    },
+    getStatusLabel(status) {
+      const labels = {
+        'not_started': 'Not Started',
+        'in_progress': 'In Progress',
+        'completed': 'Completed'
+      }
+      return labels[status] || status
+    },
+    startReadingProgressTracking() {
+      if (!this.lessonId) return
+      
+      // Reset session tracking
+      this.wordsReadThisSession = new Set()
+      this.readingStartTime = Date.now()
+      this.lastProgressUpdate = Date.now()
+      
+      // Start reading time interval (update every 10 seconds)
+      this.readingTimeInterval = setInterval(() => {
+        this.updateReadingProgress()
+      }, 10000)
+      
+      // Initial progress update to mark as in_progress if not started
+      if (this.lesson && this.lesson.status === 'not_started') {
+        this.updateReadingProgress({ status: 'in_progress' })
+      }
+    },
+    stopReadingProgressTracking() {
+      // Stop intervals
+      if (this.readingTimeInterval) {
+        clearInterval(this.readingTimeInterval)
+        this.readingTimeInterval = null
+      }
+      if (this.progressUpdateInterval) {
+        clearInterval(this.progressUpdateInterval)
+        this.progressUpdateInterval = null
+      }
+      
+      // Final progress update
+      if (this.lessonId) {
+        this.updateReadingProgress()
+      }
+      
+      // Reset tracking
+      this.wordsReadThisSession = new Set()
+      this.readingStartTime = null
+      this.lastProgressUpdate = null
+    },
+    trackWordRead(tokenId) {
+      if (!this.lessonId || !tokenId) return
+      
+      // Track unique words read this session
+      if (!this.wordsReadThisSession.has(tokenId)) {
+        this.wordsReadThisSession.add(tokenId)
+        // Update progress immediately
+        this.updateReadingProgress({ words_read_delta: 1 })
+      }
+    },
+    async updateReadingProgress(additionalData = {}) {
+      if (!this.lessonId || this.isUpdatingStatus) return
+      
+      try {
+        this.isUpdatingStatus = true
+        
+        const progressData = { ...additionalData }
+        
+        // Calculate reading time delta
+        if (this.readingStartTime && this.lastProgressUpdate) {
+          const now = Date.now()
+          const secondsElapsed = Math.floor((now - this.lastProgressUpdate) / 1000)
+          if (secondsElapsed > 0) {
+            progressData.reading_time_seconds_delta = secondsElapsed
+            this.lastProgressUpdate = now
+          }
+        }
+        
+        // Only update if there's something to update
+        if (Object.keys(progressData).length > 0) {
+          const response = await ApiService.reader.updateReadingProgress(this.lessonId, progressData)
+          
+          // Update local lesson data
+          if (response.data && this.lesson) {
+            Object.assign(this.lesson, {
+              status: response.data.status,
+              words_read: response.data.words_read,
+              reading_time_seconds: response.data.reading_time_seconds,
+              reading_time_formatted: response.data.reading_time_formatted,
+              progress_percentage: response.data.progress_percentage,
+              last_read_at: response.data.last_read_at,
+              completed_at: response.data.completed_at
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error updating reading progress:', error)
+        // Don't show error toast for progress updates to avoid spam
+      } finally {
+        this.isUpdatingStatus = false
+      }
     }
   },
   beforeUnmount() {
@@ -928,6 +1227,9 @@ export default {
       clearInterval(this.listeningTimeInterval)
     }
     this.updateListeningTime()
+    
+    // Clean up reading progress tracking
+    this.stopReadingProgressTracking()
   }
 }
 </script>
@@ -1138,12 +1440,80 @@ export default {
   color: var(--text-primary);
 }
 
-.listening-stats {
+.lesson-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.listening-stats, .reading-stats, .progress-stats {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
   font-size: 0.9em;
+}
+
+.reading-icon, .progress-icon {
+  font-size: 1.1em;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-not_started {
+  background-color: #e0e0e0;
+  color: #666;
+}
+
+.status-in_progress {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.progress-bar-container {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  background-color: #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75em;
+  font-weight: 600;
+  color: #333;
+  z-index: 1;
+}
+
+.lesson-reading-time {
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 0.85em;
 }
 
 .listening-icon {
@@ -1327,6 +1697,28 @@ export default {
   background-color: rgba(100, 181, 246, 0.3);
 }
 
+.token-known {
+  background-color: rgba(76, 175, 80, 0.15);
+  padding: 2px 4px;
+  border-radius: 3px;
+  border-bottom: 2px solid rgba(76, 175, 80, 0.5);
+}
+
+.token-known:hover {
+  background-color: rgba(76, 175, 80, 0.25);
+}
+
+.token-unknown {
+  background-color: rgba(244, 67, 54, 0.15);
+  padding: 2px 4px;
+  border-radius: 3px;
+  border-bottom: 2px solid rgba(244, 67, 54, 0.5);
+}
+
+.token-unknown:hover {
+  background-color: rgba(244, 67, 54, 0.25);
+}
+
 @keyframes tokenClick {
   0% {
     transform: scale(1);
@@ -1421,6 +1813,174 @@ export default {
   font-style: italic;
   color: var(--text-secondary);
   font-size: 0.9em;
+}
+
+/* Dictionary Section Styles */
+.dictionary-section {
+  margin-bottom: 15px;
+}
+
+.meaning-item {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.meaning-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.part-of-speech {
+  margin-bottom: 10px;
+}
+
+.pos-tag {
+  display: inline-block;
+  background: var(--button-primary);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.definitions-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.definition-item {
+  padding: 6px 0;
+  padding-left: 15px;
+  position: relative;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.definition-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--button-primary);
+  font-weight: bold;
+}
+
+.examples-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.examples-label {
+  display: block;
+  font-size: 0.85em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.examples-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.example-item {
+  padding: 4px 0;
+  padding-left: 15px;
+  position: relative;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.example-item::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--button-primary);
+}
+
+.translation-section {
+  margin-bottom: 15px;
+}
+
+.sentence-context-section,
+.sentence-translation-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+.popover-status-actions {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+.status-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-status {
+  flex: 1;
+  min-width: 100px;
+  padding: 8px 12px;
+  font-size: 0.9em;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-status:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--button-primary);
+}
+
+.btn-status:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-status-active {
+  background: var(--button-primary);
+  color: white;
+  border-color: var(--button-primary);
+}
+
+.btn-status-active:hover:not(:disabled) {
+  background: var(--button-primary-hover);
+}
+
+.btn-status-clear {
+  flex: 0 0 auto;
+  min-width: auto;
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+.btn-status-clear:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.popover-actions {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
 }
 
 .popover-loading {

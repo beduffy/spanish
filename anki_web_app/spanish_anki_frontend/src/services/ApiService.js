@@ -311,6 +311,43 @@ export default {
                 throw error
             })
         },
+        
+        // Token status (known/unknown)
+        updateTokenStatus(tokenId, status) {
+            if (!tokenId || !status) {
+                return Promise.reject(new Error('Token ID and status are required'))
+            }
+            if (status !== 'known' && status !== 'unknown') {
+                return Promise.reject(new Error("Status must be 'known' or 'unknown'"))
+            }
+            return apiClient.post(`/reader/tokens/${tokenId}/status/`, {
+                status: status,
+            }).catch(error => {
+                console.error('Error updating token status:', error)
+                throw error
+            })
+        },
+        
+        removeTokenStatus(tokenId) {
+            if (!tokenId) {
+                return Promise.reject(new Error('Token ID is required'))
+            }
+            return apiClient.delete(`/reader/tokens/${tokenId}/status/`).catch(error => {
+                console.error('Error removing token status:', error)
+                throw error
+            })
+        },
+        
+        // Reading progress tracking
+        updateReadingProgress(lessonId, progressData) {
+            if (!lessonId) {
+                return Promise.reject(new Error('Lesson ID is required'))
+            }
+            return apiClient.patch(`/reader/lessons/${lessonId}/progress/`, progressData).catch(error => {
+                console.error('Error updating reading progress:', error)
+                throw error
+            })
+        },
     },
 
     // Example of how to handle potential Django CSRF if not using Django Rest Framework's session auth

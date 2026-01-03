@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Sentence, Review, Card, CardReview, Lesson, Token, Phrase
+from django.db import connection
+from django.db.utils import OperationalError, ProgrammingError
+from .models import Sentence, Review, Card, CardReview, Lesson, Token, Phrase, TokenStatus
 
 
 class SentenceSerializer(serializers.ModelSerializer):
@@ -330,15 +332,22 @@ class CardReviewInputSerializer(serializers.Serializer):
 class LessonSerializer(serializers.ModelSerializer):
     token_count = serializers.SerializerMethodField()
     listening_time_formatted = serializers.SerializerMethodField()
+    progress_percentage = serializers.SerializerMethodField()
+    reading_time_formatted = serializers.SerializerMethodField()
     
     class Meta:
         model = Lesson
         fields = [
             'lesson_id', 'title', 'text', 'language', 'audio_url',
             'source_type', 'source_url', 'created_at', 'token_count',
-            'total_listening_time_seconds', 'last_listened_at', 'listening_time_formatted'
+            'total_listening_time_seconds', 'last_listened_at', 'listening_time_formatted',
+            'status', 'words_read', 'reading_time_seconds', 'last_read_at', 'completed_at',
+            'progress_percentage', 'reading_time_formatted'
         ]
-        read_only_fields = ['lesson_id', 'created_at', 'total_listening_time_seconds', 'last_listened_at']
+        read_only_fields = [
+            'lesson_id', 'created_at', 'total_listening_time_seconds', 'last_listened_at',
+            'progress_percentage', 'reading_time_formatted'
+        ]
     
     def get_token_count(self, obj):
         return obj.tokens.count()
@@ -352,16 +361,51 @@ class LessonSerializer(serializers.ModelSerializer):
         if hours > 0:
             return f"{hours}:{minutes:02d}:{secs:02d}"
         return f"{minutes}:{secs:02d}"
+    
+    def get_progress_percentage(self, obj):
+        """Calculate reading progress as a percentage."""
+        return obj.get_progress_percentage()
+    
+    def get_reading_time_formatted(self, obj):
+        """Format reading time as MM:SS or HH:MM:SS."""
+        seconds = obj.reading_time_seconds or 0
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{secs:02d}"
+        return f"{minutes}:{secs:02d}"
 
 
 class TokenSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+    
     class Meta:
         model = Token
         fields = [
-            'token_id', 'text', 'normalized', 'start_offset', 'end_offset',
-            'translation', 'clicked_count', 'added_to_flashcards', 'card_id'
+            'token_id', 'text', 'normalized', 'lemma', 'start_offset', 'end_offset',
+            'translation', 'dictionary_entry', 'clicked_count', 'added_to_flashcards', 'card_id', 'status'
         ]
-        read_only_fields = ['token_id', 'clicked_count', 'added_to_flashcards', 'card_id']
+        read_only_fields = ['token_id', 'clicked_count', 'added_to_flashcards', 'card_id', 'status']
+    
+    def get_status(self, obj):
+        """Get the known/unknown status for the current user."""
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            try:
+                token_status = TokenStatus.objects.get(user=request.user, token=obj)
+                return token_status.status
+            except TokenStatus.DoesNotExist:
+                return None
+            except (OperationalError, ProgrammingError):
+                # Handle case where TokenStatus table doesn't exist yet (migration not run)
+                # OperationalError: table doesn't exist
+                # ProgrammingError: column doesn't exist
+                return None
+            except Exception:
+                # Catch any other unexpected errors gracefully
+                return None
+        return None
 
 
 class PhraseSerializer(serializers.ModelSerializer):
@@ -410,7 +454,7 @@ class LessonCreateSerializer(serializers.ModelSerializer):
         token_count = 0
         try:
             from .tokenization import tokenize_text
-            tokens_data = tokenize_text(lesson.text)
+            tokens_data = tokenize_text(lesson.text, language=lesson.language)
             
             if not tokens_data:
                 print(f"[LessonCreateSerializer] Warning: No tokens generated for lesson {lesson.lesson_id}")
@@ -473,7 +517,7 @@ class LessonUpdateSerializer(serializers.ModelSerializer):
             token_count = 0
             try:
                 from .tokenization import tokenize_text
-                tokens_data = tokenize_text(instance.text)
+                tokens_data = tokenize_text(instance.text, language=instance.language)
                 
                 if not tokens_data:
                     print(f"[LessonUpdateSerializer] Warning: No tokens generated for lesson {instance.lesson_id}")
