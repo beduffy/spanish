@@ -18,27 +18,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Install docker-compose (V1) and compatible dependencies
+    - name: Verify Docker and Docker Compose are available
       run: |
-        pip install --upgrade pip
-        pip install requests==2.31.0  # Pin requests to a known good version before 2.32.0
-        pip install "urllib3<2.0"  # Compatible with requests 2.31.0
-        pip install requests-unixsocket # For robust socket handling
-        pip install docker-compose==1.25.0 # Match user's local working version, pulls in docker-py 4.x
-      # Previous attempt, keeping for history:
-      # run: |
-      #   sudo apt-get update
-      #   sudo apt-get install -y python3-pip libffi-dev python3-dev
-      #   pip3 install --upgrade pip
-      #   pip3 install docker-compose==1.29.2 # Use a specific V1 version
-      # run: |
-      #   echo "Install Docker Compose V2 (docker compose)"
-      #   mkdir -p ~/.docker/cli-plugins/
-      #   COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\\" -f4)
-      #   echo "Latest Docker Compose version: $COMPOSE_VERSION"
-      #   curl -SL https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-      #   chmod +x ~/.docker/cli-plugins/docker-compose
-      #   docker compose version
+        echo "Docker version:"
+        docker --version
+        echo "Docker Compose version:"
+        docker compose version || docker-compose --version || echo "Docker Compose not found (should not happen on GitHub Actions)"
 
     - name: Install Frontend Dependencies (Node.js) & Cypress System Deps
       run: |
