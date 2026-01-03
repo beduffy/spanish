@@ -853,7 +853,29 @@ export default {
       const gap = nextToken.start_offset - currentToken.end_offset
       if (gap <= 0) return ''
       // Extract the spacing from the original lesson text
-      return this.lesson.text.substring(currentToken.end_offset, nextToken.start_offset)
+      let spacing = this.lesson.text.substring(currentToken.end_offset, nextToken.start_offset)
+      
+      // Remove spaces before punctuation (common formatting issue)
+      // Punctuation should not have spaces before it
+      const nextIsPunctuation = /^[^\w\s]/.test(nextToken.text || '')
+      if (nextIsPunctuation) {
+        // Remove all leading spaces before punctuation
+        spacing = spacing.replace(/^\s+/, '')
+      }
+      
+      // Remove trailing spaces after punctuation (but keep one space after sentence-ending punctuation)
+      const currentIsPunctuation = /^[^\w\s]/.test(currentToken.text || '')
+      if (currentIsPunctuation) {
+        // After punctuation like . ! ? : ; , keep only one space (or none if next is punctuation)
+        if (nextIsPunctuation) {
+          spacing = spacing.replace(/\s+$/, '')
+        } else {
+          // Normalize multiple spaces to single space
+          spacing = spacing.replace(/\s+$/, ' ')
+        }
+      }
+      
+      return spacing
     },
     showToast(message, type = 'success') {
       this.toastMessage = message
@@ -1258,28 +1280,33 @@ export default {
 
 .token {
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px 0;
   border-radius: 3px;
   transition: all 0.2s ease;
-  display: inline-block;
-  white-space: pre-wrap;
+  display: inline;
+  white-space: normal;
   position: relative;
   color: var(--text-primary);
 }
 
 .token:hover {
   background-color: var(--token-hover-bg);
-  transform: translateY(-1px);
+  padding: 2px 4px;
+  border-radius: 3px;
   box-shadow: 0 2px 4px var(--shadow);
 }
 
 .token-clicked {
   background-color: var(--token-clicked-bg);
+  padding: 2px 4px;
+  border-radius: 3px;
   animation: tokenClick 0.3s ease;
 }
 
 .token-added {
   background-color: var(--token-added-bg);
+  padding: 2px 4px;
+  border-radius: 3px;
   font-weight: 500;
   border-bottom: 2px solid var(--token-added-border);
 }
@@ -1291,6 +1318,8 @@ export default {
 
 .token-in-phrase {
   background-color: rgba(100, 181, 246, 0.2);
+  padding: 2px 4px;
+  border-radius: 3px;
   border-bottom: 2px solid rgba(100, 181, 246, 0.5);
 }
 
