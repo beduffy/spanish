@@ -33,10 +33,41 @@ Cypress.Commands.add('login', () => {
 
 // Visit a page and ensure we're logged in
 Cypress.Commands.add('visitAsAuthenticated', (url) => {
+  // Set up mock session before visiting
+  cy.window().then((win) => {
+    win.__CYPRESS_TEST_MODE__ = true;
+    win.__CYPRESS_MOCK_SESSION__ = {
+      access_token: 'mock-access-token-for-e2e-tests',
+      refresh_token: 'mock-refresh-token',
+      expires_in: 3600,
+      expires_at: Date.now() / 1000 + 3600,
+      token_type: 'bearer',
+      user: {
+        id: 'mock-user-id',
+        email: 'test@example.com',
+        user_metadata: {},
+        app_metadata: {},
+      }
+    };
+  });
+  
   cy.visit(url, {
     onBeforeLoad(win) {
-      // Ensure flag is set before page loads and router initializes
+      // Ensure flag and mock session are set before page loads
       win.__CYPRESS_TEST_MODE__ = true;
+      win.__CYPRESS_MOCK_SESSION__ = {
+        access_token: 'mock-access-token-for-e2e-tests',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        expires_at: Date.now() / 1000 + 3600,
+        token_type: 'bearer',
+        user: {
+          id: 'mock-user-id',
+          email: 'test@example.com',
+          user_metadata: {},
+          app_metadata: {},
+        }
+      };
     }
   });
   // Wait for page to load and route guard to process
