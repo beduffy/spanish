@@ -9,11 +9,22 @@ services:
       - ./anki_web_app:/app
       - ./data:/app/data
       - static_volume:/app/staticfiles
+      - ~/.google-cloud/google-tts-credentials.json:/app/google-tts-credentials.json:ro
     env_file:
       - .env.prod
     environment:
       - PYTHONUNBUFFERED=1
       - DJANGO_SETTINGS_MODULE=spanish_anki_project.settings
+      # Explicitly pass Supabase vars (env_file should handle this, but being explicit)
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      # DeepL Translation API
+      - DEEPL_API_KEY=${DEEPL_API_KEY}
+      # TTS Services
+      - GOOGLE_TTS_CREDENTIALS_PATH=/app/google-tts-credentials.json
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID:-21m00Tcm4TlvDq8ikWAM}
     networks:
       - app_services_network
     restart: unless-stopped
@@ -24,10 +35,9 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
-        # These will be read from .env.prod when building
-        # Use default empty values if not set (for CI compatibility)
-        SUPABASE_URL: ${SUPABASE_URL:-}
-        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+        # Read from .env.prod file (docker-compose automatically loads env_file)
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
     container_name: spanish_anki_frontend_prod
     env_file:
       - .env.prod
