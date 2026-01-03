@@ -13,8 +13,6 @@ services:
       # - db_data:/app/anki_web_app/data # Example for a named volume if you want Docker to manage it
     ports:
       - "8000:8000"
-    env_file:
-      - .env # Optional: Load from .env file if it exists (create from .env.example)
     environment:
       - PYTHONUNBUFFERED=1 # Ensures Python output is sent straight to terminal
       # Set default SECRET_KEY for CI if .env doesn't exist
@@ -24,9 +22,9 @@ services:
       # Explicitly enable auto-login for local development (NEVER set in production)
       - ALLOW_AUTO_LOGIN=${ALLOW_AUTO_LOGIN:-true}
       # Supabase configuration for backend authentication
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
       # DeepL Translation API (required - set in .env file or environment)
       - DEEPL_API_KEY=${DEEPL_API_KEY:-}
       # TTS Services
@@ -62,11 +60,11 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true # Often needed for hot-reloading to work correctly in Docker
       # Supabase configuration - Vue CLI requires VUE_APP_ prefix
-      - VUE_APP_SUPABASE_URL=${SUPABASE_URL}
-      - VUE_APP_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - VUE_APP_SUPABASE_URL=${SUPABASE_URL:-}
+      - VUE_APP_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
       # Also set non-prefixed for vue.config.js fallback
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
     depends_on:
       - backend
     networks:
