@@ -879,7 +879,9 @@ The migration will create:
 
 ## Phase 7: Future Enhancements (Post-MVP)
 
-### 7.1 YouTube Integration
+### 7.1 YouTube Integration (DEFERRED)
+
+**Status**: Deferred - Users can manually extract transcripts using tools like y2doc and paste text directly.
 
 - Extract transcript from YouTube URL
 - Sync audio with text (timestamps)
@@ -887,11 +889,54 @@ The migration will create:
 
 ### 7.2 Advanced Features
 
-- Phrase selection (drag to select multiple words)
-- Dictionary integration (more detailed word meanings)
-- Audio-text alignment (timestamps per word)
-- Multiple language support (German, etc.)
-- Community hints (if multi-user)
+**Completed:**
+- ✅ Phrase selection (drag to select multiple words) - January 2026
+
+**Next Priority Features** (in order of priority):
+
+1. **Dictionary Integration** (High Priority)
+   - Integrate with dictionary API (e.g., Wiktionary, DeepL dictionary)
+   - Show multiple meanings, part of speech, example sentences
+   - Enhance popover with richer word information
+   - Store dictionary entries in `Token.dictionary_entry` JSONField
+
+2. **Lemmatization** (High Priority - from todos.txt)
+   - Unify word forms (e.g., sehen/sah/gesehen → sehen)
+   - Store surface form + lemma + sentence
+   - Improves flashcard creation and vocabulary tracking
+   - Use spaCy or similar NLP library
+
+3. **Known/Unknown Highlighting** (High Priority - from todos.txt)
+   - Mark words as known/unknown while reading
+   - Visual highlighting based on status
+   - Track vocabulary progress per user
+   - Persist known/unknown status in database
+
+4. **Progress Tracking** (Medium Priority)
+   - Track reading progress per lesson (words read, time spent)
+   - Mark lessons as "in progress", "completed"
+   - Show progress indicators in lesson list
+   - Track vocabulary growth over time
+
+5. **Vocabulary Lists** (Medium Priority)
+   - Generate vocabulary lists from lessons
+   - Export to CSV/Anki format
+   - Filter by "unknown words", "added to flashcards", etc.
+   - Statistics: total words, known words, learning words
+
+6. **Audio-Text Alignment** (Lower Priority)
+   - Word-level timestamps for audio sync
+   - Highlight words as audio plays
+   - Click word to jump to audio position
+   - Requires more advanced TTS or manual alignment
+
+7. **Multiple Language Support** (Lower Priority)
+   - Currently supports German (default) and Spanish
+   - Add more languages as needed
+
+8. **Community Hints** (Future - if multi-user)
+   - User-contributed translations/hints
+   - Community dictionary entries
 
 ---
 

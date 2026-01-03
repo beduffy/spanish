@@ -344,68 +344,15 @@ The reader feature uses a two-level caching strategy to minimize API calls and i
 - Error handling and logging added throughout for easier debugging
 - Context from reader lessons is now visible in the All Cards page
 
-## What's Next (From LINGQ_READER_PLAN.md)
+## What's Next
 
-Based on the implementation plan, the next phases are:
+For planning and next steps, see: **[LINGQ_READER_PLAN.md](./LINGQ_READER_PLAN.md)**
 
-### Phase 3: Audio & Polish (Week 3)
-1. **TTS Integration** (Days 1-2)
-   - Complete Google Cloud TTS integration (currently basic implementation exists)
-   - Or integrate ElevenLabs as alternative
-   - Generate audio files for lessons
-   - Store audio URLs in Lesson model
-
-2. **Audio Player** (Day 3)
-   - Implement audio playback in ReaderView
-   - Add listening time tracking
-   - Sync audio with text (optional)
-
-3. **UI Polish** (Day 4)
-   - Improve token highlighting animations
-   - Enhance popover styling
-   - Add loading states
-   - Improve mobile responsiveness
-
-4. **Testing & Bug Fixes** (Day 5)
-   - Write E2E tests for reader flow
-   - Fix any remaining issues
-   - Performance optimization
-
-### Phase 4: Advanced Features (Next Steps)
-
-**Note**: YouTube integration deferred - users can manually extract transcripts using tools like y2doc and paste text directly.
-
-**Recommended Next Features** (in order of priority):
-
-1. **Dictionary Integration** (High Priority)
-   - Integrate with dictionary API (e.g., Wiktionary, DeepL dictionary)
-   - Show multiple meanings, part of speech, example sentences
-   - Enhance popover with richer word information
-   - Store dictionary entries in `Token.dictionary_entry` JSONField
-
-2. **Progress Tracking** (Medium Priority)
-   - Track reading progress per lesson (words read, time spent)
-   - Mark lessons as "in progress", "completed"
-   - Show progress indicators in lesson list
-   - Track vocabulary growth over time
-
-3. **Vocabulary Lists** (Medium Priority)
-   - Generate vocabulary lists from lessons
-   - Export to CSV/Anki format
-   - Filter by "unknown words", "added to flashcards", etc.
-   - Statistics: total words, known words, learning words
-
-4. **Audio-Text Alignment** (Lower Priority)
-   - Word-level timestamps for audio sync
-   - Highlight words as audio plays
-   - Click word to jump to audio position
-   - Requires more advanced TTS or manual alignment
-
-5. **YouTube Integration** (Deferred)
-   - Extract transcripts from YouTube URLs
-   - Sync audio with text timestamps
-   - Use `youtube-transcript-api` or similar library
-   - **Status**: Deferred - users can use y2doc or similar tools manually
+The plan document contains:
+- Implementation phases and priorities
+- Feature roadmap
+- Recommended next features (Dictionary Integration, Lemmatization, Known/Unknown highlighting, etc.)
+- YouTube integration status (deferred)
 
 ### Current Status
 - ✅ Backend models and API endpoints
