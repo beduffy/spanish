@@ -1,3 +1,35 @@
+###########################################
+HIGH PRIORITY
+###########################################
+
+rename repo and folder... 
+Random order anki review
+
+Next review time show correct
+If i give low scorenit shows immediately, shown later? Show how many cards etc 
+Better logo
+Title should be german
+order things better on anki review page 
+Better name
+Edit card in review page and ask gemini flash there 
+Add animations to make it addictive
+Reset number ids or start from 1 or something
+
+
+fix popup not being seen
+make it easier to close popup
+
+
+Change all scores in all cards page to be better and color graded.
+Enable to see entire notes easier or maybe edit does that. 
+calendara view bursting out of view. and should show everything.
+llm FUN for extra.  
+
+
+###########################################
+LESS PRIORITY
+###########################################
+
 make it so we can disable each card if we know it we master it
 have clarity and info on the algorithm and how many days and don't show cards that are not due or something?
 ONLY ALLOW BENFDUFFY AND  irene.castrovergel
@@ -12,20 +44,13 @@ clearer understanding of ease efactor and next review date etc. and show curve o
 super cheap/free llm to explain a sentence and how word fits
 find article always for nouns, combined. 
 Find verb and conjugation of verb
-auto create flash card
 more more more
 even use chatgpt to create images/videos/audio?
 
 
-rename repo and folder... 
 
 
 
-
-alert shouldn't happen for adding flashcard
-fix empty space between words in long story
-fix popup not being seen
-make it easier to close popup
 
 
 use y2doc or my own thing to easily convert videos or blogs i care about to text. 
@@ -35,45 +60,32 @@ How many youtube videos have auto dubbing? Could I show live transcription of ge
 
 Store numbers of words from blogs? or? 
 
+
 think more. 
-
 too many afk sessions
-
 create many stats and charts. 
-
-
 dont understand and see tokens, dictionary and many other features. 
-
 listen amount and read amount wrong, and progress wrong. 
 mark lesson as completed. 
-
 Hackx anki calendar, hover over multiple words on phone. Num cards reviewed
-
-Random order anki review
-
-Next review time 
-Better logo
-Title should be german
-Better name
-
-If i give low scorenit shows immediately, shown later? Show how many cards etc 
-
-Edit card in review page and ask gemini flash there 
-
-Add animations to make it addictive
-
-Reset number ids or start from 1 or something
-
-More e2e with z fold 5 sim sim and order things better on anki review page 
-
+is dictionary api free?
 Audio in review page?
 
-Change all scores in all cards page to bebbetter and color graded.
-Enable to see entire notes easier or maybe edit does that. 
+
+
+
+
+
+
+
+
+
+
+
+
 
 list view for lessons?
 
-calendara view bursting out of view. and should show everything. 
 
 Cheapest LLM APIs (good enough quality for Anki)
 
