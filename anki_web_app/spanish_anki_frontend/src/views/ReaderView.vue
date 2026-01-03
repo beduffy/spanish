@@ -523,24 +523,59 @@ export default {
       }
 
       // Position popover near clicked token
-      try {
-        const rect = event.target.getBoundingClientRect()
-        this.popoverStyle = {
-          position: 'fixed',
-          top: `${rect.bottom + 10}px`,
-          left: `${rect.left}px`,
-          zIndex: 1000
+      this.$nextTick(() => {
+        try {
+          const rect = event.target.getBoundingClientRect()
+          const viewportHeight = window.innerHeight
+          const viewportWidth = window.innerWidth
+          const popoverWidth = 500 // max-width from CSS
+          const popoverHeight = 400 // estimated max height
+          const padding = 20
+          
+          let top = rect.bottom + 10
+          let left = rect.left
+          
+          // Check if popover would go off bottom of screen
+          if (top + popoverHeight > viewportHeight - padding) {
+            // Position above token instead
+            top = rect.top - popoverHeight - 10
+            // If still off screen, position at top with padding
+            if (top < padding) {
+              top = padding
+            }
+          }
+          
+          // Check if popover would go off right side
+          if (left + popoverWidth > viewportWidth - padding) {
+            left = viewportWidth - popoverWidth - padding
+          }
+          
+          // Check if popover would go off left side
+          if (left < padding) {
+            left = padding
+          }
+          
+          this.popoverStyle = {
+            position: 'fixed',
+            top: `${top}px`,
+            left: `${left}px`,
+            maxHeight: `${viewportHeight - top - padding}px`,
+            overflowY: 'auto',
+            zIndex: 1000
+          }
+        } catch (e) {
+          // Fallback positioning
+          this.popoverStyle = {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            zIndex: 1000
+          }
         }
-      } catch (e) {
-        // Fallback positioning
-        this.popoverStyle = {
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 1000
-        }
-      }
+      })
 
       this.selectedToken = { ...token } // Copy token to avoid reactivity issues
       this.selectedPhrase = null // Clear phrase selection
@@ -817,12 +852,38 @@ export default {
           const sentenceText = this.getSentenceContext(startOffset)
           this.sentenceContext = sentenceText
           
-          // Position popover
+          // Position popover with smart positioning
           const rect = range.getBoundingClientRect()
+          const viewportHeight = window.innerHeight
+          const viewportWidth = window.innerWidth
+          const popoverWidth = 500
+          const popoverHeight = 400
+          const padding = 20
+          
+          let top = rect.bottom + 10
+          let left = rect.left
+          
+          if (top + popoverHeight > viewportHeight - padding) {
+            top = rect.top - popoverHeight - 10
+            if (top < padding) {
+              top = padding
+            }
+          }
+          
+          if (left + popoverWidth > viewportWidth - padding) {
+            left = viewportWidth - popoverWidth - padding
+          }
+          
+          if (left < padding) {
+            left = padding
+          }
+          
           this.popoverStyle = {
             position: 'fixed',
-            top: `${rect.bottom + 10}px`,
-            left: `${rect.left}px`,
+            top: `${top}px`,
+            left: `${left}px`,
+            maxHeight: `${viewportHeight - top - padding}px`,
+            overflowY: 'auto',
             zIndex: 1000
           }
           
@@ -850,10 +911,37 @@ export default {
           
           // Position popover
           const rect = range.getBoundingClientRect()
+          // Use smart positioning
+          const viewportHeight = window.innerHeight
+          const viewportWidth = window.innerWidth
+          const popoverWidth = 500
+          const popoverHeight = 400
+          const padding = 20
+          
+          let top = rect.bottom + 10
+          let left = rect.left
+          
+          if (top + popoverHeight > viewportHeight - padding) {
+            top = rect.top - popoverHeight - 10
+            if (top < padding) {
+              top = padding
+            }
+          }
+          
+          if (left + popoverWidth > viewportWidth - padding) {
+            left = viewportWidth - popoverWidth - padding
+          }
+          
+          if (left < padding) {
+            left = padding
+          }
+          
           this.popoverStyle = {
             position: 'fixed',
-            top: `${rect.bottom + 10}px`,
-            left: `${rect.left}px`,
+            top: `${top}px`,
+            left: `${left}px`,
+            maxHeight: `${viewportHeight - top - padding}px`,
+            overflowY: 'auto',
             zIndex: 1000
           }
         }
@@ -1751,6 +1839,8 @@ export default {
   animation: popoverFadeIn 0.2s ease;
   z-index: 1000;
   color: var(--text-primary);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @media (max-width: 768px) {
