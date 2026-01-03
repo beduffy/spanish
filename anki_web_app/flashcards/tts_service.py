@@ -48,31 +48,101 @@ def generate_tts_audio(text: str, language_code: str = 'de-DE', output_filename:
 
 
 def _generate_google_tts(text: str, language_code: str, output_filename: str = None) -> Optional[str]:
-    """Generate TTS using Google Cloud TTS."""
+    """
+    Generate TTS using Google Cloud TTS.
+    Handles long text by chunking (Google TTS limit: 5000 characters per request).
+    """
     if not GOOGLE_TTS_CREDENTIALS_PATH or not os.path.exists(GOOGLE_TTS_CREDENTIALS_PATH):
         return None
     
     try:
         from google.cloud import texttospeech
+        import io
         
         client = texttospeech.TextToSpeechClient.from_service_account_file(
             GOOGLE_TTS_CREDENTIALS_PATH
         )
         
-        synthesis_input = texttospeech.SynthesisInput(text=text)
-        voice = texttospeech.VoiceSelectionParams(
-            language_code=language_code,
-            ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
-        )
-        audio_config = texttospeech.AudioConfig(
-            audio_encoding=texttospeech.AudioEncoding.MP3
-        )
+        # Google Cloud TTS limit: 5000 characters per request
+        MAX_CHARS_PER_REQUEST = 5000
         
-        response = client.synthesize_speech(
-            input=synthesis_input,
-            voice=voice,
-            audio_config=audio_config
-        )
+        # If text is short enough, process in one request
+        if len(text) <= MAX_CHARS_PER_REQUEST:
+            synthesis_input = texttospeech.SynthesisInput(text=text)
+            voice = texttospeech.VoiceSelectionParams(
+                language_code=language_code,
+                ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+            )
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3
+            )
+            
+            response = client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config
+            )
+            audio_content = response.audio_content
+        else:
+            # Split text into chunks and combine audio
+            print(f"Text length ({len(text)} chars) exceeds limit ({MAX_CHARS_PER_REQUEST}). Chunking...")
+            audio_chunks = []
+            
+            # Split by sentences to avoid cutting words
+            sentences = text.split('. ')
+            current_chunk = ""
+            
+            for sentence in sentences:
+                # If adding this sentence would exceed limit, process current chunk
+                if len(current_chunk) + len(sentence) + 2 > MAX_CHARS_PER_REQUEST and current_chunk:
+                    # Process current chunk
+                    synthesis_input = texttospeech.SynthesisInput(text=current_chunk)
+                    voice = texttospeech.VoiceSelectionParams(
+                        language_code=language_code,
+                        ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+                    )
+                    audio_config = texttospeech.AudioConfig(
+                        audio_encoding=texttospeech.AudioEncoding.MP3
+                    )
+                    
+                    response = client.synthesize_speech(
+                        input=synthesis_input,
+                        voice=voice,
+                        audio_config=audio_config
+                    )
+                    audio_chunks.append(response.audio_content)
+                    
+                    # Start new chunk
+                    current_chunk = sentence
+                else:
+                    # Add sentence to current chunk
+                    if current_chunk:
+                        current_chunk += ". " + sentence
+                    else:
+                        current_chunk = sentence
+            
+            # Process remaining chunk
+            if current_chunk:
+                synthesis_input = texttospeech.SynthesisInput(text=current_chunk)
+                voice = texttospeech.VoiceSelectionParams(
+                    language_code=language_code,
+                    ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+                )
+                audio_config = texttospeech.AudioConfig(
+                    audio_encoding=texttospeech.AudioEncoding.MP3
+                )
+                
+                response = client.synthesize_speech(
+                    input=synthesis_input,
+                    voice=voice,
+                    audio_config=audio_config
+                )
+                audio_chunks.append(response.audio_content)
+            
+            # Combine audio chunks (simple concatenation for MP3)
+            # Note: This works for MP3, but for other formats you might need proper audio merging
+            audio_content = b''.join(audio_chunks)
+            print(f"Combined {len(audio_chunks)} audio chunks")
         
         # Save to Django storage
         if not output_filename:
@@ -80,14 +150,8 @@ def _generate_google_tts(text: str, language_code: str, output_filename: str = N
             text_hash = hashlib.md5(text.encode()).hexdigest()
             output_filename = f'tts/google_{text_hash}.mp3'
         
-        file_path = default_storage.save(output_filename, ContentFile(response.audio_content))
+        file_path = default_storage.save(output_filename, ContentFile(audio_content))
         audio_url = default_storage.url(file_path)
-        # Ensure URL is absolute for frontend access
-        if audio_url.startswith('/'):
-            from django.conf import settings
-            # In production, you might want to use a full domain
-            # For now, return relative URL (frontend will handle it)
-            pass
         return audio_url
         
     except ImportError:
@@ -95,6 +159,8 @@ def _generate_google_tts(text: str, language_code: str, output_filename: str = N
         return None
     except Exception as e:
         print(f"Google TTS error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
