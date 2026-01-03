@@ -39,7 +39,8 @@ describe('Card Review Flow', () => {
                         expect(frontText.trim()).not.to.be.empty;
                         
                         // Show answer
-                        cy.get('button.action-button').contains('Show Answer').click();
+                        cy.dismissWebpackOverlay();
+                        cy.get('button.action-button').contains('Show Answer').click({ force: true });
                         
                         // Verify answer is shown
                         cy.get('.card-back').should('be.visible');

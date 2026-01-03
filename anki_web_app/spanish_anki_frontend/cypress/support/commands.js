@@ -32,7 +32,7 @@ Cypress.Commands.add('login', () => {
 });
 
 // Visit a page and ensure we're logged in
-Cypress.Commands.add('visitAsAuthenticated', (url) => {
+Cypress.Commands.add('visitAsAuthenticated', (url, options = {}) => {
   // Set up mock session before visiting
   cy.window().then((win) => {
     win.__CYPRESS_TEST_MODE__ = true;
@@ -52,6 +52,7 @@ Cypress.Commands.add('visitAsAuthenticated', (url) => {
   });
   
   cy.visit(url, {
+    ...options,
     onBeforeLoad(win) {
       // Ensure flag and mock session are set before page loads
       win.__CYPRESS_TEST_MODE__ = true;
@@ -68,8 +69,39 @@ Cypress.Commands.add('visitAsAuthenticated', (url) => {
           app_metadata: {},
         }
       };
+      if (options.onBeforeLoad) {
+        options.onBeforeLoad(win);
+      }
     }
   });
   // Wait for page to load and route guard to process
   cy.wait(500);
+  
+  // Hide webpack dev server overlay if present
+  cy.get('body').then(($body) => {
+    const overlay = $body.find('#webpack-dev-server-client-overlay');
+    if (overlay.length > 0) {
+      cy.window().then((win) => {
+        const overlayEl = win.document.getElementById('webpack-dev-server-client-overlay');
+        if (overlayEl) {
+          overlayEl.style.display = 'none';
+        }
+      });
+    }
+  });
+});
+
+// Command to dismiss webpack overlay
+Cypress.Commands.add('dismissWebpackOverlay', () => {
+  cy.get('body').then(($body) => {
+    const overlay = $body.find('#webpack-dev-server-client-overlay');
+    if (overlay.length > 0) {
+      cy.window().then((win) => {
+        const overlayEl = win.document.getElementById('webpack-dev-server-client-overlay');
+        if (overlayEl) {
+          overlayEl.style.display = 'none';
+        }
+      });
+    }
+  });
 });

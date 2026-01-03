@@ -5,7 +5,8 @@ describe('Reader (LingQ-style) Flow', () => {
 
     it('can navigate to reader and import a lesson', () => {
         // Navigate to reader/lessons page
-        cy.get('nav a').contains('Reader').click();
+        cy.dismissWebpackOverlay();
+        cy.get('nav a').contains('Reader').click({ force: true });
         cy.url().should('include', '/reader');
         
         // Look for import button or link

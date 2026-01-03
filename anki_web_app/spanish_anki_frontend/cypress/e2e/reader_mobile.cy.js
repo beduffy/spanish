@@ -241,7 +241,7 @@ describe('Reader Mobile - Phrase Selection', () => {
   // Test with actual mobile device user agent
   context('Mobile User Agent', () => {
     beforeEach(() => {
-      cy.viewport('iphone-12')
+      cy.viewport(390, 844) // iPhone 12 dimensions
       // Set mobile user agent
       cy.visitAsAuthenticated('/', {
         headers: {

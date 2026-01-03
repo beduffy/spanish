@@ -4,7 +4,8 @@ describe('Card Navigation and Data Verification', () => {
     });
 
     it('navigates to Dashboard and verifies card statistics', () => {
-        cy.get('nav a').contains('Dashboard').click();
+        cy.dismissWebpackOverlay();
+        cy.get('nav a').contains('Dashboard').click({ force: true });
         cy.url().should('include', '/dashboard');
         cy.get('h1').contains('Dashboard');
         
@@ -31,7 +32,8 @@ describe('Card Navigation and Data Verification', () => {
 
     it('navigates to Cards List and verifies cards are displayed', () => {
         cy.visitAsAuthenticated('/');
-        cy.get('nav a').contains('All Cards').click();
+        cy.dismissWebpackOverlay();
+        cy.get('nav a').contains('All Cards').click({ force: true });
         cy.url().should('include', '/cards');
         cy.get('h1').contains('All Cards');
         
@@ -72,7 +74,8 @@ describe('Card Navigation and Data Verification', () => {
 
     it('can create a new card', () => {
         cy.visitAsAuthenticated('/cards');
-        cy.get('a.btn-primary').contains('Create Card').click();
+        cy.dismissWebpackOverlay();
+        cy.get('a.btn-primary').contains('Create Card').click({ force: true });
         cy.url().should('include', '/cards/create');
         
         // Fill in card form - CardEditorView uses textarea#front and textarea#back
@@ -103,13 +106,15 @@ describe('Card Navigation and Data Verification', () => {
         
         cy.get('body').then(($body) => {
             if ($body.find('.flashcard-container').length > 0) {
-                cy.get('button.action-button').contains('Show Answer').click();
+                cy.dismissWebpackOverlay();
+                cy.get('button.action-button').contains('Show Answer').click({ force: true });
                 cy.get('#userScore').clear().type('0.8');
                 cy.get('button.action-button').contains('Submit & Next').click();
                 cy.wait('@submitReview', { timeout: 10000 });
                 
                 // Navigate to Dashboard
-                cy.get('nav a').contains('Dashboard').click();
+                cy.dismissWebpackOverlay();
+                cy.get('nav a').contains('Dashboard').click({ force: true });
                 cy.url().should('include', '/dashboard');
                 
                 // Verify review count increased

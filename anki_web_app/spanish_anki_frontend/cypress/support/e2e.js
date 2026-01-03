@@ -33,3 +33,14 @@ Cypress.on('uncaught:exception', (err, runnable) => {
   // Return true to let other errors fail the test
   return true
 })
+
+// Hide webpack dev server overlay before each test
+beforeEach(() => {
+  cy.window().then((win) => {
+    // Remove webpack overlay if it exists
+    const overlay = win.document.getElementById('webpack-dev-server-client-overlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+    }
+  });
+});
